@@ -6,7 +6,7 @@
 
 ## Summary
 
-Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. Wild-card identification is parked on `feature/1.1.2-wild-cards` (not merged to `main`).
+Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. Shuffle and draw are parked on `feature/1.1.4-shuffle-draw` (not merged to `main`).
 
 ---
 
@@ -14,6 +14,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Branch | Role |
 |--------|------|
+| **`feature/1.1.4-shuffle-draw`** | 1.1.4 Shuffling and drawing — **not merged** to `main` |
 | **`feature/1.1.2-wild-cards`** | 1.1.2 Wild Card Identification — **not merged** to `main` |
 | **`feature/1.1-card-definitions`** | 1.1.1 Card Definitions and 1.1.3 Deck Generation — **not merged** to `main` |
 | **`feature/foundation-scaffold`** | Foundation scaffold — pushed, **not merged** to `main` |
@@ -31,6 +32,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 - **1.1.1** Suit, Rank, Card (`id`, `suit`, `rank`, `locked_until_turn`)
 - **1.1.3** `Deck::new`: 2 decks × 52 cards + 2 jokers per deck (4 jokers, 8 twos, 108 cards)
 - **1.1.2** `Card::is_wild`: jokers and twos are wild; other ranks are not. A new deck has 12 wilds.
+- **1.1.4** `Deck::shuffle` and `Deck::draw`: order changes, one draw leaves 107 cards, an empty deck returns `None`.
 
 ---
 
@@ -38,7 +40,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Item | Detail |
 |------|--------|
-| **1.1.4** | Shuffling and drawing — `test_deck_shuffle` first |
+| **1.2.1** | Player initialization — `test_player_instantiation` first |
 | **Merge** | **CMPH** only when human wants `main` populated |
 
 ---

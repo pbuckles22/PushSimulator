@@ -18,7 +18,7 @@ cargo test
 
 Headless tests in `push_core` that run shipped behaviors **together** through real engine APIs. Rule: [.cursor/rules/integration-chain.mdc](.cursor/rules/integration-chain.mdc).
 
-Current chain through wild cards: Suit → Rank → Card → `Deck::new` → `is_wild`, named `test_suit_rank_card_deck_new_is_wild_twelve_wilds` (`push_core/tests/suit_rank_card_deck.rs`). It locks 12 wilds (4 jokers + 8 twos). The earlier composition test `test_suit_rank_card_deck_new_two_decks_two_jokers_each` stays.
+Current chain through shuffle and draw: Suit → Rank → Card → `Deck::new` → `is_wild` → `shuffle` → `draw`, named `test_suit_rank_card_deck_new_is_wild_shuffle_draw` (`push_core/tests/suit_rank_card_deck.rs`). It locks 12 wilds through a shuffle (same cards, new order) and a draw down to `None`. Earlier chains stay: `test_suit_rank_card_deck_new_is_wild_twelve_wilds` and `test_suit_rank_card_deck_new_two_decks_two_jokers_each`.
 
 Suggested after Epic 1.8: Epic 1.9 chains (see [doc/PLAN_COMMENTARY.md](doc/PLAN_COMMENTARY.md)). Until then, Crucible scenarios in BACKLOG Epic 1.8 are the later multi-step suites.
 

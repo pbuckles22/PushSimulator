@@ -45,10 +45,10 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 
 *As the game engine, I want to shuffle and draw from the deck so that gameplay is randomized and state advances.*
 
-* \[ \] Write test test\_deck\_shuffle asserting the order of cards changes after shuffling.  
-* \[ \] Add rand crate and implement deck.shuffle().  
-* \[ \] Write test test\_deck\_draw\_reduces\_count asserting drawing 1 card reduces deck size.  
-* \[ \] Implement deck.draw() returning Option\<Card\>.  
+* \[x\] Write test test\_deck\_shuffle asserting the order of cards changes after shuffling.  
+* \[x\] Add rand crate and implement deck.shuffle().  
+* \[x\] Write test test\_deck\_draw\_reduces\_count asserting drawing 1 card reduces deck size.  
+* \[x\] Implement deck.draw() returning Option\<Card\>.  
 * \[ \] Write test test\_deck\_draw\_empty\_reshuffles asserting drawing from an empty deck takes the discard pile (minus top card), shuffles, and draws.  
 * \[ \] Implement empty deck reshuffle logic.
 

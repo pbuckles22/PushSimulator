@@ -43,13 +43,13 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 
 *As the game engine, I want to shuffle and draw from the deck so that gameplay is randomized and state advances.*
 
-* \[ \] Write test test\_deck\_shuffle asserting the order of cards in deck.cards changes after shuffling.  
-* \[ \] Add rand crate to Cargo.toml.  
-* \[ \] Implement deck.shuffle() using a random number generator to pass test.  
-* \[ \] Write test test\_deck\_draw\_reduces\_count asserting drawing 1 card reduces deck size from 108 to 107\.  
-* \[ \] Implement deck.draw() returning Option\<Card\> to pass test.  
-* \[ \] Write test test\_deck\_draw\_empty asserting drawing from an empty deck returns None.  
-* \[ \] Ensure deck.draw() handles empty vectors gracefully to pass test.
+* \[x\] Write test test\_deck\_shuffle asserting the order of cards in deck.cards changes after shuffling.  
+* \[x\] Add rand crate to Cargo.toml.  
+* \[x\] Implement deck.shuffle() using a random number generator to pass test.  
+* \[x\] Write test test\_deck\_draw\_reduces\_count asserting drawing 1 card reduces deck size from 108 to 107\.  
+* \[x\] Implement deck.draw() returning Option\<Card\> to pass test.  
+* \[x\] Write test test\_deck\_draw\_empty asserting drawing from an empty deck returns None.  
+* \[x\] Ensure deck.draw() handles empty vectors gracefully to pass test.
 
 ## **Epic 1.2: Player State & Scoring**
 
