@@ -41,7 +41,8 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Item | Detail |
 |------|--------|
-| **1.2.1** | Player initialization — start only when asked |
+| **1.2.1** | `Player::new` on `feature/1.2.1-player-init` — 0 points, `is_on_board = false`, empty hand. Not merged |
+| **1.2.2** | Dealing hands — start only when asked |
 
 ---
 

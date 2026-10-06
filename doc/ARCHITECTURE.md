@@ -20,7 +20,9 @@ To visually watch bots play and verify the game logic *early*, we will build a w
 Once the game looks correct in the Web Viewer, you scale it up.
 
 * You will use a Rust library called Rayon.  
-* Rayon takes your headless game loop and distributes it perfectly across every CPU core your Linux EC2 instance has. This allows you to run 100,000 simulations in a matter of seconds.
+* Rayon spreads the headless game loop across every CPU core of the machine that runs `push_sim`.  
+* **Where it runs:** coding stays on the Windows PC. The first CPU host is the Mac: install Rust there once, pull this repo, and build `push_sim` on the Mac. Do not cross-compile a Mac binary from Windows. A Linux EC2 instance is the later scale host, the same binary and the same Rayon loop.  
+* **How many games:** 1,000 to prove a batch finishes, 10,000 for a first look, and **100,000 games per matchup** when ranking bots. One game is a full 5-round match. Go to a million only when two bots are still inside half a percentage point. Detail: [requirements/MONTE_CARLO_STRATEGY.md](requirements/MONTE_CARLO_STRATEGY.md).
 
 ## **4\. Phase 3 & 4: iOS App & Multiplayer Server**
 

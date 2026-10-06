@@ -20,8 +20,8 @@
 
 ## Current state
 
-- **Ship:** Epic 1.1 is complete on **`main` @ 248075f**. `feature/1.1.4-empty-reshuffle` is kept. `feature/1.1.4-shuffle-draw` is kept. Prior park: `origin/feature/1.1.2-wild-cards @ 71c50c7`.
-- **Phase:** 1 — Rust core. **Next story:** 1.2.1 Player initialization, only when asked. Empty draw with three or more discard cards leaves the top card. One leftover card goes to the current player. Two leftover cards are shuffled and split between the current player and the next.
+- **Ship:** 1.2.1 is parked on **`feature/1.2.1-player-init`** (not merged). Epic 1.1 stays on **`main` @ 94d0183**. `feature/1.1.4-empty-reshuffle` is kept. `feature/1.1.4-shuffle-draw` is kept. Prior park: `origin/feature/1.1.2-wild-cards @ 71c50c7`.
+- **Phase:** 1 — Rust core. **Next story:** 1.2.2 Dealing hands, only when asked. 1.2.1 `Player::new` is on `feature/1.2.1-player-init` (0 points, `is_on_board = false`, empty hand). Empty draw with three or more discard cards leaves the top card. One leftover card goes to the current player. Two leftover cards are shuffled and split between the current player and the next.
 - **Version:** no bump (workspace 0.1.0; not a user-visible build).
 - **Client path:** SwiftUI + UniFFI (not Flutter).
 - **Handoff:** Receiving agents get **`You are the receiving agent.`** as first line; brief is second person.

@@ -25,7 +25,7 @@ Google's plan is sound for this product:
 
 1. **Pure Rust core** — single rules engine for sim, WASM, iOS, and server.
 2. **Phase 1b WASM debug table** — watch bots early without Flutter/desktop cost.
-3. **Rayon Monte Carlo** — Phase 2 on the same crate.
+3. **Rayon Monte Carlo** — Phase 2 on the same crate. Code stays on the Windows PC. The Mac is the first CPU host (`cargo build -p push_sim --release` on the Mac). Linux EC2 is the later scale host. Comparison runs are 100,000 games per matchup ([requirements/MONTE_CARLO_STRATEGY.md](requirements/MONTE_CARLO_STRATEGY.md)).
 4. **SwiftUI + UniFFI for iOS** — native UI; no Flutter rewrite of the rules.
 5. **Axum + WebSockets** — Phase 4 multiplayer on the same core.
 

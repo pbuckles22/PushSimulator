@@ -62,8 +62,8 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 
 *As the game engine, I want to create a Player so that I can track their hand, board status, and score.*
 
-* \[ \] Write test test\_player\_instantiation asserting a new player starts with 0 points and is\_on\_board \= false.  
-* \[ \] Implement Player struct and Player::new().
+* \[x\] Write test test\_player\_instantiation asserting a new player starts with 0 points and is\_on\_board \= false.  
+* \[x\] Implement Player struct and Player::new().
 
 **User Story 1.2.2: Dealing Hands**
 

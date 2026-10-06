@@ -56,16 +56,16 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 
 ## **Epic 1.2: Player State & Scoring**
 
-The 1.1.4 reshuffle lines are done. Start 1.2.1 only when asked.
+The 1.1.4 reshuffle lines are done. 1.2.1 is implemented on `feature/1.2.1-player-init`.
 
 ### **User Story 1.2.1: Player Initialization**
 
 *As the game engine, I want to create a Player so that I can track their hand, board status, and score.*
 
-* \[ \] Write test test\_player\_instantiation asserting a new player starts with 0 points and is\_on\_board \= false.  
-* \[ \] Implement Player struct matching the Data Schema to pass test.  
-* \[ \] Write test test\_player\_hand\_starts\_empty asserting a new player has 0 cards.  
-* \[ \] Implement Player::new(id, seat\_index) to pass test.
+* \[x\] Write test test\_player\_instantiation asserting a new player starts with 0 points and is\_on\_board \= false.  
+* \[x\] Implement Player struct matching the Data Schema to pass test.  
+* \[x\] Write test test\_player\_hand\_starts\_empty asserting a new player has 0 cards.  
+* \[x\] Implement Player::new(id, seat\_index) to pass test.
 
 ### **User Story 1.2.2: Dealing Hands**
 

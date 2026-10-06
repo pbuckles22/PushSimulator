@@ -3,6 +3,7 @@
 
 use push_core::card::{Card, Rank, Suit};
 use push_core::deck::{Deck, TurnDraw};
+use push_core::player::Player;
 
 const DECKS: usize = 2;
 const JOKERS_PER_DECK: usize = 2;
@@ -560,5 +561,227 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_draw_two_pile_cards_stay_ordinar
     assert_eq!(deck.draw(), TurnDraw::One(second));
     assert_eq!(deck.draw(), TurnDraw::One(first));
     assert!(deck.discard.is_empty());
+    assert_eq!(deck.draw(), TurnDraw::Empty);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → draw → Player::new.
+/// A new player does not take cards from that deck.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_draw_player_new() {
+    let mut deck = Deck::new();
+    let before_ids: Vec<u32> = deck.cards.iter().map(|card| card.id).collect();
+    assert_eq!(deck.cards.len(), 52 * DECKS + JOKERS_PER_DECK * DECKS);
+    assert_eq!(
+        deck.cards.iter().filter(|card| card.is_wild()).count(),
+        DECKS * JOKERS_PER_DECK + DECKS * SUITS_PER_DECK
+    );
+
+    deck.shuffle();
+
+    let drawn = ordinary(deck.draw());
+    assert!(before_ids.contains(&drawn.id));
+    assert_eq!(deck.cards.len(), 107);
+
+    let current = Player::new(1, 0);
+    let next = Player::new(2, 1);
+    assert_eq!(current.id, 1);
+    assert_eq!(current.seat_index, 0);
+    assert_eq!(current.points, 0);
+    assert!(!current.is_on_board);
+    assert!(current.hand.is_empty());
+    assert_eq!(next.id, 2);
+    assert_eq!(next.seat_index, 1);
+    assert_eq!(next.points, 0);
+    assert!(!next.is_on_board);
+    assert!(next.hand.is_empty());
+    assert_eq!(deck.cards.len(), 107);
+    assert!(deck.cards.iter().all(|card| card.id != drawn.id));
+    assert!(current.hand.iter().all(|card| card.id != drawn.id));
+    assert!(next.hand.iter().all(|card| card.id != drawn.id));
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → draw → last card → Player::new.
+/// The leftover card is a draw result. Creating the current player does not take it.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_draw_last_card_player_starts_empty() {
+    let mut deck = shuffled_deck();
+    let mut drawn = drain_without_discard(&mut deck);
+    let last = drawn.pop().expect("drained deck still has one card");
+    deck.discard = vec![last];
+
+    assert_eq!(deck.draw(), TurnDraw::LastCard(last));
+    let current = Player::new(1, 0);
+    assert_eq!(current.points, 0);
+    assert!(!current.is_on_board);
+    assert!(current.hand.is_empty());
+    assert!(deck.cards.is_empty());
+    assert!(deck.discard.is_empty());
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → draw → last two → Player::new.
+/// The split cards stay out of both new hands.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_draw_last_two_players_start_empty() {
+    let mut deck = shuffled_deck();
+    let mut drawn = drain_without_discard(&mut deck);
+    let second = drawn.pop().expect("drained deck still has a card");
+    let first = drawn.pop().expect("drained deck still has a second card");
+    deck.discard = vec![first, second];
+
+    let TurnDraw::LastTwo {
+        current: current_card,
+        next: next_card,
+    } = deck.draw()
+    else {
+        panic!("the last two cards are shuffled and split");
+    };
+    let current = Player::new(1, 0);
+    let next = Player::new(2, 1);
+    assert!(current.hand.is_empty());
+    assert!(next.hand.is_empty());
+    assert_ne!(current_card.id, next_card.id);
+    assert!(deck.cards.is_empty());
+    assert!(deck.discard.is_empty());
+}
+
+fn assert_fresh(player: &Player, id: u32, seat: u32) {
+    assert_eq!(player.id, id);
+    assert_eq!(player.seat_index, seat);
+    assert_eq!(player.points, 0);
+    assert!(!player.is_on_board);
+    assert!(player.hand.is_empty());
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → Player::new.
+/// Building a player leaves the 108-card deck and its 12 wilds alone.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_player_new() {
+    let deck = Deck::new();
+    assert_eq!(deck.cards.len(), deck_size());
+    assert_wilds(&deck.cards);
+    assert_eq!(
+        deck.cards
+            .iter()
+            .filter(|card| card.rank == Rank::Joker)
+            .count(),
+        DECKS * JOKERS_PER_DECK
+    );
+
+    let player = Player::new(4, 3);
+    assert_fresh(&player, 4, 3);
+    assert_eq!(deck.cards.len(), deck_size());
+    assert_wilds(&deck.cards);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → draw → empty → Player::new.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_draw_empty_player_starts_empty() {
+    let mut deck = shuffled_deck();
+    let _drawn = drain_without_discard(&mut deck);
+    assert_eq!(deck.draw(), TurnDraw::Empty);
+
+    let player = Player::new(1, 0);
+    assert_fresh(&player, 1, 0);
+    assert_eq!(deck.draw(), TurnDraw::Empty);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → draw → empty reshuffle → Player::new.
+/// The recycled card and the discard top stay out of the new hand.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_draw_empty_reshuffle_player_starts_empty() {
+    let mut deck = shuffled_deck();
+    let mut held = Vec::new();
+    while deck.cards.len() > 1 {
+        held.push(ordinary(deck.draw()));
+    }
+    let last = deck.cards[0];
+    let top = held.pop().expect("held cards supply a discard top");
+    let mid = held.pop().expect("held cards supply a middle discard");
+    let under = held.pop().expect("held cards supply an under discard");
+    deck.discard = vec![under, mid, top];
+
+    let drawn = ordinary(deck.draw());
+    assert_eq!(drawn, last);
+    let recycled = ordinary(deck.draw());
+    assert_ne!(recycled.id, top.id);
+    assert!(recycled.id == under.id || recycled.id == mid.id);
+    assert_eq!(
+        recycled.is_wild(),
+        recycled.rank == Rank::Joker || recycled.rank == Rank::Two
+    );
+
+    let player = Player::new(1, 0);
+    assert_fresh(&player, 1, 0);
+    assert!(player
+        .hand
+        .iter()
+        .all(|card| card.id != recycled.id && card.id != top.id));
+    assert_eq!(deck.discard.as_slice(), &[top]);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → one draw, discard stays → Player::new.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_draw_nonempty_discard_player_starts_empty() {
+    let mut deck = shuffled_deck();
+    let mut pile = Vec::new();
+    for _ in 0..5 {
+        pile.push(ordinary(deck.draw()));
+    }
+    deck.discard = pile;
+    let discard_before = deck.discard.clone();
+    let drawn = ordinary(deck.draw());
+
+    let player = Player::new(3, 2);
+    assert_fresh(&player, 3, 2);
+    assert!(player.hand.iter().all(|card| card.id != drawn.id));
+    assert_eq!(deck.discard, discard_before);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → one draw-pile card, then the last discard → Player::new.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_draw_one_then_last_player_starts_empty() {
+    let mut deck = shuffled_deck();
+    let mut drawn = drain_without_discard(&mut deck);
+    let discard_card = drawn.pop().expect("drained deck still has a discard card");
+    let draw_card = drawn.pop().expect("drained deck still has a draw card");
+    deck.cards = vec![draw_card];
+    deck.discard = vec![discard_card];
+
+    assert_eq!(deck.draw(), TurnDraw::One(draw_card));
+    assert_eq!(deck.draw(), TurnDraw::LastCard(discard_card));
+
+    let player = Player::new(1, 0);
+    assert_fresh(&player, 1, 0);
+    assert!(player
+        .hand
+        .iter()
+        .all(|card| card.id != draw_card.id && card.id != discard_card.id));
+    assert_eq!(deck.draw(), TurnDraw::Empty);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → two ordinary draw-pile cards → Player::new.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_draw_two_pile_cards_player_starts_empty() {
+    let mut deck = shuffled_deck();
+    let mut drawn = drain_without_discard(&mut deck);
+    let second = drawn.pop().expect("drained deck still has a card");
+    let first = drawn.pop().expect("drained deck still has a second card");
+    deck.cards = vec![first, second];
+
+    assert_eq!(deck.draw(), TurnDraw::One(second));
+    assert_eq!(deck.draw(), TurnDraw::One(first));
+
+    let current = Player::new(1, 0);
+    let next = Player::new(2, 1);
+    assert_fresh(&current, 1, 0);
+    assert_fresh(&next, 2, 1);
+    assert!(current
+        .hand
+        .iter()
+        .all(|card| card.id != first.id && card.id != second.id));
+    assert!(next
+        .hand
+        .iter()
+        .all(|card| card.id != first.id && card.id != second.id));
     assert_eq!(deck.draw(), TurnDraw::Empty);
 }
