@@ -18,7 +18,9 @@ cargo test
 
 Headless tests in `push_core` that run shipped behaviors **together** through real engine APIs. Rule: [.cursor/rules/integration-chain.mdc](.cursor/rules/integration-chain.mdc).
 
-Suggested after Epic 1.8: Epic 1.9 chains (see [doc/PLAN_COMMENTARY.md](doc/PLAN_COMMENTARY.md)). Until then, Crucible scenarios in BACKLOG Epic 1.8 are the first multi-step suites.
+Current chain through deck generation: Suit → Rank → Card → `Deck::new`, named `test_suit_rank_card_deck_new_two_decks_two_jokers_each` (`push_core/tests/suit_rank_card_deck.rs`). It locks 2 decks × 2 jokers.
+
+Suggested after Epic 1.8: Epic 1.9 chains (see [doc/PLAN_COMMENTARY.md](doc/PLAN_COMMENTARY.md)). Until then, Crucible scenarios in BACKLOG Epic 1.8 are the later multi-step suites.
 
 ```bash
 cargo test -p push_core

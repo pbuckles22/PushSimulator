@@ -12,12 +12,12 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 
 *As the game engine, I want to define a playing card so that I have a foundational object for all game mechanics.*
 
-* \[ \] Write test test\_suit\_enum\_instantiation (Hearts, Diamonds, Clubs, Spades, None).  
-* \[ \] Implement Suit enum to pass test.  
-* \[ \] Write test test\_rank\_enum\_instantiation (Two through Ace, Joker).  
-* \[ \] Implement Rank enum to pass test.  
-* \[ \] Write test test\_card\_struct\_instantiation asserting a Card requires an id, suit, rank, and locked\_until\_turn.  
-* \[ \] Implement Card struct matching the Data Schema to pass test.
+* \[x\] Write test test\_suit\_enum\_instantiation (Hearts, Diamonds, Clubs, Spades, None).  
+* \[x\] Implement Suit enum to pass test.  
+* \[x\] Write test test\_rank\_enum\_instantiation (Two through Ace, Joker).  
+* \[x\] Implement Rank enum to pass test.  
+* \[x\] Write test test\_card\_struct\_instantiation asserting a Card requires an id, suit, rank, and locked\_until\_turn.  
+* \[x\] Implement Card struct matching the Data Schema to pass test.
 
 ### **User Story 1.1.2: Wild Card Identification**
 
@@ -34,10 +34,10 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 
 *As the game engine, I want to generate a standard "Push" deck so that players have the correct 108 cards to play with.*
 
-* \[ \] Write test test\_deck\_instantiation\_count asserting a new deck has exactly 108 cards.  
-* \[ \] Implement Deck struct and Deck::new() method with nested loops (2 decks x 52 cards \+ 4 Jokers) to pass test.  
-* \[ \] Write test test\_deck\_contains\_exact\_wild\_count asserting the new deck contains exactly 8 Twos and 4 Jokers.  
-* \[ \] Refactor Deck::new() if necessary to pass test.
+* \[x\] Write test test\_deck\_instantiation\_count asserting a new deck has exactly 108 cards.  
+* \[x\] Implement Deck struct and Deck::new() method with nested loops (2 decks x 52 cards \+ 4 Jokers) to pass test.  
+* \[x\] Write test test\_deck\_contains\_exact\_wild\_count asserting the new deck contains exactly 8 Twos and 4 Jokers.  
+* \[x\] Refactor Deck::new() if necessary to pass test.
 
 ### **User Story 1.1.4: Shuffling & Drawing**
 

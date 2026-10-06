@@ -15,6 +15,7 @@ Operating model: `.cursor/rules/` ship commands (UCPH, CMPH, SWAT), human check,
 ## Current
 
 - **Phase 1 / Sprint 1:** Epic 1.1–1.2 foundation — [doc/sprints/SPRINT_1.md](doc/sprints/SPRINT_1.md)
+- **Parked on `feature/1.1-card-definitions`:** 1.1.1 Card Definitions and 1.1.3 Deck Generation. **Next:** 1.1.2 Wild Card Identification.
 - **Full backlog:** [doc/BACKLOG.md](doc/BACKLOG.md)
 - **Commentary / deltas:** [doc/PLAN_COMMENTARY.md](doc/PLAN_COMMENTARY.md) (integration-chain Epic 1.9 suggested; Google export quirks)
 

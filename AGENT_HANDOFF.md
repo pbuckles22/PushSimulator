@@ -20,8 +20,9 @@
 
 ## Current state
 
-- **Ship:** Foundation scaffold on **`origin/feature/foundation-scaffold`** (not merged to `main`).
-- **Phase:** 1 — Rust core. **Next story:** Epic 1.1 Card Definitions.
+- **Ship:** Stories 1.1.1 (Card) and 1.1.3 (108-card deck, 4 jokers) on **`feature/1.1-card-definitions`** (not merged to `main`). Parent scaffold remains `origin/feature/foundation-scaffold @ 908d595`.
+- **Phase:** 1 — Rust core. **Next story:** 1.1.2 Wild Card Identification.
+- **Version:** no bump (workspace 0.1.0; not a product ship on `main`).
 - **Client path:** SwiftUI + UniFFI (not Flutter).
 - **Handoff:** Receiving agents get **`You are the receiving agent.`** as first line; brief is second person.
 
