@@ -56,7 +56,7 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 
 ## **Epic 1.2: Player State & Scoring**
 
-The 1.1.4 reshuffle lines are done. 1.2.1 is on `feature/1.2.1-player-init`. 1.2.2 is on `feature/1.2.2-deal-hands`. 1.2.3 is on `feature/1.2.3-pip-scoring`. 1.2.4.1 is on `feature/1.2.4-face-ace-scoring`.
+The 1.1.4 reshuffle lines are done. 1.2.1 is on `feature/1.2.1-player-init`. 1.2.2 is on `feature/1.2.2-deal-hands`. 1.2.3 is on `feature/1.2.3-pip-scoring`. 1.2.4.1 is on `feature/1.2.4-face-ace-scoring`. 1.2.5 is on `feature/1.2.5-wild-scoring`. Next is 1.2.6, only when asked. 1.2.4.2 and 1.2.4.3 stay deferred.
 
 ### **User Story 1.2.1: Player Initialization**
 
@@ -104,7 +104,7 @@ The 1.1.4 reshuffle lines are done. 1.2.1 is on `feature/1.2.1-player-init`. 1.2
 **1.2.4.3: Test gaps**
 
 * \[ \] Write a test that `deal_initial_hands` runs out of draw-pile cards. The panic is the same line as a successful pop, so `player.rs` at 100% line coverage does not cover a short deck.  
-* \[ \] Do not add a `should_panic` test for `get_penalty_value` on a Two or a joker. **1.2.5** and **1.2.6** replace that panic (wild 20, hand total). Face cards score 10 and an ace scores 15.  
+* \[ \] Do not add a `should_panic` test for `get_penalty_value` on a Two or a joker. **1.2.5** scores those 20. Hand total is **1.2.6**. Face cards score 10 and an ace scores 15.  
 * \[ \] Add a property test that the same card ids survive shuffle, draw, and a three-or-more reshuffle. Fixed scenarios already check this.  
 * \[ \] Doc-tests are 0. Add them only when a public function's rustdoc example is the lock.  
 * \[ \] `push_wasm` and `push_sim` have no tests. Tier 2 (viewer, iOS, multiplayer) stays in `TEST_PLAN.md` for later phases. This item does not start those.
@@ -113,8 +113,8 @@ The 1.1.4 reshuffle lines are done. 1.2.1 is on `feature/1.2.1-player-init`. 1.2
 
 *As the game engine, I want to calculate the massive penalty for wild cards so that players are properly punished for hoarding them.*
 
-* \[ \] Write test test\_score\_card\_wild passing a Two and a Joker, asserting each returns 20 points.  
-* \[ \] Update card.get\_penalty\_value() to handle Twos and Jokers to pass test.
+* \[x\] Write test test\_score\_card\_wild passing a Two and a Joker, asserting each returns 20 points.  
+* \[x\] Update card.get\_penalty\_value() to handle Twos and Jokers to pass test.
 
 ### **User Story 1.2.6: Total Hand Calculation**
 

@@ -82,12 +82,14 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 * \[x\] Implement face card scoring.  
 * \[x\] Write test test\_score\_card\_ace asserting Aces return 15 points.  
 * \[x\] Implement Ace scoring.  
-* \[ \] Write test test\_score\_card\_wild asserting 2s and Jokers return 20 points.  
-* \[ \] Implement wild card scoring.  
+* \[x\] Write test test\_score\_card\_wild asserting 2s and Jokers return 20 points.  
+* \[x\] Implement wild card scoring.  
 * \[ \] Write test test\_calculate\_hand\_total asserting hand sums correctly.  
 * \[ \] Implement calculate\_hand\_penalty() iterating over hand.
 
-Face and ace scoring is sprint story **1.2.4.1**, parked on `feature/1.2.4-face-ace-scoring`. The two items below are the 2026-10-06 test review. They are not the next red/green.
+Wild scoring is sprint story **1.2.5**, parked on `feature/1.2.5-wild-scoring`. The two hand-total lines above are sprint story **1.2.6**. They stay under this heading because the Google export listed every penalty step on story 1.2.3. The sprint order is pips, then face and ace, then wilds, then the hand total.
+
+Face and ace scoring is sprint story **1.2.4.1**, parked on `feature/1.2.4-face-ace-scoring`. **1.2.4.2** and **1.2.4.3** below are the 2026-10-06 test review. They are not the next red/green. Next is **1.2.6**, only when asked.
 
 **1.2.4.2: Tech debt**
 
@@ -101,7 +103,7 @@ Face and ace scoring is sprint story **1.2.4.1**, parked on `feature/1.2.4-face-
 **1.2.4.3: Test gaps**
 
 * \[ \] Write a test that `deal_initial_hands` runs out of draw-pile cards. The panic is the same line as a successful pop, so `player.rs` at 100% line coverage does not cover a short deck.  
-* \[ \] Do not add a `should_panic` test for `get_penalty_value` on a Two or a joker. **1.2.5** and **1.2.6** replace that panic (wild 20, hand total). Face cards score 10 and an ace scores 15.  
+* \[ \] Do not add a `should_panic` test for `get_penalty_value` on a Two or a joker. **1.2.5** scores those 20. Hand total is **1.2.6**. Face cards score 10 and an ace scores 15.  
 * \[ \] Add a property test that the same card ids survive shuffle, draw, and a three-or-more reshuffle. Fixed scenarios already check this.  
 * \[ \] Doc-tests are 0. Add them only when a public function's rustdoc example is the lock.  
 * \[ \] `push_wasm` and `push_sim` have no tests. Tier 2 (viewer, iOS, multiplayer) stays in `TEST_PLAN.md` for later phases. This item does not start those.

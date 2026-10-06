@@ -1357,3 +1357,198 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_leaves_discard_face_ace_pen
     }
     assert_eq!(deck.cards.len(), deck_size() - 5 - 20);
 }
+
+const TWO_COUNT: usize = SUITS_PER_DECK * DECKS;
+const JOKER_COUNT: usize = JOKERS_PER_DECK * DECKS;
+
+fn count_wild_penalty(cards: &[Card]) -> (usize, usize) {
+    let mut twos = 0;
+    let mut jokers = 0;
+    for card in cards {
+        match card.rank {
+            Rank::Two => {
+                assert_eq!(card.get_penalty_value(), 20);
+                assert!(card.is_wild());
+                twos += 1;
+            }
+            Rank::Joker => {
+                assert_eq!(card.get_penalty_value(), 20);
+                assert!(card.is_wild());
+                jokers += 1;
+            }
+            _ => {}
+        }
+    }
+    (twos, jokers)
+}
+
+fn wild_scores_in_play(players: &[Player], deck: &Deck) -> (usize, usize) {
+    let mut twos = 0;
+    let mut jokers = 0;
+    for player in players {
+        assert_eq!(player.points, 0);
+        let (hand_twos, hand_jokers) = count_wild_penalty(&player.hand);
+        twos += hand_twos;
+        jokers += hand_jokers;
+    }
+    let (draw_twos, draw_jokers) = count_wild_penalty(&deck.cards);
+    let (discard_twos, discard_jokers) = count_wild_penalty(&deck.discard);
+    (twos + draw_twos + discard_twos, jokers + draw_jokers + discard_jokers)
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal one card at a time → wild penalty.
+/// The first two cards dealt are a two and a joker. Each scores 20. Every other two and joker scores 20.
+/// Pips still score 5. A 10 through King still scores 10. An ace still scores 15.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_wild_penalty() {
+    let mut deck = shuffled_deck();
+    stack_next_draws(&mut deck.cards, &[Rank::Two, Rank::Joker]);
+    let players = deal_table(&mut deck, 2);
+
+    assert_eq!(players[0].hand[0].rank, Rank::Two);
+    assert_eq!(players[0].hand[0].get_penalty_value(), 20);
+    assert!(players[0].hand[0].is_wild());
+    assert_eq!(players[1].hand[0].rank, Rank::Joker);
+    assert_eq!(players[1].hand[0].suit, Suit::None);
+    assert_eq!(players[1].hand[0].get_penalty_value(), 20);
+    assert!(players[1].hand[0].is_wild());
+    assert_eq!(wild_scores_in_play(&players, &deck), (TWO_COUNT, JOKER_COUNT));
+    assert_eq!(pip_scores_in_play(&players, &deck), PIP_COUNT);
+    assert_eq!(
+        face_ace_scores_in_play(&players, &deck),
+        (FACE_COUNT, ACE_COUNT)
+    );
+    for player in &players {
+        assert_eq!(player.points, 0);
+    }
+    assert!(deck.discard.is_empty());
+    assert_eq!(deck.cards.len(), deck_size() - 20);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → one card at a time around three players → wild penalty.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_three_hands_wild_penalty() {
+    let mut deck = shuffled_deck();
+    stack_next_draws(&mut deck.cards, &[Rank::Two, Rank::Joker, Rank::Two]);
+    let players = deal_table(&mut deck, 3);
+
+    assert_eq!(players[0].hand[0].rank, Rank::Two);
+    assert_eq!(players[1].hand[0].rank, Rank::Joker);
+    assert_eq!(players[1].hand[0].suit, Suit::None);
+    assert_eq!(players[2].hand[0].rank, Rank::Two);
+    assert_ne!(players[0].hand[0].id, players[2].hand[0].id);
+    assert_eq!(players[0].hand[0].get_penalty_value(), 20);
+    assert_eq!(players[1].hand[0].get_penalty_value(), 20);
+    assert_eq!(players[2].hand[0].get_penalty_value(), 20);
+    for player in &players {
+        assert_eq!(player.hand.len(), 10);
+        assert_eq!(player.points, 0);
+    }
+    assert_eq!(wild_scores_in_play(&players, &deck), (TWO_COUNT, JOKER_COUNT));
+    assert_eq!(pip_scores_in_play(&players, &deck), PIP_COUNT);
+    assert_eq!(
+        face_ace_scores_in_play(&players, &deck),
+        (FACE_COUNT, ACE_COUNT)
+    );
+    assert!(deck.discard.is_empty());
+    assert_eq!(deck.cards.len(), deck_size() - 30);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal around → draw a two → wild penalty.
+/// Scoring the drawn two leaves the hands where the deal put them and does not change player points.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_then_draw_two_penalty() {
+    let mut deck = shuffled_deck();
+    let players = deal_table(&mut deck, 2);
+    let hands = hands_of(&players);
+    let two = take_rank(&mut deck.cards, Rank::Two);
+    deck.cards.push(two);
+
+    let drawn = ordinary(deck.draw());
+
+    assert_eq!(drawn.id, two.id);
+    assert_eq!(drawn.rank, Rank::Two);
+    assert_eq!(drawn.get_penalty_value(), 20);
+    assert_eq!(drawn.get_penalty_value(), 20);
+    assert!(drawn.is_wild());
+    assert_hands_kept(&players, &hands);
+    none_hold(&players, drawn.id);
+    let (twos, jokers) = wild_scores_in_play(&players, &deck);
+    assert_eq!(twos + 1, TWO_COUNT);
+    assert_eq!(jokers, JOKER_COUNT);
+    assert_eq!(pip_scores_in_play(&players, &deck), PIP_COUNT);
+    assert_eq!(
+        face_ace_scores_in_play(&players, &deck),
+        (FACE_COUNT, ACE_COUNT)
+    );
+    for player in &players {
+        assert_eq!(player.points, 0);
+    }
+    assert_eq!(deck.cards.len(), deck_size() - 21);
+    assert!(deck.discard.is_empty());
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal around → draw a joker → wild penalty.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_then_draw_joker_penalty() {
+    let mut deck = shuffled_deck();
+    let players = deal_table(&mut deck, 2);
+    let hands = hands_of(&players);
+    let joker = take_rank(&mut deck.cards, Rank::Joker);
+    deck.cards.push(joker);
+
+    let drawn = ordinary(deck.draw());
+
+    assert_eq!(drawn.id, joker.id);
+    assert_eq!(drawn.rank, Rank::Joker);
+    assert_eq!(drawn.suit, Suit::None);
+    assert_eq!(drawn.get_penalty_value(), 20);
+    assert!(drawn.is_wild());
+    assert_hands_kept(&players, &hands);
+    none_hold(&players, drawn.id);
+    let (twos, jokers) = wild_scores_in_play(&players, &deck);
+    assert_eq!(twos, TWO_COUNT);
+    assert_eq!(jokers + 1, JOKER_COUNT);
+    assert_eq!(pip_scores_in_play(&players, &deck), PIP_COUNT);
+    assert_eq!(
+        face_ace_scores_in_play(&players, &deck),
+        (FACE_COUNT, ACE_COUNT)
+    );
+    for player in &players {
+        assert_eq!(player.points, 0);
+    }
+    assert_eq!(deck.cards.len(), deck_size() - 21);
+    assert!(deck.discard.is_empty());
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal around, discard stays → wild penalty.
+/// A two and a joker left on the discard pile still score 20 and stay there.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_leaves_discard_wild_penalty() {
+    let mut deck = shuffled_deck();
+    let two = take_rank(&mut deck.cards, Rank::Two);
+    let joker = take_rank(&mut deck.cards, Rank::Joker);
+    let mut discard: Vec<Card> = deck.cards.drain(0..3).collect();
+    discard.push(two);
+    discard.push(joker);
+    deck.discard = discard.clone();
+    let players = deal_table(&mut deck, 2);
+
+    assert_eq!(deck.discard, discard);
+    assert_eq!(two.get_penalty_value(), 20);
+    assert_eq!(joker.get_penalty_value(), 20);
+    assert_eq!(joker.suit, Suit::None);
+    for card in &discard {
+        none_hold(&players, card.id);
+    }
+    assert_eq!(wild_scores_in_play(&players, &deck), (TWO_COUNT, JOKER_COUNT));
+    assert_eq!(pip_scores_in_play(&players, &deck), PIP_COUNT);
+    assert_eq!(
+        face_ace_scores_in_play(&players, &deck),
+        (FACE_COUNT, ACE_COUNT)
+    );
+    for player in &players {
+        assert_eq!(player.points, 0);
+    }
+    assert_eq!(deck.cards.len(), deck_size() - 5 - 20);
+}

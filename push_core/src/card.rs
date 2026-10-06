@@ -44,7 +44,8 @@ impl Card {
         self.rank == Rank::Joker || self.rank == Rank::Two
     }
 
-    /// Penalty points for ranks 3 through ace. A two or a joker panics.
+    /// Penalty points for one card. Ranks 3–9 score 5, a 10 through King scores 10,
+    /// an ace scores 15, and a two or a joker scores 20.
     pub fn get_penalty_value(&self) -> u32 {
         match self.rank {
             Rank::Three
@@ -56,7 +57,7 @@ impl Card {
             | Rank::Nine => 5,
             Rank::Ten | Rank::Jack | Rank::Queen | Rank::King => 10,
             Rank::Ace => 15,
-            Rank::Two | Rank::Joker => panic!("wild penalty is a two or a joker"),
+            Rank::Two | Rank::Joker => 20,
         }
     }
 }
@@ -229,6 +230,53 @@ mod tests {
                 assert_eq!(card.rank, Rank::Ace);
                 assert_eq!(card.locked_until_turn, locked_until_turn);
             }
+        }
+    }
+
+    #[test]
+    fn test_score_card_wild() {
+        let suits = [Suit::Hearts, Suit::Diamonds, Suit::Clubs, Suit::Spades];
+        let mut id = 200u32;
+
+        for (index, suit) in suits.iter().copied().enumerate() {
+            for copy in 0..2u32 {
+                let locked_until_turn = (index as u32) + copy;
+                let card = Card {
+                    id,
+                    suit,
+                    rank: Rank::Two,
+                    locked_until_turn,
+                };
+
+                assert_eq!(card.get_penalty_value(), 20);
+                assert_eq!(card.get_penalty_value(), 20);
+                assert!(card.is_wild());
+                assert_eq!(card.id, id);
+                assert_eq!(card.suit, suit);
+                assert_eq!(card.rank, Rank::Two);
+                assert_eq!(card.locked_until_turn, locked_until_turn);
+                id += 1;
+            }
+        }
+
+        let joker_suits = [Suit::None, Suit::Hearts, Suit::Diamonds, Suit::Spades];
+        for (index, suit) in joker_suits.iter().copied().enumerate() {
+            let locked_until_turn = index as u32 + 3;
+            let card = Card {
+                id,
+                suit,
+                rank: Rank::Joker,
+                locked_until_turn,
+            };
+
+            assert_eq!(card.get_penalty_value(), 20);
+            assert_eq!(card.get_penalty_value(), 20);
+            assert!(card.is_wild());
+            assert_eq!(card.id, id);
+            assert_eq!(card.suit, suit);
+            assert_eq!(card.rank, Rank::Joker);
+            assert_eq!(card.locked_until_turn, locked_until_turn);
+            id += 1;
         }
     }
 }
