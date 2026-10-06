@@ -78,14 +78,33 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 
 * \[x\] Write test test\_score\_card\_pip asserting ranks 3-9 return 5 points.  
 * \[x\] Implement pip scoring in get\_penalty\_value().  
-* \[ \] Write test test\_score\_card\_face asserting 10-K returns 10 points.  
-* \[ \] Implement face card scoring.  
-* \[ \] Write test test\_score\_card\_ace asserting Aces return 15 points.  
-* \[ \] Implement Ace scoring.  
+* \[x\] Write test test\_score\_card\_face asserting 10-K returns 10 points.  
+* \[x\] Implement face card scoring.  
+* \[x\] Write test test\_score\_card\_ace asserting Aces return 15 points.  
+* \[x\] Implement Ace scoring.  
 * \[ \] Write test test\_score\_card\_wild asserting 2s and Jokers return 20 points.  
 * \[ \] Implement wild card scoring.  
 * \[ \] Write test test\_calculate\_hand\_total asserting hand sums correctly.  
 * \[ \] Implement calculate\_hand\_penalty() iterating over hand.
+
+Face and ace scoring is sprint story **1.2.4.1**, parked on `feature/1.2.4-face-ace-scoring`. The two items below are the 2026-10-06 test review. They are not the next red/green.
+
+**1.2.4.2: Tech debt**
+
+* \[ \] Seed `Deck::shuffle` in tests, or inject the rng, so the order check does not depend on `thread_rng` (`TECH_DEBT.md`).  
+* \[ \] Remove the uncalled arms, or make them real behavior: `reshuffle_discard` on an empty discard, `reshuffle_discard` putting a single card back, and `TurnDraw::Empty` after a reshuffle. `draw` does not reach those paths.  
+* \[ \] Keep one chain test that `Player::new` does not take a drawn card. The other "player starts empty" chains repeat that.  
+* \[ \] Add CI that runs `cargo test -p push_core`. The 2026-10-06 LLVM run (58 tests, 98.1% lines) stays a local measurement until a coverage gate is chosen.  
+* \[ \] Name the evidence sink in `TEST_PLAN.md`, or leave one explicit TBD.  
+* \[ \] Drop the unused `serde` dependency on `push_core`, or use it (`TECH_DEBT.md`).
+
+**1.2.4.3: Test gaps**
+
+* \[ \] Write a test that `deal_initial_hands` runs out of draw-pile cards. The panic is the same line as a successful pop, so `player.rs` at 100% line coverage does not cover a short deck.  
+* \[ \] Do not add a `should_panic` test for `get_penalty_value` on a Two or a joker. **1.2.5** and **1.2.6** replace that panic (wild 20, hand total). Face cards score 10 and an ace scores 15.  
+* \[ \] Add a property test that the same card ids survive shuffle, draw, and a three-or-more reshuffle. Fixed scenarios already check this.  
+* \[ \] Doc-tests are 0. Add them only when a public function's rustdoc example is the lock.  
+* \[ \] `push_wasm` and `push_sim` have no tests. Tier 2 (viewer, iOS, multiplayer) stays in `TEST_PLAN.md` for later phases. This item does not start those.
 
 ### **Epic 1.3: The "Push" & Draw Phase**
 

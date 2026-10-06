@@ -1186,3 +1186,174 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_leaves_discard_pip_penalty(
     assert_eq!(pip_scores_in_play(&players, &deck), PIP_COUNT);
     assert_eq!(deck.cards.len(), deck_size() - 4 - 20);
 }
+
+const FACE_COUNT: usize = 4 * SUITS_PER_DECK * DECKS;
+const ACE_COUNT: usize = SUITS_PER_DECK * DECKS;
+
+fn is_face(rank: Rank) -> bool {
+    matches!(rank, Rank::Ten | Rank::Jack | Rank::Queen | Rank::King)
+}
+
+fn count_face_penalty(cards: &[Card]) -> usize {
+    let faces: Vec<&Card> = cards.iter().filter(|card| is_face(card.rank)).collect();
+    for card in &faces {
+        assert_eq!(card.get_penalty_value(), 10);
+    }
+    faces.len()
+}
+
+fn count_ace_penalty(cards: &[Card]) -> usize {
+    let aces: Vec<&Card> = cards.iter().filter(|card| card.rank == Rank::Ace).collect();
+    for card in &aces {
+        assert_eq!(card.get_penalty_value(), 15);
+    }
+    aces.len()
+}
+
+fn face_ace_scores_in_play(players: &[Player], deck: &Deck) -> (usize, usize) {
+    let mut faces = 0;
+    let mut aces = 0;
+    for player in players {
+        assert_eq!(player.points, 0);
+        faces += count_face_penalty(&player.hand);
+        aces += count_ace_penalty(&player.hand);
+    }
+    faces += count_face_penalty(&deck.cards);
+    aces += count_ace_penalty(&deck.cards);
+    faces += count_face_penalty(&deck.discard);
+    aces += count_ace_penalty(&deck.discard);
+    (faces, aces)
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal one card at a time → face and ace penalty.
+/// The first five cards dealt are a 10, Jack, Queen, King, and Ace. Faces score 10. The ace scores 15.
+/// Every other 10 through King scores 10, and every other ace scores 15. Pips still score 5.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_face_ace_penalty() {
+    let mut deck = shuffled_deck();
+    stack_next_draws(
+        &mut deck.cards,
+        &[Rank::Ten, Rank::Jack, Rank::Queen, Rank::King, Rank::Ace],
+    );
+    let players = deal_table(&mut deck, 2);
+
+    assert_eq!(players[0].hand[0].rank, Rank::Ten);
+    assert_eq!(players[0].hand[0].get_penalty_value(), 10);
+    assert_eq!(players[1].hand[0].rank, Rank::Jack);
+    assert_eq!(players[1].hand[0].get_penalty_value(), 10);
+    assert_eq!(players[0].hand[1].rank, Rank::Queen);
+    assert_eq!(players[0].hand[1].get_penalty_value(), 10);
+    assert_eq!(players[1].hand[1].rank, Rank::King);
+    assert_eq!(players[1].hand[1].get_penalty_value(), 10);
+    assert_eq!(players[0].hand[2].rank, Rank::Ace);
+    assert_eq!(players[0].hand[2].get_penalty_value(), 15);
+    assert_eq!(
+        face_ace_scores_in_play(&players, &deck),
+        (FACE_COUNT, ACE_COUNT)
+    );
+    assert_eq!(pip_scores_in_play(&players, &deck), PIP_COUNT);
+    for player in &players {
+        assert_eq!(player.points, 0);
+    }
+    assert!(deck.discard.is_empty());
+    assert_eq!(deck.cards.len(), deck_size() - 20);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → one card at a time around three players → face and ace penalty.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_three_hands_face_ace_penalty() {
+    let mut deck = shuffled_deck();
+    stack_next_draws(
+        &mut deck.cards,
+        &[Rank::Ten, Rank::Jack, Rank::Queen, Rank::King, Rank::Ace],
+    );
+    let players = deal_table(&mut deck, 3);
+
+    assert_eq!(players[0].hand[0].rank, Rank::Ten);
+    assert_eq!(players[1].hand[0].rank, Rank::Jack);
+    assert_eq!(players[2].hand[0].rank, Rank::Queen);
+    assert_eq!(players[0].hand[1].rank, Rank::King);
+    assert_eq!(players[1].hand[1].rank, Rank::Ace);
+    assert_eq!(players[0].hand[0].get_penalty_value(), 10);
+    assert_eq!(players[1].hand[0].get_penalty_value(), 10);
+    assert_eq!(players[2].hand[0].get_penalty_value(), 10);
+    assert_eq!(players[0].hand[1].get_penalty_value(), 10);
+    assert_eq!(players[1].hand[1].get_penalty_value(), 15);
+    for player in &players {
+        assert_eq!(player.hand.len(), 10);
+        assert_eq!(player.points, 0);
+    }
+    assert_eq!(
+        face_ace_scores_in_play(&players, &deck),
+        (FACE_COUNT, ACE_COUNT)
+    );
+    assert_eq!(pip_scores_in_play(&players, &deck), PIP_COUNT);
+    assert!(deck.discard.is_empty());
+    assert_eq!(deck.cards.len(), deck_size() - 30);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal around → ordinary draw → face and ace penalty.
+/// Scoring the dealt cards leaves the hands and the draw pile where the deal and draw put them.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_then_draw_face_ace_penalty() {
+    let mut deck = shuffled_deck();
+    let players = deal_table(&mut deck, 2);
+    let hands = hands_of(&players);
+    let next_top = top_cards(&deck.cards, 1)[0];
+
+    let drawn = ordinary(deck.draw());
+
+    assert_eq!(drawn, next_top);
+    if is_face(drawn.rank) {
+        assert_eq!(drawn.get_penalty_value(), 10);
+    } else if drawn.rank == Rank::Ace {
+        assert_eq!(drawn.get_penalty_value(), 15);
+    } else if is_pip(drawn.rank) {
+        assert_eq!(drawn.get_penalty_value(), 5);
+    }
+    assert_hands_kept(&players, &hands);
+    none_hold(&players, drawn.id);
+    let (faces, aces) = face_ace_scores_in_play(&players, &deck);
+    let drawn_faces = usize::from(is_face(drawn.rank));
+    let drawn_aces = usize::from(drawn.rank == Rank::Ace);
+    assert_eq!(faces + drawn_faces, FACE_COUNT);
+    assert_eq!(aces + drawn_aces, ACE_COUNT);
+    let scored = pip_scores_in_play(&players, &deck);
+    let drawn_pips = usize::from(is_pip(drawn.rank));
+    assert_eq!(scored + drawn_pips, PIP_COUNT);
+    for player in &players {
+        assert_eq!(player.points, 0);
+    }
+    assert_eq!(deck.cards.len(), deck_size() - 21);
+    assert!(deck.discard.is_empty());
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal around, discard stays → face and ace penalty.
+/// A king and an ace left on the discard pile still score and stay there.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_leaves_discard_face_ace_penalty() {
+    let mut deck = shuffled_deck();
+    let king = take_rank(&mut deck.cards, Rank::King);
+    let ace = take_rank(&mut deck.cards, Rank::Ace);
+    let mut discard: Vec<Card> = deck.cards.drain(0..3).collect();
+    discard.push(king);
+    discard.push(ace);
+    deck.discard = discard.clone();
+    let players = deal_table(&mut deck, 2);
+
+    assert_eq!(deck.discard, discard);
+    assert_eq!(king.get_penalty_value(), 10);
+    assert_eq!(ace.get_penalty_value(), 15);
+    for card in &discard {
+        none_hold(&players, card.id);
+    }
+    assert_eq!(
+        face_ace_scores_in_play(&players, &deck),
+        (FACE_COUNT, ACE_COUNT)
+    );
+    assert_eq!(pip_scores_in_play(&players, &deck), PIP_COUNT);
+    for player in &players {
+        assert_eq!(player.points, 0);
+    }
+    assert_eq!(deck.cards.len(), deck_size() - 5 - 20);
+}

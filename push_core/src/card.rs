@@ -44,7 +44,7 @@ impl Card {
         self.rank == Rank::Joker || self.rank == Rank::Two
     }
 
-    /// Penalty points for ranks 3 through 9.
+    /// Penalty points for ranks 3 through ace. A two or a joker panics.
     pub fn get_penalty_value(&self) -> u32 {
         match self.rank {
             Rank::Three
@@ -54,13 +54,9 @@ impl Card {
             | Rank::Seven
             | Rank::Eight
             | Rank::Nine => 5,
-            Rank::Two
-            | Rank::Ten
-            | Rank::Jack
-            | Rank::Queen
-            | Rank::King
-            | Rank::Ace
-            | Rank::Joker => panic!("pip penalty is ranks 3 through 9"),
+            Rank::Ten | Rank::Jack | Rank::Queen | Rank::King => 10,
+            Rank::Ace => 15,
+            Rank::Two | Rank::Joker => panic!("wild penalty is a two or a joker"),
         }
     }
 }
@@ -181,6 +177,58 @@ mod tests {
                 locked_until_turn,
             };
             assert_eq!(card.get_penalty_value(), 5);
+        }
+    }
+
+    #[test]
+    fn test_score_card_face() {
+        let ranks = [Rank::Ten, Rank::Jack, Rank::Queen, Rank::King];
+        let suits = [Suit::Hearts, Suit::Diamonds, Suit::Clubs, Suit::Spades];
+        let mut id = 20u32;
+
+        for (rank_index, rank) in ranks.iter().copied().enumerate() {
+            for (suit_index, suit) in suits.iter().copied().enumerate() {
+                let locked_until_turn = (rank_index + suit_index) as u32;
+                let card = Card {
+                    id,
+                    suit,
+                    rank,
+                    locked_until_turn,
+                };
+
+                assert_eq!(card.get_penalty_value(), 10);
+                assert_eq!(card.get_penalty_value(), 10);
+                assert_eq!(card.id, id);
+                assert_eq!(card.suit, suit);
+                assert_eq!(card.rank, rank);
+                assert_eq!(card.locked_until_turn, locked_until_turn);
+                id += 1;
+            }
+        }
+    }
+
+    #[test]
+    fn test_score_card_ace() {
+        let suits = [Suit::Hearts, Suit::Diamonds, Suit::Clubs, Suit::Spades];
+
+        for (index, suit) in suits.iter().copied().enumerate() {
+            for copy in 0..2u32 {
+                let id = 100 + (index as u32) * 2 + copy;
+                let locked_until_turn = copy + 1;
+                let card = Card {
+                    id,
+                    suit,
+                    rank: Rank::Ace,
+                    locked_until_turn,
+                };
+
+                assert_eq!(card.get_penalty_value(), 15);
+                assert_eq!(card.get_penalty_value(), 15);
+                assert_eq!(card.id, id);
+                assert_eq!(card.suit, suit);
+                assert_eq!(card.rank, Rank::Ace);
+                assert_eq!(card.locked_until_turn, locked_until_turn);
+            }
         }
     }
 }

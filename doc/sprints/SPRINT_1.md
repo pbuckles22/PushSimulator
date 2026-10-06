@@ -56,7 +56,7 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 
 ## **Epic 1.2: Player State & Scoring**
 
-The 1.1.4 reshuffle lines are done. 1.2.1 is on `feature/1.2.1-player-init`. 1.2.2 is on `feature/1.2.2-deal-hands`. 1.2.3 is on `feature/1.2.3-pip-scoring`.
+The 1.1.4 reshuffle lines are done. 1.2.1 is on `feature/1.2.1-player-init`. 1.2.2 is on `feature/1.2.2-deal-hands`. 1.2.3 is on `feature/1.2.3-pip-scoring`. 1.2.4.1 is on `feature/1.2.4-face-ace-scoring`.
 
 ### **User Story 1.2.1: Player Initialization**
 
@@ -85,10 +85,29 @@ The 1.1.4 reshuffle lines are done. 1.2.1 is on `feature/1.2.1-player-init`. 1.2
 
 *As the game engine, I want to calculate the value of high cards so that appropriate penalties are applied.*
 
-* \[ \] Write test test\_score\_card\_face passing a 10, Jack, Queen, and King, asserting each returns 10 points.  
-* \[ \] Update card.get\_penalty\_value() to handle face cards to pass test.  
-* \[ \] Write test test\_score\_card\_ace passing an Ace, asserting it returns 15 points.  
-* \[ \] Update card.get\_penalty\_value() to handle Aces to pass test.
+**1.2.4.1** is the scoring below, parked on `feature/1.2.4-face-ace-scoring`. **1.2.4.2** and **1.2.4.3** are the 2026-10-06 test review. They are not the next red/green.
+
+* \[x\] Write test test\_score\_card\_face passing a 10, Jack, Queen, and King, asserting each returns 10 points.  
+* \[x\] Update card.get\_penalty\_value() to handle face cards to pass test.  
+* \[x\] Write test test\_score\_card\_ace passing an Ace, asserting it returns 15 points.  
+* \[x\] Update card.get\_penalty\_value() to handle Aces to pass test.
+
+**1.2.4.2: Tech debt**
+
+* \[ \] Seed `Deck::shuffle` in tests, or inject the rng, so the order check does not depend on `thread_rng` (`TECH_DEBT.md`).  
+* \[ \] Remove the uncalled arms, or make them real behavior: `reshuffle_discard` on an empty discard, `reshuffle_discard` putting a single card back, and `TurnDraw::Empty` after a reshuffle. `draw` does not reach those paths.  
+* \[ \] Keep one chain test that `Player::new` does not take a drawn card. The other "player starts empty" chains repeat that.  
+* \[ \] Add CI that runs `cargo test -p push_core`. The 2026-10-06 LLVM run (58 tests, 98.1% lines) stays a local measurement until a coverage gate is chosen.  
+* \[ \] Name the evidence sink in `TEST_PLAN.md`, or leave one explicit TBD.  
+* \[ \] Drop the unused `serde` dependency on `push_core`, or use it (`TECH_DEBT.md`).
+
+**1.2.4.3: Test gaps**
+
+* \[ \] Write a test that `deal_initial_hands` runs out of draw-pile cards. The panic is the same line as a successful pop, so `player.rs` at 100% line coverage does not cover a short deck.  
+* \[ \] Do not add a `should_panic` test for `get_penalty_value` on a Two or a joker. **1.2.5** and **1.2.6** replace that panic (wild 20, hand total). Face cards score 10 and an ace scores 15.  
+* \[ \] Add a property test that the same card ids survive shuffle, draw, and a three-or-more reshuffle. Fixed scenarios already check this.  
+* \[ \] Doc-tests are 0. Add them only when a public function's rustdoc example is the lock.  
+* \[ \] `push_wasm` and `push_sim` have no tests. Tier 2 (viewer, iOS, multiplayer) stays in `TEST_PLAN.md` for later phases. This item does not start those.
 
 ### **User Story 1.2.5: Wild Card Scoring**
 

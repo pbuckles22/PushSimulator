@@ -15,6 +15,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 | Branch | Role |
 |--------|------|
 | **`main`** | Epic 1.1 complete — cards, wilds, 108-card deck, shuffle, draw, empty-deck leftovers |
+| **`feature/1.2.4-face-ace-scoring`** | Parked. 10 through King score 10. An ace scores 15. Not merged |
 | **`feature/1.2.3-pip-scoring`** | Parked. Ranks 3–9 score 5 points. Not merged |
 | **`feature/1.2.2-deal-hands`** | Parked. Deal 10 cards to each of 2 or more players, one card at a time. Not merged |
 | **`feature/1.2.1-player-init`** | Parked. `Player::new` starts empty. Not merged |
@@ -44,7 +45,9 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Item | Detail |
 |------|--------|
-| **1.2.4** | Face card and ace scoring — start only when asked |
+| **1.2.5** | Wild card scoring — a two and a joker score 20, only when asked |
+| **1.2.4.2** | Tech debt from the 2026-10-06 test review — not the next red/green |
+| **1.2.4.3** | Test gaps from that review — not the next red/green |
 
 ---
 

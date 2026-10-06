@@ -25,7 +25,7 @@ This is the durable home for technical debt across sessions. Handoff notes can m
 
 (Isolated + workaround + revisit trigger.)
 
-- **Tests / Low:** `test_deck_shuffle` uses `thread_rng` and asserts the order changed (`push_core/src/deck.rs`). A 108-card identity shuffle is not a practical failure. Revisit if that test flakes.
+- **Tests / Low:** `test_deck_shuffle` uses `thread_rng` and asserts the order changed (`push_core/src/deck.rs`). A 108-card identity shuffle is not a practical failure. Revisit if that test flakes. Tracked as plan item **1.2.4.2** with the rest of the 2026-10-06 test-review debt. Test gaps from that review are **1.2.4.3**.
 - **Code / Low:** `push_core` declares `serde` and does not use it yet. Leave it for a later serialize story.
 - **Docs / Low:** `docs/` is the original Google export and still says an empty draw pile always leaves the discard top. The living rule is `doc/requirements/GAME_RULES.md`. Leave the export as the snapshot.
 
