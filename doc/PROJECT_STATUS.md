@@ -6,7 +6,7 @@
 
 ## Summary
 
-Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. Shuffle and draw are parked on `feature/1.1.4-shuffle-draw` (not merged to `main`).
+Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. Epic 1.1 (cards, wilds, deck, shuffle, draw) is on `main`.
 
 ---
 
@@ -14,11 +14,11 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Branch | Role |
 |--------|------|
-| **`feature/1.1.4-shuffle-draw`** | 1.1.4 Shuffling and drawing — **not merged** to `main` |
-| **`feature/1.1.2-wild-cards`** | 1.1.2 Wild Card Identification — **not merged** to `main` |
-| **`feature/1.1-card-definitions`** | 1.1.1 Card Definitions and 1.1.3 Deck Generation — **not merged** to `main` |
-| **`feature/foundation-scaffold`** | Foundation scaffold — pushed, **not merged** to `main` |
-| **`main`** | Empty / not yet populated on remote |
+| **`main`** | Epic 1.1 first land — cards, wilds, 108-card deck, shuffle, draw |
+| **`feature/1.1.4-shuffle-draw`** | Kept. Same history as this land. Do not merge again |
+| **`feature/1.1.2-wild-cards`** | Ancestor of `main`. Do not merge separately |
+| **`feature/1.1-card-definitions`** | Ancestor of `main`. Do not merge separately |
+| **`feature/foundation-scaffold`** | Ancestor of `main`. Do not merge separately |
 
 ---
 
@@ -40,8 +40,8 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Item | Detail |
 |------|--------|
-| **1.2.1** | Player initialization — `test_player_instantiation` first |
-| **Merge** | **CMPH** only when human wants `main` populated |
+| **1.2.1** | Player initialization — `test_player_instantiation` first, only when asked |
+| **Epic 1.1** | Closed 2026-10-06. Discard-pile reshuffle stays deferred |
 
 ---
 

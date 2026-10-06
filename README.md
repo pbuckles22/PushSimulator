@@ -1,6 +1,6 @@
 # PushSimulator
 
-Rust-centric engine and simulator for the card game **Push**. Agentic Cursor foundation from AgenticTemplate.
+Rust-centric engine and simulator for the card game **Push**. Agentic Cursor foundation from AgenticTemplate. Epic 1.1 (cards, wilds, a 108-card deck, shuffle, and draw) is on `main`. Next is player state.
 
 **Repository:** https://github.com/pbuckles22/PushSimulator
 

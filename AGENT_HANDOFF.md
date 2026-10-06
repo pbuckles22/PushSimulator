@@ -20,8 +20,8 @@
 
 ## Current state
 
-- **Ship:** Story 1.1.4 (`shuffle` and `draw`; empty deck returns `None`) on **`feature/1.1.4-shuffle-draw`** (not merged to `main`). Prior park: `origin/feature/1.1.2-wild-cards @ 71c50c7`.
-- **Phase:** 1 — Rust core. **Next story:** 1.2.1 Player initialization.
+- **Ship:** Epic 1.1 closed on **`main`** (first land). `feature/1.1.4-shuffle-draw` is kept. Prior park: `origin/feature/1.1.2-wild-cards @ 71c50c7`.
+- **Phase:** 1 — Rust core. **Next story:** 1.2.1 Player initialization, only when asked.
 - **Version:** no bump (workspace 0.1.0; not a product ship on `main`).
 - **Client path:** SwiftUI + UniFFI (not Flutter).
 - **Handoff:** Receiving agents get **`You are the receiving agent.`** as first line; brief is second person.

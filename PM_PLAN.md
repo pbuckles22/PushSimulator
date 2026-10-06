@@ -14,8 +14,9 @@ Operating model: `.cursor/rules/` ship commands (UCPH, CMPH, SWAT), human check,
 
 ## Current
 
-- **Phase 1 / Sprint 1:** Epic 1.1–1.2 foundation — [doc/sprints/SPRINT_1.md](doc/sprints/SPRINT_1.md)
-- **Parked on `feature/1.1.4-shuffle-draw`:** 1.1.4 Shuffling and drawing (plus 1.1.1, 1.1.3, and 1.1.2 on the parent branches). **Next:** 1.2.1 Player initialization.
+- **Phase 1 / Sprint 1:** Epic 1.2 foundation — [doc/sprints/SPRINT_1.md](doc/sprints/SPRINT_1.md)
+- **Epic 1.1:** **Status: complete** (2026-10-06). Cards, wilds, 108-card deck, shuffle, and draw. First land on `main`.
+- **Next:** 1.2.1 Player initialization, only when asked. Empty-deck reshuffle from the discard pile stays deferred until a discard pile exists.
 - **Full backlog:** [doc/BACKLOG.md](doc/BACKLOG.md)
 - **Commentary / deltas:** [doc/PLAN_COMMENTARY.md](doc/PLAN_COMMENTARY.md) (integration-chain Epic 1.9 suggested; Google export quirks)
 

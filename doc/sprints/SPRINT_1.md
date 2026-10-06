@@ -8,6 +8,8 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 
 ## **Epic 1.1: Primitives & Deck Management**
 
+**Status:** complete — 2026-10-06
+
 ### **User Story 1.1.1: Card Definitions**
 
 *As the game engine, I want to define a playing card so that I have a foundational object for all game mechanics.*
