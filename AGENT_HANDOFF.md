@@ -20,7 +20,7 @@
 
 ## Current state
 
-- **Ship:** Epic 1.1 is complete on **`main`**. `feature/1.1.4-empty-reshuffle` is kept. `feature/1.1.4-shuffle-draw` is kept. Prior park: `origin/feature/1.1.2-wild-cards @ 71c50c7`.
+- **Ship:** Epic 1.1 is complete on **`main` @ 248075f**. `feature/1.1.4-empty-reshuffle` is kept. `feature/1.1.4-shuffle-draw` is kept. Prior park: `origin/feature/1.1.2-wild-cards @ 71c50c7`.
 - **Phase:** 1 — Rust core. **Next story:** 1.2.1 Player initialization, only when asked. Empty draw with three or more discard cards leaves the top card. One leftover card goes to the current player. Two leftover cards are shuffled and split between the current player and the next.
 - **Version:** no bump (workspace 0.1.0; not a user-visible build).
 - **Client path:** SwiftUI + UniFFI (not Flutter).
