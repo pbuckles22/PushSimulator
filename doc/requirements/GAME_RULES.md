@@ -34,7 +34,13 @@ Before you play, you need to know the two ways to group your cards:
 2. Deal **10 cards** to each player.  
 3. Place the remaining cards face-down in the center to create the **Draw Pile**.  
 4. Flip the top card of the Draw Pile face-up next to it. This starts the **Discard Pile**.  
-   * *Empty Deck Rule:* If the Draw Pile ever runs out before a round is over, simply take the Discard Pile (leaving the top card in place), shuffle it, and place it face-down to create a new Draw Pile.
+   * *Empty Deck Rule:* If the Draw Pile runs out before a round is over, use the Discard Pile as follows.
+     * **Three or more cards:** Leave the top card. Shuffle the rest face-down to make a new Draw Pile. The player whose turn it is draws one card.
+     * **Two cards:** Shuffle them. Give one to the player whose turn it is and one to the next player. This is rare, because almost every card is already in a hand or on the table. With three or more players, only those two players receive a card.
+     * **One card:** It goes to the player whose turn it is.
+     * **No cards:** There is nothing to draw.
+     * If the Draw Pile still has cards, draw those one at a time. A short Discard Pile does not change that. One card on the Draw Pile and one on the Discard Pile means the current player takes the Draw Pile card, and the Discard Pile card waits for a later draw.
+     * Two cards still on the Draw Pile are not dealt out together.
 
 ## **How to Play Your Turn**
 

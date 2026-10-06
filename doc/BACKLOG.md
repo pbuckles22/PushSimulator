@@ -10,7 +10,7 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 
 ### **Epic 1.1: Primitives & Deck Management**
 
-**Status:** sprint slice landed 2026-10-06. The two reshuffle lines under 1.1.4 are still open and block Epic 1.2.
+**Status:** complete — 2026-10-06. Cards, wilds, a 108-card deck, shuffle, and draw. An empty draw pile leaves the top card when three or more discards remain. One leftover card goes to the current player. Two leftover cards are shuffled and split between the current player and the next.
 
 **User Story 1.1.1: Card Definitions**
 
@@ -51,8 +51,10 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 * \[x\] Add rand crate and implement deck.shuffle().  
 * \[x\] Write test test\_deck\_draw\_reduces\_count asserting drawing 1 card reduces deck size.  
 * \[x\] Implement deck.draw() returning Option\<Card\>.  
-* \[ \] Write test test\_deck\_draw\_empty\_reshuffles asserting drawing from an empty deck takes the discard pile (minus top card), shuffles, and draws.  
-* \[ \] Implement empty deck reshuffle logic.
+* \[x\] Write test test\_deck\_draw\_empty\_reshuffles asserting an empty draw pile with three or more discard cards takes that pile except its top card, shuffles, and draws.  
+* \[x\] Implement that reshuffle.  
+* \[x\] Write test test\_deck\_draw\_last\_card\_goes\_to\_current and test\_deck\_draw\_last\_two\_split. One leftover card goes to the current player. Two leftover cards are shuffled and split between the current player and the next.  
+* \[x\] Implement the one-card and two-card leftovers. Both piles empty still draws nothing.
 
 ### **Epic 1.2: Player State & Scoring**
 

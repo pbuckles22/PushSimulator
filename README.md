@@ -1,6 +1,6 @@
 # PushSimulator
 
-Rust-centric engine and simulator for the card game **Push**. Agentic Cursor foundation from AgenticTemplate. Epic 1.1’s sprint slice (cards, wilds, a 108-card deck, shuffle, and draw) is on `main`. Next is the empty-deck reshuffle, then player state.
+Rust-centric engine and simulator for the card game **Push**. Agentic Cursor foundation from AgenticTemplate. Epic 1.1 is on `main`: cards, wilds, a 108-card deck, shuffle, draw, and the empty-deck leftovers. Next, when asked, is player state.
 
 **Repository:** https://github.com/pbuckles22/PushSimulator
 

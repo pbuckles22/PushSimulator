@@ -6,7 +6,7 @@
 
 ## Summary
 
-Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. Epic 1.1’s sprint slice (cards, wilds, deck, shuffle, draw) is on `main`. The empty-deck reshuffle is still open and blocks 1.2.
+Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. Epic 1.1 is complete on `main`: cards, wilds, a 108-card deck, shuffle, draw, and the empty-deck leftovers.
 
 ---
 
@@ -14,7 +14,8 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Branch | Role |
 |--------|------|
-| **`main`** | Epic 1.1 first land — cards, wilds, 108-card deck, shuffle, draw |
+| **`main`** | Epic 1.1 complete — cards, wilds, 108-card deck, shuffle, draw, empty-deck leftovers |
+| **`feature/1.1.4-empty-reshuffle`** | Kept. Empty-deck leftovers |
 | **`feature/1.1.4-shuffle-draw`** | Kept. Same history as this land. Do not merge again |
 | **`feature/1.1.2-wild-cards`** | Ancestor of `main`. Do not merge separately |
 | **`feature/1.1-card-definitions`** | Ancestor of `main`. Do not merge separately |
@@ -32,7 +33,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 - **1.1.1** Suit, Rank, Card (`id`, `suit`, `rank`, `locked_until_turn`)
 - **1.1.3** `Deck::new`: 2 decks × 52 cards + 2 jokers per deck (4 jokers, 8 twos, 108 cards)
 - **1.1.2** `Card::is_wild`: jokers and twos are wild; other ranks are not. A new deck has 12 wilds.
-- **1.1.4** `Deck::shuffle` and `Deck::draw`: order changes, one draw leaves 107 cards, an empty deck returns `None`.
+- **1.1.4** `Deck::shuffle` and `Deck::draw`. Order changes, one draw leaves 107 cards. Three or more discard cards leave the top card and reshuffle. One leftover card goes to the current player. Two leftover cards are shuffled and split. Both piles empty draws nothing.
 
 ---
 
@@ -40,8 +41,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Item | Detail |
 |------|--------|
-| **1.1.4 reshuffle** | Empty draw recycles the discard pile (minus the top card), shuffles, and draws. Blocks 1.2 |
-| **1.2.1** | Player initialization — do not start until the reshuffle lines are done |
+| **1.2.1** | Player initialization — start only when asked |
 
 ---
 

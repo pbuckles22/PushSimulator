@@ -50,12 +50,13 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 * \[x\] Implement deck.shuffle() using a random number generator to pass test.  
 * \[x\] Write test test\_deck\_draw\_reduces\_count asserting drawing 1 card reduces deck size from 108 to 107\.  
 * \[x\] Implement deck.draw() returning Option\<Card\> to pass test.  
-* \[x\] Write test test\_deck\_draw\_empty asserting drawing from an empty deck returns None.  
-* \[x\] Ensure deck.draw() handles empty vectors gracefully to pass test.
+* \[x\] Write test test\_deck\_draw\_empty asserting drawing from an empty deck returns nothing when both piles are empty.  
+* \[x\] Ensure deck.draw() handles empty vectors gracefully to pass test.  
+* \[x\] One leftover discard card goes to the current player. Two leftover cards are shuffled and split between the current player and the next. Three or more still leave the top card (`doc/requirements/GAME_RULES.md`).
 
 ## **Epic 1.2: Player State & Scoring**
 
-Blocked until `doc/BACKLOG.md` story 1.1.4’s two reshuffle lines are done.
+The 1.1.4 reshuffle lines are done. Start 1.2.1 only when asked.
 
 ### **User Story 1.2.1: Player Initialization**
 
