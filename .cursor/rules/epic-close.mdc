@@ -1,0 +1,38 @@
+---
+description: Epic close is SWAT — reviews and release only with SWAT work and permission
+globs: "PM_PLAN.md,doc/PROJECT_STATUS.md,AGENT_HANDOFF.md,doc/requirements/**/*.md"
+alwaysApply: true
+---
+
+# Epic close — SWAT (permission and the SWAT work)
+
+**Do not run SWAT** (review swarm, epic status close, GitHub Release) until **both:**
+
+1. **SWAT work is the job this turn.** List: [wrap-on-command.mdc](wrap-on-command.mdc).
+2. **Permission this conversation** — they typed **SWAT**, **or** this **CMPH** is the epic’s last in-scope story (that CMPH includes SWAT).
+
+A mid-epic CMPH is not SWAT permission. Do not start the swarm because the epic looks done.
+
+## Quality gates (SWAT)
+
+Run [.cursor/rules/handoff-checklist.mdc](handoff-checklist.mdc) → *SWAT / epic close only*:
+
+1. Code review (code-reviewer)
+2. Dead code (dead-code-remover, when that skill is available) on the epic’s new surface
+3. Tech debt evaluation (tech-debt-evaluator) → update `TECH_DEBT.md` as needed
+4. Tests / coverage (merge-ready command from `AGENT_HANDOFF.md` / `TEST_PLAN.md`)
+5. Project readiness (optional / N/A)
+6. Security review when relevant (security-reviewer)
+7. Tier 2 when the epic’s behavior requires it
+
+Do **not** treat epic close as docs-only and skip review, debt, or tests.
+
+## Then status close
+
+Follow [.cursor/skills/pm-governance/SKILL.md](../skills/pm-governance/SKILL.md) → *Epic close*: mark the epic complete in `PM_PLAN`, sync `doc/PROJECT_STATUS.md` and `AGENT_HANDOFF.md` → *Current state*, write the close note, commit and push the **feature branch**. Merge to `main` only with CMPH permission ([no-auto-merge-main.mdc](no-auto-merge-main.mdc)). **After merge to `main`:** if [RELEASE.md](../../RELEASE.md) says this product cuts epic releases, cut a **GitHub Release** for the public version. Do not wait to be asked. Do not upload to a store until the product doc says it is distributable. See [doc/VERSIONING.md](../../doc/VERSIONING.md).
+
+## Do not auto-do on close
+
+- Start the next epic’s implementation unless the user already asked or **Next** already directed it.
+- Retire prototypes or other deferred debt unless the user or plan **Next** says so this session.
+- Re-open explicitly cut features.

@@ -1,0 +1,14 @@
+[package]
+name = "push_wasm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "WebAssembly bindings for the Push debug table viewer"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+push_core = { workspace = true }
+wasm-bindgen = { workspace = true }

@@ -1,0 +1,18 @@
+---
+description: Two-tier tests, evidence logs, and harvest into Tier 1 / CI
+alwaysApply: true
+---
+
+# Testing
+
+- **Tier 1:** Fast feedback (unit tests, headless checks, local runs). Document the exact command in TEST_PLAN.md. Keep green after any logic or test change.
+- **Tier 2:** Integration, browser, device, or E2E when behavior spans a real runtime. Document commands in TEST_PLAN.md.
+- **New behavior:** Red → green at every tier that covers the change. See TEST_TDD.md and the tester skill.
+- **Integration chain:** A green test of the new piece is not the gate. Add or extend a test that runs the shipped behaviors **together** (1 through this ship) through their real interfaces, and run that suite in merge-ready. See [integration-chain.mdc](integration-chain.mdc).
+- **Verify before asking the human:** Build/test output is not what they will check. Run the documented install/run step, then use the ask shape in [human-check.mdc](human-check.mdc). Quote measured numbers in chat when a session produced them.
+- **Evidence (non-noise logs):** New behavior emits **discrete, structured, named events** on meaningful transitions (lifecycle, decision, gate trip, error). No per-tick / per-frame spam. Silent success is a defect.
+- **Evidence sink:** Those events must land in a **durable file** (or the stack’s documented player/runtime log) that a human can open and an agent can Read. Document the path in TEST_PLAN.md. Debugger-only `Trace`/`Debug`/`console.log` with no file is **not** evidence. **Skip** when there is no runtime (this template, docs-only). Scripts/bookmarklets/twitchurl*/DJ tools: only if they already have a log; do not invent a compile counter or a log they cannot use.
+- **Harvest:** A human/Tier 2 find or evidence line that can be expressed without the runtime **must** become a Tier 1 test (named after the scenario) before the next ship. Logs are the input to TDD/CI, not a substitute for a pass/fail check.
+- **Merge-ready:** Run the command in AGENT_HANDOFF.md before commit when the project uses that gate. If the repo already has a Markdown linter config, run it when the ship edits Markdown. Do not add a linter only to satisfy this line.
+- **CI:** Automation runs the headless suite. A build that needs a local device, SDK, or private binary stays on the machine that has it. Keep that split in the workflow file. Do not treat the runtime log as the regression suite.
+- **Compile counter (compiling stacks only):** If merge-ready **compiles** (dotnet, cargo, go, native, etc.), **count every compile** that gate runs — typically the test/Debug compile **and** the Release/production compile. A green test run does **not** replace the Release compile. Persist a **local, gitignored** counter and inject it into the binary’s informational version when the toolchain allows. Skip IDE/design-time rebuilds. Fresh clones start from the seed. **Skip this entirely** when the repo does not compile (scripts, bookmarklets, twitchurl*, DJ tools, docs-only).

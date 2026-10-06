@@ -1,0 +1,24 @@
+---
+description: Never add Cursor co-author or Made-with trailers to git commits or PRs
+alwaysApply: true
+---
+
+# No Cursor commit attribution
+
+## Forbidden
+
+- Do **not** add `Co-authored-by: Cursor` (or any `cursoragent@cursor.com`) to commits.
+- Do **not** add `Made-with: Cursor` or similar attribution trailers.
+- Do **not** pass `--trailer` for Cursor/co-author attribution on `git commit`.
+- Do **not** put Cursor attribution in PR bodies.
+
+## Required
+
+- Commit with subject/body only (e.g. `git commit -m "..."` or `-F file`).
+- Author/committer stay the repo user’s configured `user.name` / `user.email`.
+- If the environment still injects a Cursor trailer, strip it before finishing (amend only when amend rules allow; otherwise a new clean commit or history rewrite the user requested).
+
+## Product toggle (human)
+
+IDE: **Cursor Settings → Agents → Attribution** → turn **Commit Attribution** and **PR Attribution** off.
+CLI: `~/.cursor/cli-config.json` → `"attribution": { "attributeCommitsToAgent": false, "attributePRsToAgent": false }`.

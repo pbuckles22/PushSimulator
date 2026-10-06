@@ -1,0 +1,44 @@
+---
+description: Run the real install step, ask in player language, wait for PASS before commit
+alwaysApply: true
+---
+
+# Human check
+
+Build and test output is not what the human will check. Applies once AGENT_HANDOFF documents an install or run step. Until that step exists, do not ask them to try a runtime that is not there.
+
+## Before asking for Tier 2, smoke, install, or “try it”
+
+1. **Run** the documented install or run step. Do not only paste the command.
+2. **Confirm** the thing they will open is the build you just produced (version string, timestamp, or the marker TEST_PLAN names).
+3. **Then** ask, in chat and in any handoff **Next**, with all of these:
+   1. **Where they are** — which screen, device, or mode.
+   2. **What they should see** — in plain words.
+   3. **What they should do** — a few numbered steps.
+   4. **PASS if** / **FAIL if** — one line each, something they can show you.
+   5. **Evidence** — the few named log lines that must match that result (secondary).
+   6. **Version** — the marker they use to confirm this build, when the product has one.
+4. If this slice is **not** the full behavior, say that in the ask so they do not fail a thing you did not ship.
+
+Copy the same shape into TEST_PLAN for that story. **Next** must not say only “ask for smoke.”
+
+## After they answer
+
+Quote measured results in the chat reply when the session produced numbers (this run vs the prior run, and a verdict). “See the log” with no numbers is not a verdict. If there was no runtime session, write `Measured: none this turn`.
+
+Archive the detail in the project’s log or TEST_PLAN. The chat line comes first.
+
+## Before commit of a runtime ship
+
+- **Wait** for **PASS** or an explicit waive.
+- **Do not** commit, merge, or call the epic closed on that ship until they confirm.
+- Docs-only and rules-only commits that do not change what they run are exempt.
+- **Do not** start the next story while this ship is still uncommitted. Waiting is a pause ([one-story-one-ship.mdc](one-story-one-ship.mdc)).
+- A find that can be expressed without the runtime **must** become a Tier 1 test named after the scenario before the next ship ([testing.mdc](testing.mdc)).
+
+## Do not
+
+- Ask while the installed or running copy is still the older build.
+- Treat an artifact directory alone as “installed” unless AGENT_HANDOFF says that directory is what they run.
+- Commit the ship “so they can test from main.” Deliver the build locally. Commit after PASS.
+- Stack story N+1 onto dirty WIP because N is blocked on the human.

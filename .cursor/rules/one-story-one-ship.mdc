@@ -1,0 +1,33 @@
+---
+description: One PM story per branch/commit cycle — never stack the next feature on uncommitted WIP
+alwaysApply: true
+---
+
+# One story, one ship (hard rule)
+
+**Do not** implement multiple PM_PLAN stories (or unrelated features) in one uncommitted working tree.
+
+## Required cycle
+
+For each story / coherent ship:
+
+1. **Branch** for that story only (`feature/<story-id>-short-topic` when an id exists — not epic-wide dumping grounds).
+2. **Implement** that story only.
+3. **Gate** — merge-ready from AGENT_HANDOFF. If the project has a human/Tier 2 check, that check is part of the gate.
+4. **Commit** and **push the feature branch**. A user-visible ship bumps the public version in this same change ([pm-versioning.mdc](pm-versioning.mdc)).
+5. **Merge to `main` only after CMPH permission** ([no-auto-merge-main.mdc](no-auto-merge-main.mdc)). **Only then** start the next story (new branch from updated `main` / clean tree).
+
+## Forbidden
+
+- Starting story **N+1** while story **N** is still uncommitted.
+- Treating “waiting on the user” (merge permission, smoke, install, try-it, review) as idle time to code the next feature. That wait is a **pause**.
+- Epic- or multi-story branches that accumulate several ships before any commit.
+- One commit that mixes multiple distinct PM stories “because they’re related.”
+
+## Exception — ask the user first
+
+If stacking or a multi-story commit seems necessary (shared glue that cannot split, emergency hotfix on top of WIP), **stop and ask**. Do not invent an exception silently.
+
+Docs-only / rules-only commits that do not change the product binary may land without Tier 2; they still must not mix with an unfinished ship’s WIP unless the user agrees.
+
+Project overlays (install paths, smoke ritual) belong in a **separate** short rule — do not paste them here. The shared ask shape is [human-check.mdc](human-check.mdc). Merge permission is [no-auto-merge-main.mdc](no-auto-merge-main.mdc).

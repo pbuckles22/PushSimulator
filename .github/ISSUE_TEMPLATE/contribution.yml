@@ -1,0 +1,22 @@
+name: Contribution / task
+description: Propose work aligned with PM_PLAN and PROJECT_STATUS
+title: "[task] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read [CONTRIBUTING.md](../../CONTRIBUTING.md) and [doc/PROJECT_STATUS.md](../../doc/PROJECT_STATUS.md) first.
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Verifiable checks (tests, commands)
+    validations:
+      required: true

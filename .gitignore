@@ -1,0 +1,58 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE / editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Common build / output
+dist/
+build/
+out/
+coverage/
+*.tsbuildinfo
+.cache/
+
+# Rust
+target/
+**/*.rs.bk
+Cargo.lock.bak
+
+# WASM / viewer generated package
+viewer/pkg/
+viewer/test_status.json
+
+# Full-repo Gemini XML dump (script/Export-GeminiSnapshot.ps1)
+Gemini_Snapshot.txt
+Gemini_Snapshot_*.txt
+
+# Transient Gemini drop (keep README and empty dropzone marker)
+doc/gemini/*
+!doc/gemini/README.md
+!doc/gemini/dropzone/
+doc/gemini/dropzone/*
+!doc/gemini/dropzone/.gitkeep
+
+# Local compile counter. Never commit.
+build_number.txt
+
+# Local handoff notes (keep template _template.md and README in repo)
+.cursor/handoff/handoff-*.md
+.cursor/handoff/*-handoff-*.md
+
+# Optional second location for session handoff narratives (see AGENT_HANDOFF.md).
+doc/handoff/HANDOFF-*.md
+doc/handoff/*-HANDOFF-*.md

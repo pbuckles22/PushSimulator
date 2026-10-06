@@ -1,0 +1,36 @@
+---
+description: Project context — apply in every session
+alwaysApply: true
+---
+
+# PushSimulator
+
+Document toolchain in AGENT_HANDOFF.md and TEST_PLAN.md. **Do not recopy hard rules into this file.**
+
+**Tracked truth:** PM_PLAN.md, AGENT_HANDOFF.md, TEST_PLAN.md, TECH_DEBT.md, RISKS.md, RELEASE.md, INCIDENTS.md, doc/PROJECT_STATUS.md, doc/ARCHITECTURE.md, doc/BACKLOG.md. Skills in `.cursor/skills/`.
+
+## Project invariants
+
+- Game rules and state live only in `push_core`. Do not reimplement rules in WASM, sim, or UI.
+- Phase 1 is strict TDD on `push_core` per `doc/sprints/SPRINT_1.md` and `doc/BACKLOG.md`.
+- Long-term client is **SwiftUI + UniFFI**, not Flutter. Early visual debug is **WASM** (`viewer/` + `push_wasm`).
+- Prefer real interfaces for integration chains (see `integration-chain.mdc`).
+- Google raw dump stays in `docs/`; organized truth is under `doc/`. Do not overwrite either blindly.
+
+## Hard rules (one file each — read those)
+
+| Failure mode | Rule |
+|--------------|------|
+| Docs or handoff prose before they can run the change | `wrap-on-command.mdc` |
+| Next story while current is uncommitted / waiting on a human | `one-story-one-ship.mdc` |
+| Merge to `main` without CMPH permission | `no-auto-merge-main.mdc` |
+| Human ask with no install step, or commit before PASS | `human-check.mdc` |
+| Public version guessed, or a number that goes backwards | `pm-versioning.mdc` |
+| Cursor commit/PR attribution | `no-cursor-commit-attribution.mdc` |
+| Tiers, evidence logs, harvest into tests | `testing.mdc` + `TEST_TDD.md` |
+| One piece green while chain 1..X is untested | `integration-chain.mdc` |
+| Debugger-only Trace as “evidence” | `testing.mdc` → *Evidence sink* |
+| Compiling stack skips a compile / +BUILD | `testing.mdc` → *Compile counter* |
+| Handoff / epic close | `wrap-on-command.mdc`, `handoff-checklist.mdc`, `epic-close.mdc` |
+| Gemini drop | `gemini-handoff.mdc` |
+| Branch / commit / push | `github-feature-workflow` skill + AGENT_HANDOFF Git workflow |

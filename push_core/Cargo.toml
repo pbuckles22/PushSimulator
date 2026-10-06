@@ -1,0 +1,15 @@
+[package]
+name = "push_core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Headless rules, state machine, and game engine for Push"
+
+[dependencies]
+rand = { workspace = true }
+serde = { workspace = true }
+
+[lib]
+name = "push_core"
+path = "src/lib.rs"

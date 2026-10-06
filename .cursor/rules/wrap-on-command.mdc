@@ -1,0 +1,49 @@
+---
+description: UCPH parks the feature branch; CMPH lands main; SWAT is epic close
+alwaysApply: true
+---
+
+# Ship commands — UCPH vs CMPH vs SWAT
+
+The user runs the product, not the docs. When the change is runnable, do not spend the turn on plan, status, or handoff prose before they have something to run.
+
+Close-out words name the **work**. Green tests are not permission.
+
+| Command | Permission to | What the agent does |
+|---------|---------------|---------------------|
+| **UCPH** | Park WIP on the **feature branch** (no `main`) | After the human check **PASS** (or an explicit waive): confirm evidence, harvest if needed, merge-ready gate, truth docs, **commit**, **`git push -u origin <feature-branch>`**, Receiver brief. Does **not** merge, delete the branch, or run reviewer skills. |
+| **CMPH** | Land this ship on `main` | Same truth, docs, and tests as UCPH, then **merge to `main`** and **push `origin main`**. **Keep** the feature branch. Does **not** run reviewer skills. |
+| **CMPHD** | Land on `main` and **delete** the feature branch | Same as CMPH, then delete local and remote. Only this command (or an explicit “delete the branch”) may delete. |
+| **SWAT** | Close the epic | code-reviewer; dead-code-remover when that skill is available; tech-debt-evaluator; security-reviewer only if the epic touched credentials, logging, networking, or files; merge-ready gate; then [epic-close.mdc](epic-close.mdc). Does **not** merge a mid-epic story by itself. |
+
+**UCPH** = update docs, commit, push the feature branch, handoff. Synonyms: “park the branch”, “docs commit push handoff”. **Not** merge permission.
+
+**WRAP** / “land it” / “merge to main” / “ship to main” = **CMPH** (keep the branch). **CMPHD** = the same land, then delete. After they say it, do not ask “merge?” again.
+
+**Do not merge** until both are true: the CMPH work above is done or running this turn, **and** they granted CMPH permission this conversation. See [no-auto-merge-main.mdc](no-auto-merge-main.mdc).
+
+**Do not run SWAT** until both are true: that work is the job this turn, **and** they typed **SWAT**, or this CMPH is the epic’s last in-scope story (that CMPH includes SWAT). A mid-epic CMPH or UCPH is not SWAT permission.
+
+## Fast loop (default)
+
+1. Code plus red/green for the piece, and an integration test that runs it together with the shipped chain it belongs to ([integration-chain.mdc](integration-chain.mdc)).
+2. The merge-ready command in AGENT_HANDOFF. If the stack compiles, count every documented compile ([testing.mdc](testing.mdc)).
+3. If this ship is user-visible, bump the public version in the same change ([pm-versioning.mdc](pm-versioning.mdc)). Docs-only ships do not bump.
+4. Run the documented install or run step.
+5. Ask with the shape in [human-check.mdc](human-check.mdc).
+
+Nothing else. No plan essay, no reviewer skills, no handoff note, until they say **UCPH**, **CMPH**, or **SWAT**.
+
+## Still mandatory inside the fast loop
+
+- Human **PASS** (or an explicit waive) before commit, when the ship changes what they run ([human-check.mdc](human-check.mdc)).
+- A named Tier 1 test for any lock that can be expressed without the runtime ([testing.mdc](testing.mdc)).
+- The integration chain for the behaviors this change sits in, not only the new unit test ([integration-chain.mdc](integration-chain.mdc)).
+- Measured numbers in chat when a runtime session produced them. “See the log” is not a verdict.
+
+## Forbidden
+
+- Reviewer, dead-code, or tech-debt skills on a mid-epic **UCPH** or **CMPH**.
+- Handoff or status prose in the same turn as a fix, unless they said **UCPH**, **CMPH**, or **SWAT**.
+- Treating **UCPH** as permission to merge `main`.
+- Using “the docs are not updated yet” to delay a build they can run.

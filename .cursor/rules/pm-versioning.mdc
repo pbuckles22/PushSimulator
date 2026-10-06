@@ -1,0 +1,34 @@
+---
+description: Public version follows the plan — ship counter, never backwards
+alwaysApply: true
+---
+
+# Plan-coordinate versioning
+
+The public version is how a person confirms the build they are running is the one you just produced. Full policy: [doc/VERSIONING.md](../../doc/VERSIONING.md). Record the chosen scheme in `RELEASE.md`.
+
+Default when the product has a `PM_PLAN` and a user-visible build:
+
+`MAJOR.EPIC.COUNTER` with an optional fix slot: `MAJOR.EPIC.COUNTER.FIX`
+
+- **MAJOR** changes only for a from-scratch break that `RELEASE.md` names.
+- **EPIC** is the epic number in `PM_PLAN`.
+- **COUNTER** is a strictly increasing ship count **inside that epic**. It is not the story id. Story progress lives in `PM_PLAN` only. Start an epic at `MAJOR.N.1`. Each later ship raises the counter, whatever story it closes.
+- **FIX** is a correction after that ship and before the next: append `.1`, `.2`, and so on.
+- **Never go backwards.** A lower number reads as “the new build did not load.”
+- Docs or rules with **no** story id do **not** bump.
+- The local compile counter (`build_number.txt`, `+N` on the binary informational version) stays **gitignored**. Do not write `+N` into the public version. Skip the counter when nothing compiles ([testing.mdc](testing.mdc)).
+
+Libraries and ops scripts may instead pick SemVer or a date scheme in `RELEASE.md`. Whichever scheme is chosen, a user-visible build still must not go backwards.
+
+## When a story is the ship
+
+1. Read `PM_PLAN`. Use this repo’s story ids only.
+2. Read the **shipped** public version. The new number must be greater. Never reuse it and never lower it.
+3. If the story id is unclear, ask before writing the number.
+4. In the same change as the ship: set the version, mark the story when its exit is actually done, and refresh `doc/PROJECT_STATUS.md` plus AGENT_HANDOFF *Current state*. Say the version in the summary.
+
+## Releases
+
+- **Private / smoke:** every user-visible ship, including fix slots.
+- **GitHub Release:** when `RELEASE.md` says this product cuts epic releases, cut one on SWAT after that close is on `main`. Tag the public version. Do not wait to be asked. Do not upload to a store until the product doc says it is distributable.

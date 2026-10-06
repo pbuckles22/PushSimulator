@@ -1,0 +1,40 @@
+---
+description: CMPH is a short land brief; SWAT and epic close run the review swarm
+globs: "**/.cursor/handoff/*.md,**/doc/handoff/*.md,AGENT_HANDOFF.md"
+alwaysApply: false
+---
+
+# Handoff checklist
+
+Cadence: [wrap-on-command.mdc](wrap-on-command.mdc). **UCPH** and **CMPH** do not run this swarm. **SWAT** / epic close does.
+
+## When to write a note
+
+- **UCPH:** parked on the feature branch. Receiver brief. **On** is not `main`. No Gates section.
+- **CMPH:** this ship is on `main`. Receiver brief. No Gates section.
+- **SWAT / epic close:** last in-scope story, or they typed **SWAT**. Gates below, then [epic-close.mdc](epic-close.mdc).
+- **Mid-flight:** label WIP, blocked, or needs decision. Do not write “ship complete.”
+
+**Git truth:** story, version, `origin/main @ sha` or not-merged, **Do not**, **Next**. The next agent trusts it ([context-bootstrapper](../skills/context-bootstrapper/SKILL.md)).
+
+**CMPH git:** commit, merge `main`, push `origin main`, **keep** the feature branch unless they typed **CMPHD** ([no-auto-merge-main.mdc](no-auto-merge-main.mdc)).
+
+## SWAT / epic close only (not on UCPH or mid-epic CMPH)
+
+1. **Code review** — code-reviewer. PASS/WARN/FAIL under **Code review**.
+2. **Dead code** — dead-code-remover when that skill is available.
+3. **Tech debt** — tech-debt-evaluator. Promote a persistent “Do first” item into `TECH_DEBT.md`.
+4. **Tests** — merge-ready command from AGENT_HANDOFF. Note the result under **Tests**.
+5. **Project readiness** — optional, or N/A.
+6. **Security** — only if the epic touched credentials, logging, remote access, networking, or files.
+7. **Tier 2** — already done per story when the behavior required it. Do not re-run the whole epic unless a gate is missing.
+
+Then status docs, and a GitHub Release when RELEASE.md says so ([epic-close.mdc](epic-close.mdc)).
+
+**Receiver brief in chat** — [`.cursor/handoff/_template.md`](../handoff/_template.md).
+
+**Receiver framing (mandatory):** First chat line: **`You are the receiving agent.`** Body uses second person (**You** start Epic …; **You** do not re-merge …). Never instruct the receiver to “write a handoff” or “UCPH” — that describes the *leaving* agent’s job.
+
+**Filename:** `doc/handoff/NNNN-HANDOFF-YYYY-MM-DD_HHmm.md` (never reuse `NNNN`).
+
+Gates belong in the **SWAT file only**, not in a mid-epic CMPH chat.

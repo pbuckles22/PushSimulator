@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Push — Debug Table</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Phase 1b: add selfthinker/CSS-Playing-Cards when cards render -->
+</head>
+<body>
+  <header class="toolbar">
+    <h1>Push Debug Table</h1>
+    <div class="toolbar-actions">
+      <button id="btn-load" type="button">Load WASM</button>
+      <button id="btn-play" type="button" disabled>Play bots</button>
+      <button id="btn-step" type="button" disabled>Step</button>
+    </div>
+    <p id="wasm-status" class="status">WASM not loaded</p>
+  </header>
+
+  <main class="layout">
+    <section class="felt" aria-label="Table">
+      <div class="seat seat-north" data-seat="1">
+        <h2>Bot 1</h2>
+        <div class="hand" id="hand-1"></div>
+        <div class="melds" id="melds-1"></div>
+      </div>
+      <div class="center">
+        <div class="pile" id="draw-pile">Draw</div>
+        <div class="pile discard" id="discard-pile">Discard</div>
+      </div>
+      <div class="seat seat-south" data-seat="0">
+        <h2>Bot 0</h2>
+        <div class="hand" id="hand-0"></div>
+        <div class="melds" id="melds-0"></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="panel" aria-label="TDD status">
+        <h2>TDD / Integration</h2>
+        <p class="hint">Polls <code>test_status.json</code> when a watch script writes it.</p>
+        <dl id="tdd-stats">
+          <div><dt>Green</dt><dd id="tdd-green">—</dd></div>
+          <div><dt>Red</dt><dd id="tdd-red">—</dd></div>
+          <div><dt>Last run</dt><dd id="tdd-last">—</dd></div>
+          <div><dt>Chains</dt><dd id="tdd-chains">—</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel" aria-label="Action log">
+        <h2>Action log</h2>
+        <pre id="action-log" class="log"></pre>
+      </section>
+    </aside>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+---
+description: Transient doc/gemini/ folder for an external LLM. Create it if missing.
+globs: "doc/gemini/**"
+alwaysApply: true
+---
+
+# Gemini handoff folder (`doc/gemini/`)
+
+`doc/gemini/` is a **transient scratch drop** for handing files to an external LLM and bringing output back. It is **not canonical**. Live source and tracked docs are the source of truth. Working files are disposable. Keep `README.md` tracked.
+
+**Upload size: 10 files** at `doc/gemini/` root. Pack files stay **flat** in that root. `dropzone/` does not count. Most packs are troubleshooting and should **fill all 10 with code**. More source is better. Gathering more than 10 is valid; combine before upload (below).
+
+Before a new pack, delete every root file except `README.md`. Do not stack on the previous pack. After writing, count the root upload files. On a troubleshooting pack, `README.md` stays on disk because it is tracked, and it is not one of the 10.
+
+### `dropzone/` (inbound only)
+
+- Keep **`doc/gemini/dropzone/`** always (create it empty if missing).
+- **Never delete the `dropzone` folder** on reload.
+- **May delete files inside `dropzone/`** when wiping for a new pack or after folding a reply.
+- Replies land **in** `dropzone/`. They do **not** count toward the 10.
+
+## Pick one pack (do not mix)
+
+### Conceptual
+
+The ask is a design or policy question and does not need source to answer.
+
+1. Reload clean: keep `README.md`, keep empty `dropzone/`, remove other root pack files.
+2. Write `CONTEXT.md` (the question, the locks, the reply shape).
+3. Upload **`README.md` + `CONTEXT.md` only.** Do not fill the remaining slots with code.
+
+### Troubleshooting (default)
+
+The ask is a bug, a wrong result, or any question about why code does what it does.
+
+1. Reload clean: keep `README.md` on disk, keep empty `dropzone/`, remove other root pack files.
+2. Copy the source the question depends on, by **base filename** (prefix if two share a name). Live paths stay canonical. Tests that lock the behavior count as code.
+3. Fill **10 code files**. Do not stop early to leave room for notes.
+4. `README.md` and `CONTEXT.md` are **not** part of this upload. Do not spend a slot on them. A short header comment on the first code file is enough when the filenames would hide the ask.
+5. Do **not** copy `Gemini_Snapshot.txt` into this folder.
+
+**Upload:** the 10 code files. Leave `README.md` in the folder. Do not upload it.
+
+### More than 10 files
+
+Keep every source the question needs. Combine related files into one upload file **per side** until the root upload is 10.
+
+A side is one cluster: one caller, one policy, or the tests that lock that cluster. Do not mash every extra file into one blob.
+
+Each combined file:
+
+- Starts with a short context for **that side only**: live paths, what the side decides, and what must stay unchanged.
+- Then each file in that side, separated by a filename heading.
+- Uses a side name (`Policy.md`, `LockTests.md`), not `CONTEXT.md`.
+
+Uncombined files stay as their own copies. After combining, the upload root is 10 files.
+
+### Repo-to-text (full dump)
+
+The user said **repo to text**, **full dump**, **snapshot**, or **upload the repo**.
+
+1. Run `script/Export-GeminiSnapshot.ps1` at the repo root. It writes gitignored `Gemini_Snapshot.txt`.
+2. Reload clean: keep `README.md`, keep empty `dropzone/` (clear its files only), remove other root pack files.
+3. Copy that dump into this folder as `Gemini_Snapshot.txt`. It **counts as one file**.
+4. Add `CONTEXT.md` (the review ask).
+5. Do **not** also copy source files. Those files are already inside the dump.
+
+Upload: `doc/gemini/Gemini_Snapshot.txt` + `CONTEXT.md`.
+
+## After replies
+
+Fold accepted results into canonical code and docs. Clear `dropzone/` contents when done. **Leave the folder.** The root pack may be wiped on the next reuse. Do not treat gemini contents as durable state.

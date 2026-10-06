@@ -1,0 +1,32 @@
+---
+description: Integration tests must prove shipped pieces 1..X still work together
+alwaysApply: true
+---
+
+# Integration chain
+
+A red/green test of one piece proves that piece. It does not prove the pieces still work **together**.
+
+When behavior is added or changed, name the chain it sits in: the already-shipped behaviors that call it, feed it, or run after it (1 through this ship). Add or extend an integration test that runs that chain through the **real** interfaces. The test fails if any step breaks, including a step you did not edit.
+
+A new piece joins that chain in the **same** ship as its own unit test. Do not leave “we will wire them later” as the only proof they cooperate.
+
+## Required
+
+1. **Name the chain** in the test name (which behaviors, in order).
+2. **Call through.** The neighbors this change integrates with stay real. A mock of the neighbor you just changed is not an integration test.
+3. **Run the suite** that contains those chain tests in the merge-ready gate, not only the new unit test.
+4. **Keep old chains.** A new piece’s unit test does not replace a chain that already covers 1..X.
+
+Headless chain tests are the default so CI can run them. If a boundary exists only in a device, browser, or other runtime, TEST_PLAN names that run, and a headless test still covers the decision when the decision can be expressed without that runtime.
+
+## Still required
+
+Isolated red/green for the piece you are changing. The chain does not replace it. See [testing.mdc](testing.mdc) and TEST_TDD.md.
+
+## Forbidden
+
+- Calling the ship done because the new unit test is green and the chain was not run.
+- Mocking out the neighbor this change is supposed to integrate with, then labeling that an integration test.
+- Deleting or skipping an older chain test because the new piece has its own test.
+- Treating a runtime log or a single manual pass as the proof that 1..X still work together.
