@@ -20,8 +20,8 @@
 
 ## Current state
 
-- **Ship:** Epic 1.1 closed on **`main`** (first land). `feature/1.1.4-shuffle-draw` is kept. Prior park: `origin/feature/1.1.2-wild-cards @ 71c50c7`.
-- **Phase:** 1 — Rust core. **Next story:** 1.2.1 Player initialization, only when asked.
+- **Ship:** Epic 1.1 sprint slice is on **`main`**. `feature/1.1.4-shuffle-draw` is kept. Prior park: `origin/feature/1.1.2-wild-cards @ 71c50c7`.
+- **Phase:** 1 — Rust core. **Next story:** the two open 1.1.4 backlog lines (empty-deck reshuffle). **Do not start 1.2** until those lines are done.
 - **Version:** no bump (workspace 0.1.0; not a product ship on `main`).
 - **Client path:** SwiftUI + UniFFI (not Flutter).
 - **Handoff:** Receiving agents get **`You are the receiving agent.`** as first line; brief is second person.

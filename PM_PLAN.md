@@ -14,9 +14,9 @@ Operating model: `.cursor/rules/` ship commands (UCPH, CMPH, SWAT), human check,
 
 ## Current
 
-- **Phase 1 / Sprint 1:** Epic 1.2 foundation — [doc/sprints/SPRINT_1.md](doc/sprints/SPRINT_1.md)
-- **Epic 1.1:** **Status: complete** (2026-10-06). Cards, wilds, 108-card deck, shuffle, and draw. First land on `main`.
-- **Next:** 1.2.1 Player initialization, only when asked. Empty-deck reshuffle from the discard pile stays deferred until a discard pile exists.
+- **Phase 1 / Sprint 1:** finish the open 1.1.4 reshuffle lines, then Epic 1.2 — [doc/sprints/SPRINT_1.md](doc/sprints/SPRINT_1.md)
+- **Epic 1.1:** sprint slice landed on `main` (2026-10-06). The two backlog reshuffle lines are still open and block 1.2.
+- **Next:** `test_deck_draw_empty_reshuffles`, then the empty-deck reshuffle. 1.2.1 waits until those are done.
 - **Full backlog:** [doc/BACKLOG.md](doc/BACKLOG.md)
 - **Commentary / deltas:** [doc/PLAN_COMMENTARY.md](doc/PLAN_COMMENTARY.md) (integration-chain Epic 1.9 suggested; Google export quirks)
 

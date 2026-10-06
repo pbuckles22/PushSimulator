@@ -10,7 +10,7 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 
 ### **Epic 1.1: Primitives & Deck Management**
 
-**Status:** complete — 2026-10-06. The two reshuffle lines under 1.1.4 stay open until a discard pile exists.
+**Status:** sprint slice landed 2026-10-06. The two reshuffle lines under 1.1.4 are still open and block Epic 1.2.
 
 **User Story 1.1.1: Card Definitions**
 

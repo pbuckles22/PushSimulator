@@ -55,6 +55,8 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 
 ## **Epic 1.2: Player State & Scoring**
 
+Blocked until `doc/BACKLOG.md` story 1.1.4’s two reshuffle lines are done.
+
 ### **User Story 1.2.1: Player Initialization**
 
 *As the game engine, I want to create a Player so that I can track their hand, board status, and score.*

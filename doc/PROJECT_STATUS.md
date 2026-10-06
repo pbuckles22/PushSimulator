@@ -6,7 +6,7 @@
 
 ## Summary
 
-Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. Epic 1.1 (cards, wilds, deck, shuffle, draw) is on `main`.
+Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. Epic 1.1’s sprint slice (cards, wilds, deck, shuffle, draw) is on `main`. The empty-deck reshuffle is still open and blocks 1.2.
 
 ---
 
@@ -40,8 +40,8 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Item | Detail |
 |------|--------|
-| **1.2.1** | Player initialization — `test_player_instantiation` first, only when asked |
-| **Epic 1.1** | Closed 2026-10-06. Discard-pile reshuffle stays deferred |
+| **1.1.4 reshuffle** | Empty draw recycles the discard pile (minus the top card), shuffles, and draws. Blocks 1.2 |
+| **1.2.1** | Player initialization — do not start until the reshuffle lines are done |
 
 ---
 

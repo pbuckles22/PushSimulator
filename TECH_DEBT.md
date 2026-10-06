@@ -26,7 +26,7 @@ This is the durable home for technical debt across sessions. Handoff notes can m
 (Isolated + workaround + revisit trigger.)
 
 - **Tests / Low:** `test_deck_shuffle` uses `thread_rng` and asserts the order changed (`push_core/src/deck.rs`). A 108-card identity shuffle is not a practical failure. Revisit if that test flakes.
-- **Scope / Low:** Empty-deck reshuffle from the discard pile is still open in `doc/BACKLOG.md` under 1.1.4. `Deck::draw` returns `None` until a discard pile exists. Revisit with the discard pile, not by reopening Epic 1.1.
+- **Scope / next:** The two open 1.1.4 lines in `doc/BACKLOG.md` (empty-deck reshuffle from the discard pile, minus the top card) block Epic 1.2. `test_deck_draw_empty` still expects `None` when there is no discard pile to recycle.
 - **Code / Low:** `push_core` declares `serde` and does not use it yet. Leave it for a later serialize story.
 
 ---
