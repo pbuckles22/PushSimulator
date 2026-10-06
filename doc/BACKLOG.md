@@ -25,12 +25,12 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 
 *As the game engine, I want cards to know if they are wild so that I can apply special validation and scoring rules.*
 
-* \[ \] Write test test\_card\_is\_wild\_true\_for\_joker.  
-* \[ \] Implement is\_wild() returning true for Jokers.  
-* \[ \] Write test test\_card\_is\_wild\_true\_for\_two.  
-* \[ \] Update is\_wild() to also return true for Twos.  
-* \[ \] Write test test\_card\_is\_wild\_false\_for\_standard\_card.  
-* \[ \] Ensure is\_wild() returns false for standard ranks.
+* \[x\] Write test test\_card\_is\_wild\_true\_for\_joker.  
+* \[x\] Implement is\_wild() returning true for Jokers.  
+* \[x\] Write test test\_card\_is\_wild\_true\_for\_two.  
+* \[x\] Update is\_wild() to also return true for Twos.  
+* \[x\] Write test test\_card\_is\_wild\_false\_for\_standard\_card.  
+* \[x\] Ensure is\_wild() returns false for standard ranks.
 
 **User Story 1.1.3: Deck Generation**
 

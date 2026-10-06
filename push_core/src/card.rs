@@ -38,6 +38,13 @@ pub struct Card {
     pub locked_until_turn: u32,
 }
 
+impl Card {
+    /// Twos and jokers are wild.
+    pub fn is_wild(&self) -> bool {
+        self.rank == Rank::Joker || self.rank == Rank::Two
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -96,5 +103,41 @@ mod tests {
         assert_eq!(card.suit, Suit::Hearts);
         assert_eq!(card.rank, Rank::Ace);
         assert_eq!(card.locked_until_turn, 3);
+    }
+
+    #[test]
+    fn test_card_is_wild_true_for_joker() {
+        let joker = Card {
+            id: 1,
+            suit: Suit::None,
+            rank: Rank::Joker,
+            locked_until_turn: 0,
+        };
+
+        assert!(joker.is_wild());
+    }
+
+    #[test]
+    fn test_card_is_wild_true_for_two() {
+        let two = Card {
+            id: 2,
+            suit: Suit::Hearts,
+            rank: Rank::Two,
+            locked_until_turn: 0,
+        };
+
+        assert!(two.is_wild());
+    }
+
+    #[test]
+    fn test_card_is_wild_false_for_standard_card() {
+        let three = Card {
+            id: 3,
+            suit: Suit::Hearts,
+            rank: Rank::Three,
+            locked_until_turn: 0,
+        };
+
+        assert!(!three.is_wild());
     }
 }

@@ -23,12 +23,12 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 
 *As the game engine, I want cards to know if they are wild so that I can apply special validation and scoring rules to them later.*
 
-* \[ \] Write test test\_card\_is\_wild\_true\_for\_joker.  
-* \[ \] Implement is\_wild() method returning true for Jokers to pass test.  
-* \[ \] Write test test\_card\_is\_wild\_true\_for\_two.  
-* \[ \] Update is\_wild() method to also return true for Twos to pass test.  
-* \[ \] Write test test\_card\_is\_wild\_false\_for\_standard\_card (e.g., 3 of Hearts).  
-* \[ \] Ensure is\_wild() method correctly returns false to pass test.
+* \[x\] Write test test\_card\_is\_wild\_true\_for\_joker.  
+* \[x\] Implement is\_wild() method returning true for Jokers to pass test.  
+* \[x\] Write test test\_card\_is\_wild\_true\_for\_two.  
+* \[x\] Update is\_wild() method to also return true for Twos to pass test.  
+* \[x\] Write test test\_card\_is\_wild\_false\_for\_standard\_card (e.g., 3 of Hearts).  
+* \[x\] Ensure is\_wild() method correctly returns false to pass test.
 
 ### **User Story 1.1.3: Deck Generation**
 

@@ -61,3 +61,21 @@ fn test_suit_rank_card_deck_new_two_decks_two_jokers_each() {
     assert_eq!(ids.len(), cards.len(), "each copy has its own id");
     assert!(cards.iter().all(|card| card.locked_until_turn == 0));
 }
+
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_twelve_wilds() {
+    let deck = Deck::new();
+    let wilds: Vec<_> = deck.cards.iter().filter(|card| card.is_wild()).collect();
+
+    assert_eq!(
+        wilds.len(),
+        DECKS * JOKERS_PER_DECK + DECKS * SUITS_PER_DECK
+    );
+    assert!(wilds
+        .iter()
+        .all(|card| card.rank == Rank::Joker || card.rank == Rank::Two));
+    assert!(deck.cards.iter().all(|card| {
+        let expect = card.rank == Rank::Joker || card.rank == Rank::Two;
+        card.is_wild() == expect
+    }));
+}
