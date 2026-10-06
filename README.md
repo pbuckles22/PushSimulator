@@ -2,6 +2,8 @@
 
 Rust-centric engine and simulator for the card game **Push**. Agentic Cursor foundation from AgenticTemplate.
 
+**Repository:** https://github.com/pbuckles22/PushSimulator
+
 ## New here?
 
 **Start with [CONTRIBUTING.md](CONTRIBUTING.md)** and **[doc/PROJECT_STATUS.md](doc/PROJECT_STATUS.md)**.
