@@ -3,7 +3,7 @@
 
 use push_core::card::{Card, Rank, Suit};
 use push_core::deck::{Deck, TurnDraw};
-use push_core::player::Player;
+use push_core::player::{deal_initial_hands, Player};
 
 const DECKS: usize = 2;
 const JOKERS_PER_DECK: usize = 2;
@@ -783,5 +783,277 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_draw_two_pile_cards_player_start
         .hand
         .iter()
         .all(|card| card.id != first.id && card.id != second.id));
+    assert_eq!(deck.draw(), TurnDraw::Empty);
+}
+
+fn top_cards(cards: &[Card], count: usize) -> Vec<Card> {
+    cards.iter().rev().take(count).copied().collect()
+}
+
+fn pop_card(drawn: &mut Vec<Card>) -> Card {
+    drawn.pop().expect("drained deck still has a card")
+}
+
+/// Cards taken from the drained pile, with the first taken card on top.
+fn pile_from_end(drawn: &mut Vec<Card>, count: usize) -> Vec<Card> {
+    let mut cards = Vec::with_capacity(count);
+    for _ in 0..count {
+        cards.push(pop_card(drawn));
+    }
+    cards.reverse();
+    cards
+}
+
+fn assert_hand_kept(player: &Player, hand: &[Card]) {
+    assert_eq!(player.points, 0);
+    assert!(!player.is_on_board);
+    assert_eq!(player.hand.as_slice(), hand);
+}
+
+fn hands_around(tops: &[Card], player_count: usize) -> Vec<Vec<Card>> {
+    let mut hands = vec![Vec::new(); player_count];
+    for (index, card) in tops.iter().copied().enumerate() {
+        hands[index % player_count].push(card);
+    }
+    hands
+}
+
+fn deal_table(deck: &mut Deck, player_count: usize) -> Vec<Player> {
+    let dealt = 10 * player_count;
+    let tops = top_cards(&deck.cards, dealt);
+    let expect = hands_around(&tops, player_count);
+    let mut players: Vec<Player> = (0..player_count)
+        .map(|seat| {
+            let player = Player::new((seat + 1) as u32, seat as u32);
+            assert_fresh(&player, player.id, player.seat_index);
+            player
+        })
+        .collect();
+    deal_initial_hands(&mut players, deck);
+    for (player, hand) in players.iter().zip(&expect) {
+        assert_hand_kept(player, hand);
+    }
+    players
+}
+
+fn hands_of(players: &[Player]) -> Vec<Vec<Card>> {
+    players.iter().map(|player| player.hand.clone()).collect()
+}
+
+fn assert_hands_kept(players: &[Player], hands: &[Vec<Card>]) {
+    for (player, hand) in players.iter().zip(hands) {
+        assert_hand_kept(player, hand);
+    }
+}
+
+fn none_hold(players: &[Player], id: u32) {
+    assert!(players
+        .iter()
+        .all(|player| player.hand.iter().all(|card| card.id != id)));
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal one card at a time to two players.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_initial_hand() {
+    let mut deck = shuffled_deck();
+    let before = ids_of(&deck.cards);
+    let players = deal_table(&mut deck, 2);
+
+    assert_eq!(deck.cards.len(), deck_size() - 20);
+    assert!(deck.discard.is_empty());
+    let mut left = ids_of(&deck.cards);
+    for player in &players {
+        left.extend(player.hand.iter().map(|card| card.id));
+        for card in &player.hand {
+            assert_eq!(
+                card.is_wild(),
+                card.rank == Rank::Joker || card.rank == Rank::Two
+            );
+        }
+    }
+    same_ids(&before, &left);
+    assert_eq!(
+        players
+            .iter()
+            .flat_map(|player| player.hand.iter())
+            .chain(deck.cards.iter())
+            .filter(|card| card.is_wild())
+            .count(),
+        wild_count()
+    );
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → one card at a time around three players.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_three_hands() {
+    let mut deck = shuffled_deck();
+    let tops = top_cards(&deck.cards, 30);
+    let players = deal_table(&mut deck, 3);
+
+    assert_eq!(players.len(), 3);
+    assert!(players.iter().all(|player| player.hand.len() == 10));
+    assert_eq!(players[0].hand[0], tops[0]);
+    assert_eq!(players[1].hand[0], tops[1]);
+    assert_eq!(players[2].hand[0], tops[2]);
+    assert_eq!(players[0].hand[1], tops[3]);
+    assert_eq!(deck.cards.len(), deck_size() - 30);
+    assert!(deck.discard.is_empty());
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal around → ordinary draw.
+/// The draw stays out of every dealt hand.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_then_draw() {
+    let mut deck = shuffled_deck();
+    let players = deal_table(&mut deck, 2);
+    let hands = hands_of(&players);
+    let next_top = top_cards(&deck.cards, 1)[0];
+
+    let drawn = ordinary(deck.draw());
+
+    assert_eq!(drawn, next_top);
+    assert_hands_kept(&players, &hands);
+    none_hold(&players, drawn.id);
+    assert_eq!(deck.cards.len(), deck_size() - 21);
+    assert!(deck.discard.is_empty());
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal around, discard stays, then an ordinary draw.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_leaves_discard_then_draw() {
+    let mut deck = shuffled_deck();
+    let discard: Vec<Card> = deck.cards.drain(0..4).collect();
+    deck.discard = discard.clone();
+    let players = deal_table(&mut deck, 2);
+    let hands = hands_of(&players);
+
+    assert_eq!(deck.discard, discard);
+    for card in &discard {
+        none_hold(&players, card.id);
+    }
+    let drawn = ordinary(deck.draw());
+    assert_hands_kept(&players, &hands);
+    none_hold(&players, drawn.id);
+    assert_eq!(deck.discard, discard);
+    assert_eq!(deck.cards.len(), deck_size() - 4 - 20 - 1);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal the last 20 around → empty reshuffle.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_then_empty_reshuffle() {
+    let mut deck = shuffled_deck();
+    let mut drawn = drain_without_discard(&mut deck);
+    let top = pop_card(&mut drawn);
+    let mid = pop_card(&mut drawn);
+    let under = pop_card(&mut drawn);
+    deck.cards = pile_from_end(&mut drawn, 20);
+    deck.discard = vec![under, mid, top];
+
+    let players = deal_table(&mut deck, 2);
+    let hands = hands_of(&players);
+
+    assert!(deck.cards.is_empty());
+    assert_eq!(deck.discard.as_slice(), &[under, mid, top]);
+    let recycled = ordinary(deck.draw());
+    assert_ne!(recycled.id, top.id);
+    assert!(recycled.id == under.id || recycled.id == mid.id);
+    assert_hands_kept(&players, &hands);
+    none_hold(&players, recycled.id);
+    assert_eq!(deck.discard.as_slice(), &[top]);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal the last 20 around → last discard card.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_then_last_card() {
+    let mut deck = shuffled_deck();
+    let mut drawn = drain_without_discard(&mut deck);
+    let last = pop_card(&mut drawn);
+    deck.cards = pile_from_end(&mut drawn, 20);
+    deck.discard = vec![last];
+
+    let players = deal_table(&mut deck, 2);
+    let hands = hands_of(&players);
+
+    assert!(deck.cards.is_empty());
+    assert_eq!(deck.discard.as_slice(), &[last]);
+    assert_eq!(deck.draw(), TurnDraw::LastCard(last));
+    assert_hands_kept(&players, &hands);
+    none_hold(&players, last.id);
+    assert_eq!(deck.draw(), TurnDraw::Empty);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal the last 20 around → last two split.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_then_last_two() {
+    let mut deck = shuffled_deck();
+    let mut drawn = drain_without_discard(&mut deck);
+    let second = pop_card(&mut drawn);
+    let first = pop_card(&mut drawn);
+    deck.cards = pile_from_end(&mut drawn, 20);
+    deck.discard = vec![first, second];
+
+    let players = deal_table(&mut deck, 2);
+    let hands = hands_of(&players);
+
+    assert!(deck.cards.is_empty());
+    assert_eq!(deck.discard.as_slice(), &[first, second]);
+    let TurnDraw::LastTwo { current, next } = deck.draw() else {
+        panic!("the last two cards are shuffled and split");
+    };
+    let mut got = [current.id, next.id];
+    got.sort_unstable();
+    let mut expect = [first.id, second.id];
+    expect.sort_unstable();
+    assert_eq!(got, expect);
+    assert_hands_kept(&players, &hands);
+    none_hold(&players, current.id);
+    none_hold(&players, next.id);
+    assert_eq!(deck.draw(), TurnDraw::Empty);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal around → one draw-pile card, then the last discard.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_then_one_then_last() {
+    let mut deck = shuffled_deck();
+    let mut drawn = drain_without_discard(&mut deck);
+    let discard_card = pop_card(&mut drawn);
+    let pile = pile_from_end(&mut drawn, 21);
+    let leftover = pile[0];
+    deck.cards = pile;
+    deck.discard = vec![discard_card];
+
+    let players = deal_table(&mut deck, 2);
+    let hands = hands_of(&players);
+
+    assert_eq!(deck.cards.as_slice(), &[leftover]);
+    assert_eq!(deck.discard.as_slice(), &[discard_card]);
+    assert_eq!(deck.draw(), TurnDraw::One(leftover));
+    assert_eq!(deck.draw(), TurnDraw::LastCard(discard_card));
+    assert_hands_kept(&players, &hands);
+    none_hold(&players, leftover.id);
+    none_hold(&players, discard_card.id);
+    assert_eq!(deck.draw(), TurnDraw::Empty);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal around → two ordinary draw-pile cards.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_then_two_pile_cards() {
+    let mut deck = shuffled_deck();
+    let mut drawn = drain_without_discard(&mut deck);
+    let pile = pile_from_end(&mut drawn, 22);
+    let first = pile[0];
+    let second = pile[1];
+    deck.cards = pile;
+
+    let players = deal_table(&mut deck, 2);
+    let hands = hands_of(&players);
+
+    assert_eq!(deck.cards.as_slice(), &[first, second]);
+    assert!(deck.discard.is_empty());
+    assert_eq!(deck.draw(), TurnDraw::One(second));
+    assert_eq!(deck.draw(), TurnDraw::One(first));
+    assert_hands_kept(&players, &hands);
+    none_hold(&players, first.id);
+    none_hold(&players, second.id);
     assert_eq!(deck.draw(), TurnDraw::Empty);
 }

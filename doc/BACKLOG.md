@@ -69,8 +69,8 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 
 *As the game engine, I want to deal cards to a player so that they have a starting hand.*
 
-* \[ \] Write test test\_deal\_initial\_hand asserting a player receives exactly 10 cards.  
-* \[ \] Implement hand dealing logic pulling from Deck.
+* \[x\] Write test test\_deal\_initial\_hand asserting two or more players each receive exactly 10 cards, one card at a time.  
+* \[x\] Implement deal\_initial\_hands. One player is refused.
 
 **User Story 1.2.3: Point Calculations**
 

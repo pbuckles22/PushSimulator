@@ -15,6 +15,8 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 | Branch | Role |
 |--------|------|
 | **`main`** | Epic 1.1 complete — cards, wilds, 108-card deck, shuffle, draw, empty-deck leftovers |
+| **`feature/1.2.2-deal-hands`** | Parked. Deal 10 cards to each of 2 or more players, one card at a time. Not merged |
+| **`feature/1.2.1-player-init`** | Parked. `Player::new` starts empty. Not merged |
 | **`feature/1.1.4-empty-reshuffle`** | Kept. Empty-deck leftovers |
 | **`feature/1.1.4-shuffle-draw`** | Kept. Same history as this land. Do not merge again |
 | **`feature/1.1.2-wild-cards`** | Ancestor of `main`. Do not merge separately |
@@ -25,7 +27,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 ## Completed
 
-- AgenticTemplate layer + handoff receiver framing (`You are the receiving agent.`)
+- AgenticTemplate layer + handoff framing (`You are the agent to execute the below hand off.`)
 - Google docs organized under `doc/` (raw dump in `docs/`)
 - Cargo workspace: `push_core`, `push_wasm`, `push_sim` — Tier 1 green (`cargo test -p push_core`)
 - `viewer/` HTML/CSS/JS shell
@@ -41,8 +43,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Item | Detail |
 |------|--------|
-| **1.2.1** | `Player::new` on `feature/1.2.1-player-init` — 0 points, `is_on_board = false`, empty hand. Not merged |
-| **1.2.2** | Dealing hands — start only when asked |
+| **1.2.3** | Point calculations — start only when asked |
 
 ---
 

@@ -20,11 +20,11 @@
 
 ## Current state
 
-- **Ship:** 1.2.1 is parked on **`feature/1.2.1-player-init`** (not merged). Epic 1.1 stays on **`main` @ 94d0183**. `feature/1.1.4-empty-reshuffle` is kept. `feature/1.1.4-shuffle-draw` is kept. Prior park: `origin/feature/1.1.2-wild-cards @ 71c50c7`.
-- **Phase:** 1 — Rust core. **Next story:** 1.2.2 Dealing hands, only when asked. 1.2.1 `Player::new` is on `feature/1.2.1-player-init` (0 points, `is_on_board = false`, empty hand). Empty draw with three or more discard cards leaves the top card. One leftover card goes to the current player. Two leftover cards are shuffled and split between the current player and the next.
+- **Ship:** 1.2.2 is parked on **`feature/1.2.2-deal-hands`** (not merged). 1.2.1 stays on **`feature/1.2.1-player-init`**. Epic 1.1 stays on **`main` @ 94d0183**. `feature/1.1.4-empty-reshuffle` is kept. `feature/1.1.4-shuffle-draw` is kept. Prior park: `origin/feature/1.1.2-wild-cards @ 71c50c7`.
+- **Phase:** 1 — Rust core. **Next story:** 1.2.3 Point calculations, only when asked. 1.2.2 deals one card at a time to 2 or more players, 10 cards each. A one-player deal is refused. The discard pile stays put. 1.2.1 `Player::new` is on `feature/1.2.1-player-init` (0 points, `is_on_board = false`, empty hand).
 - **Version:** no bump (workspace 0.1.0; not a user-visible build).
 - **Client path:** SwiftUI + UniFFI (not Flutter).
-- **Handoff:** Receiving agents get **`You are the receiving agent.`** as first line; brief is second person.
+- **Handoff:** The next session gets **`You are the agent to execute the below hand off.`** as first line; brief is second person.
 
 ## Run and test
 
@@ -45,7 +45,7 @@ Viewer: `cd viewer && npx --yes serve .`
 
 - Game rules live only in `push_core`.
 - Strict TDD for Epic 1.x; integration chains after Epic 1.8.
-- **Handoff protocol:** First chat line **`You are the receiving agent.`** Body uses **You** …; never tell the receiver to write a handoff. Template: [`.cursor/handoff/_template.md`](.cursor/handoff/_template.md).
+- **Handoff protocol:** First chat line **`You are the agent to execute the below hand off.`** Body uses **You** …; never tell the receiver to write a handoff. Template: [`.cursor/handoff/_template.md`](.cursor/handoff/_template.md).
 
 ## Git workflow
 

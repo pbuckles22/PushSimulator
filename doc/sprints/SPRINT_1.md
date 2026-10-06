@@ -56,7 +56,7 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 
 ## **Epic 1.2: Player State & Scoring**
 
-The 1.1.4 reshuffle lines are done. 1.2.1 is implemented on `feature/1.2.1-player-init`.
+The 1.1.4 reshuffle lines are done. 1.2.1 is on `feature/1.2.1-player-init`. 1.2.2 is on `feature/1.2.2-deal-hands`.
 
 ### **User Story 1.2.1: Player Initialization**
 
@@ -71,8 +71,8 @@ The 1.1.4 reshuffle lines are done. 1.2.1 is implemented on `feature/1.2.1-playe
 
 *As the game engine, I want to deal cards to a player so that they have a starting hand.*
 
-* \[ \] Write test test\_deal\_initial\_hand asserting a player receives exactly 10 cards and the deck is reduced by 10\.  
-* \[ \] Implement a function/method to pop 10 cards from the Deck and push them to the Player's hand to pass test.
+* \[x\] Write test test\_deal\_initial\_hand asserting two or more players each receive exactly 10 cards, one card at a time, and the deck shrinks by 10 per player.  
+* \[x\] Implement deal\_initial\_hands. One player is refused. The discard pile stays put.
 
 ### **User Story 1.2.3: Pip Card Scoring (2-9)**
 
