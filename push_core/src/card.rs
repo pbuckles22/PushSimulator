@@ -43,6 +43,26 @@ impl Card {
     pub fn is_wild(&self) -> bool {
         self.rank == Rank::Joker || self.rank == Rank::Two
     }
+
+    /// Penalty points for ranks 3 through 9.
+    pub fn get_penalty_value(&self) -> u32 {
+        match self.rank {
+            Rank::Three
+            | Rank::Four
+            | Rank::Five
+            | Rank::Six
+            | Rank::Seven
+            | Rank::Eight
+            | Rank::Nine => 5,
+            Rank::Two
+            | Rank::Ten
+            | Rank::Jack
+            | Rank::Queen
+            | Rank::King
+            | Rank::Ace
+            | Rank::Joker => panic!("pip penalty is ranks 3 through 9"),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -139,5 +159,28 @@ mod tests {
         };
 
         assert!(!three.is_wild());
+    }
+
+    #[test]
+    fn test_score_card_pip() {
+        let cases = [
+            (Rank::Three, Suit::Hearts, 1, 0),
+            (Rank::Four, Suit::Diamonds, 2, 1),
+            (Rank::Five, Suit::Clubs, 3, 2),
+            (Rank::Six, Suit::Spades, 4, 3),
+            (Rank::Seven, Suit::Hearts, 11, 0),
+            (Rank::Eight, Suit::Diamonds, 12, 4),
+            (Rank::Nine, Suit::Clubs, 13, 5),
+        ];
+
+        for (rank, suit, id, locked_until_turn) in cases {
+            let card = Card {
+                id,
+                suit,
+                rank,
+                locked_until_turn,
+            };
+            assert_eq!(card.get_penalty_value(), 5);
+        }
     }
 }

@@ -20,8 +20,8 @@
 
 ## Current state
 
-- **Ship:** 1.2.2 is parked on **`feature/1.2.2-deal-hands`** (not merged). 1.2.1 stays on **`feature/1.2.1-player-init`**. Epic 1.1 stays on **`main` @ 94d0183**. `feature/1.1.4-empty-reshuffle` is kept. `feature/1.1.4-shuffle-draw` is kept. Prior park: `origin/feature/1.1.2-wild-cards @ 71c50c7`.
-- **Phase:** 1 — Rust core. **Next story:** 1.2.3 Point calculations, only when asked. 1.2.2 deals one card at a time to 2 or more players, 10 cards each. A one-player deal is refused. The discard pile stays put. 1.2.1 `Player::new` is on `feature/1.2.1-player-init` (0 points, `is_on_board = false`, empty hand).
+- **Ship:** 1.2.3 is parked on **`feature/1.2.3-pip-scoring`** (not merged). 1.2.2 stays on **`feature/1.2.2-deal-hands`**. 1.2.1 stays on **`feature/1.2.1-player-init`**. Epic 1.1 stays on **`main` @ 94d0183**. `feature/1.1.4-empty-reshuffle` is kept. `feature/1.1.4-shuffle-draw` is kept. Prior park: `origin/feature/1.1.2-wild-cards @ 71c50c7`.
+- **Phase:** 1 — Rust core. **Next story:** 1.2.4 Face card and ace scoring, only when asked. 1.2.3 `Card::get_penalty_value` returns 5 for ranks 3 through 9. A 2, a face card, an ace, or a joker still panics. 1.2.2 deals one card at a time to 2 or more players, 10 cards each. A one-player deal is refused. The discard pile stays put. 1.2.1 `Player::new` is on `feature/1.2.1-player-init` (0 points, `is_on_board = false`, empty hand).
 - **Version:** no bump (workspace 0.1.0; not a user-visible build).
 - **Client path:** SwiftUI + UniFFI (not Flutter).
 - **Handoff:** The next session gets **`You are the agent to execute the below hand off.`** as first line; brief is second person.

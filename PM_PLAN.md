@@ -16,7 +16,7 @@ Operating model: `.cursor/rules/` ship commands (UCPH, CMPH, SWAT), human check,
 
 - **Phase 1 / Sprint 1:** Epic 1.1 is complete. Epic 1.2 is next when asked — [doc/sprints/SPRINT_1.md](doc/sprints/SPRINT_1.md)
 - **Epic 1.1:** complete — 2026-10-06. Empty-deck rule: [doc/requirements/GAME_RULES.md](doc/requirements/GAME_RULES.md).
-- **Next:** 1.2.3 Point calculations, only when asked. 1.2.2 `deal_initial_hands` is on `feature/1.2.2-deal-hands` (one card at a time to 2 or more players, 10 each). 1.2.1 `Player::new` is on `feature/1.2.1-player-init`.
+- **Next:** 1.2.4 Face card and ace scoring, only when asked. 1.2.3 `Card::get_penalty_value` is on `feature/1.2.3-pip-scoring` (ranks 3–9 score 5). 1.2.2 `deal_initial_hands` is on `feature/1.2.2-deal-hands` (one card at a time to 2 or more players, 10 each). 1.2.1 `Player::new` is on `feature/1.2.1-player-init`.
 - **Full backlog:** [doc/BACKLOG.md](doc/BACKLOG.md)
 - **Commentary / deltas:** [doc/PLAN_COMMENTARY.md](doc/PLAN_COMMENTARY.md) (integration-chain Epic 1.9 suggested; Google export quirks)
 

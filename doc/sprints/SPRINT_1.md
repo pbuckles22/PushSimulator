@@ -56,7 +56,7 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 
 ## **Epic 1.2: Player State & Scoring**
 
-The 1.1.4 reshuffle lines are done. 1.2.1 is on `feature/1.2.1-player-init`. 1.2.2 is on `feature/1.2.2-deal-hands`.
+The 1.1.4 reshuffle lines are done. 1.2.1 is on `feature/1.2.1-player-init`. 1.2.2 is on `feature/1.2.2-deal-hands`. 1.2.3 is on `feature/1.2.3-pip-scoring`.
 
 ### **User Story 1.2.1: Player Initialization**
 
@@ -74,12 +74,12 @@ The 1.1.4 reshuffle lines are done. 1.2.1 is on `feature/1.2.1-player-init`. 1.2
 * \[x\] Write test test\_deal\_initial\_hand asserting two or more players each receive exactly 10 cards, one card at a time, and the deck shrinks by 10 per player.  
 * \[x\] Implement deal\_initial\_hands. One player is refused. The discard pile stays put.
 
-### **User Story 1.2.3: Pip Card Scoring (2-9)**
+### **User Story 1.2.3: Pip Card Scoring (3-9)**
 
 *As the game engine, I want to calculate the value of pip cards so that penalties can be tallied at the end of a round.*
 
-* \[ \] Write test test\_score\_card\_pip passing a 3, 5, and 9, asserting each returns 5 points.  
-* \[ \] Implement card.get\_penalty\_value() returning 5 for ranks 3 through 9 to pass test.
+* \[x\] Write test test\_score\_card\_pip passing a 3, 5, and 9, asserting each returns 5 points.  
+* \[x\] Implement card.get\_penalty\_value() returning 5 for ranks 3 through 9 to pass test.
 
 ### **User Story 1.2.4: Face Card & Ace Scoring**
 

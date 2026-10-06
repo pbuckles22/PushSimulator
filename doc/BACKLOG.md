@@ -76,8 +76,8 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 
 *As the game engine, I want to calculate the value of any card so that penalties can be tallied.*
 
-* \[ \] Write test test\_score\_card\_pip asserting ranks 3-9 return 5 points.  
-* \[ \] Implement pip scoring in get\_penalty\_value().  
+* \[x\] Write test test\_score\_card\_pip asserting ranks 3-9 return 5 points.  
+* \[x\] Implement pip scoring in get\_penalty\_value().  
 * \[ \] Write test test\_score\_card\_face asserting 10-K returns 10 points.  
 * \[ \] Implement face card scoring.  
 * \[ \] Write test test\_score\_card\_ace asserting Aces return 15 points.  

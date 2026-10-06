@@ -1057,3 +1057,132 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_then_two_pile_cards() {
     none_hold(&players, second.id);
     assert_eq!(deck.draw(), TurnDraw::Empty);
 }
+
+const PIP_COUNT: usize = 7 * SUITS_PER_DECK * DECKS;
+
+fn is_pip(rank: Rank) -> bool {
+    matches!(
+        rank,
+        Rank::Three | Rank::Four | Rank::Five | Rank::Six | Rank::Seven | Rank::Eight | Rank::Nine
+    )
+}
+
+fn take_rank(cards: &mut Vec<Card>, rank: Rank) -> Card {
+    let index = cards
+        .iter()
+        .position(|card| card.rank == rank)
+        .expect("the deck contains this rank");
+    cards.remove(index)
+}
+
+/// Next draws come off the end, so the last pushed card is dealt first.
+fn stack_next_draws(cards: &mut Vec<Card>, ranks: &[Rank]) {
+    let stacked: Vec<Card> = ranks
+        .iter()
+        .rev()
+        .map(|rank| take_rank(cards, *rank))
+        .collect();
+    cards.extend(stacked);
+}
+
+fn count_pip_penalty(cards: &[Card]) -> usize {
+    let pips: Vec<&Card> = cards.iter().filter(|card| is_pip(card.rank)).collect();
+    for card in &pips {
+        assert_eq!(card.get_penalty_value(), 5);
+    }
+    pips.len()
+}
+
+fn pip_scores_in_play(players: &[Player], deck: &Deck) -> usize {
+    let mut scored = 0;
+    for player in players {
+        assert_eq!(player.points, 0);
+        scored += count_pip_penalty(&player.hand);
+    }
+    scored += count_pip_penalty(&deck.cards);
+    scored += count_pip_penalty(&deck.discard);
+    scored
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal one card at a time → pip penalty.
+/// The first three cards dealt are a 3, a 5, and a 9. Each scores 5. Every other rank 3–9 scores 5.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_pip_penalty() {
+    let mut deck = shuffled_deck();
+    stack_next_draws(&mut deck.cards, &[Rank::Three, Rank::Five, Rank::Nine]);
+    let players = deal_table(&mut deck, 2);
+
+    assert_eq!(players[0].hand[0].rank, Rank::Three);
+    assert_eq!(players[0].hand[0].get_penalty_value(), 5);
+    assert_eq!(players[1].hand[0].rank, Rank::Five);
+    assert_eq!(players[1].hand[0].get_penalty_value(), 5);
+    assert_eq!(players[0].hand[1].rank, Rank::Nine);
+    assert_eq!(players[0].hand[1].get_penalty_value(), 5);
+    assert_eq!(pip_scores_in_play(&players, &deck), PIP_COUNT);
+    assert!(deck.discard.is_empty());
+    assert_eq!(deck.cards.len(), deck_size() - 20);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → one card at a time around three players → pip penalty.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_three_hands_pip_penalty() {
+    let mut deck = shuffled_deck();
+    stack_next_draws(&mut deck.cards, &[Rank::Three, Rank::Five, Rank::Nine]);
+    let players = deal_table(&mut deck, 3);
+
+    assert_eq!(players[0].hand[0].rank, Rank::Three);
+    assert_eq!(players[1].hand[0].rank, Rank::Five);
+    assert_eq!(players[2].hand[0].rank, Rank::Nine);
+    for player in &players {
+        assert_eq!(player.hand[0].get_penalty_value(), 5);
+        assert_eq!(player.hand.len(), 10);
+        assert_eq!(player.points, 0);
+    }
+    assert_eq!(pip_scores_in_play(&players, &deck), PIP_COUNT);
+    assert!(deck.discard.is_empty());
+    assert_eq!(deck.cards.len(), deck_size() - 30);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal around → ordinary draw → pip penalty.
+/// Scoring the dealt cards leaves the hands and the draw pile where the deal and draw put them.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_then_draw_pip_penalty() {
+    let mut deck = shuffled_deck();
+    let players = deal_table(&mut deck, 2);
+    let hands = hands_of(&players);
+    let next_top = top_cards(&deck.cards, 1)[0];
+
+    let drawn = ordinary(deck.draw());
+
+    assert_eq!(drawn, next_top);
+    if is_pip(drawn.rank) {
+        assert_eq!(drawn.get_penalty_value(), 5);
+    }
+    assert_hands_kept(&players, &hands);
+    none_hold(&players, drawn.id);
+    let scored = pip_scores_in_play(&players, &deck);
+    let drawn_pips = usize::from(is_pip(drawn.rank));
+    assert_eq!(scored + drawn_pips, PIP_COUNT);
+    assert_eq!(deck.cards.len(), deck_size() - 21);
+    assert!(deck.discard.is_empty());
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal around, discard stays → pip penalty.
+/// A pip left on the discard pile still scores 5 and stays there.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_leaves_discard_pip_penalty() {
+    let mut deck = shuffled_deck();
+    let pip = take_rank(&mut deck.cards, Rank::Three);
+    let mut discard: Vec<Card> = deck.cards.drain(0..3).collect();
+    discard.push(pip);
+    deck.discard = discard.clone();
+    let players = deal_table(&mut deck, 2);
+
+    assert_eq!(deck.discard, discard);
+    assert_eq!(pip.get_penalty_value(), 5);
+    for card in &discard {
+        none_hold(&players, card.id);
+    }
+    assert_eq!(pip_scores_in_play(&players, &deck), PIP_COUNT);
+    assert_eq!(deck.cards.len(), deck_size() - 4 - 20);
+}

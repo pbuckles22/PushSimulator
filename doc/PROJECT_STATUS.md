@@ -15,6 +15,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 | Branch | Role |
 |--------|------|
 | **`main`** | Epic 1.1 complete — cards, wilds, 108-card deck, shuffle, draw, empty-deck leftovers |
+| **`feature/1.2.3-pip-scoring`** | Parked. Ranks 3–9 score 5 points. Not merged |
 | **`feature/1.2.2-deal-hands`** | Parked. Deal 10 cards to each of 2 or more players, one card at a time. Not merged |
 | **`feature/1.2.1-player-init`** | Parked. `Player::new` starts empty. Not merged |
 | **`feature/1.1.4-empty-reshuffle`** | Kept. Empty-deck leftovers |
@@ -43,7 +44,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Item | Detail |
 |------|--------|
-| **1.2.3** | Point calculations — start only when asked |
+| **1.2.4** | Face card and ace scoring — start only when asked |
 
 ---
 
