@@ -52,6 +52,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 - **1.2.6** `calculate_hand_penalty` sums the hand. A hand of 4, Jack, Ace, and Joker is 50. `add_hand_penalty_to_total` adds that onto `total_score`. `points` stays 0
 - **1.3.1** `Action::TakeDiscard` moves the discard pile's top card onto the end of the player's hand. Cards under that top stay. The draw pile stays. `points` and `total_score` stay 0
 - **1.3.2** `Action::PushDiscard` gives the next player the top discard and the top draw-pile card. The pushing player then draws. Cards under the pushed top stay. `points` and `total_score` stay 0
+- **1.4.2** `validate_run` accepts four or more cards of one suit in order. Twos and jokers fill gaps. An ace is low or high. King, ace, a two, and a three is not a run
 - **1.4.1** `validate_set` accepts three or more cards of one rank. Twos and jokers fill that rank. A group of only wilds is a set. Two cards, or two different natural ranks, are not
 
 ---
@@ -60,8 +61,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Item | Detail |
 |------|--------|
-| **1.4.2** | Validating Runs & Aces — only when asked |
-| **1.2.4.2** | Tech debt — fix soon, before Epic 1.4 closes. Not the next story while 1.4.2 is waiting |
+| **1.2.4.2** | Tech debt — next, only when asked. Epic 1.4 stays open until this lands |
 
 ---
 

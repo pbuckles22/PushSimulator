@@ -56,7 +56,7 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 
 ## **Epic 1.2: Player State & Scoring**
 
-**Status:** complete — 2026-10-06. A player starts empty. Two or more players are dealt 10 cards, one at a time. Ranks 3–9 score 5, a 10 through King scores 10, an ace scores 15, and a two or a joker scores 20. A hand of 4, Jack, Ace, and Joker totals 50, and that penalty adds onto `total_score`. **1.2.4.3** is closed. **1.2.4.2** is fix soon, before Epic 1.4 closes. **1.3.1**, **1.3.2**, and **1.4.1** are on `main`. Next is **1.4.2**, only when asked.
+**Status:** complete — 2026-10-06. A player starts empty. Two or more players are dealt 10 cards, one at a time. Ranks 3–9 score 5, a 10 through King scores 10, an ace scores 15, and a two or a joker scores 20. A hand of 4, Jack, Ace, and Joker totals 50, and that penalty adds onto `total_score`. **1.2.4.3** is closed. **1.2.4.2** is next, only when asked. Epic 1.4 stays open until that lands. **1.3.1**, **1.3.2**, **1.4.1**, and **1.4.2** are on `main`.
 
 ### **User Story 1.2.1: Player Initialization**
 
@@ -85,7 +85,7 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 
 *As the game engine, I want to calculate the value of high cards so that appropriate penalties are applied.*
 
-**1.2.4.1** is the scoring below, parked on `feature/1.2.4-face-ace-scoring`. **1.2.4.3** is closed. **1.2.4.2** is fix soon, before Epic 1.4 closes. It is not the next story while 1.4.2 is waiting.
+**1.2.4.1** is the scoring below, parked on `feature/1.2.4-face-ace-scoring`. **1.2.4.3** is closed. **1.2.4.2** is next, only when asked. Epic 1.4 stays open until that lands.
 
 * \[x\] Write test test\_score\_card\_face passing a 10, Jack, Queen, and King, asserting each returns 10 points.  
 * \[x\] Update card.get\_penalty\_value() to handle face cards to pass test.  
@@ -100,7 +100,7 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 * \[ \] Add CI that runs `cargo test -p push_core`. The 2026-10-06 LLVM run (58 tests, 98.1% lines) stays a local measurement until a coverage gate is chosen.  
 * \[x\] Name the evidence sink in `TEST_PLAN.md`, or leave one explicit TBD.  
 * \[ \] Drop the unused `serde` dependency on `push_core`, or use it (`TECH_DEBT.md`).  
-Hit this before Epic 1.4 closes. It is not the next story while 1.4.2 is waiting.
+Hit this before Epic 1.4 closes. It is the next story, only when asked.
 
 **1.2.4.3: Test gaps**
 
@@ -135,4 +135,4 @@ Hit this before Epic 1.4 closes. It is not the next story while 1.4.2 is waiting
 *As the game engine, I want a player to take a discard so they can add it to their hand.*
 
 * \[x\] Write test test\_take\_discard asserting the discard pile's top card moves to the player's hand.  
-* \[x\] Implement Action::TakeDiscard handler. **1.3.2** and **1.4.1** are on `main`. Next is **1.4.2**, only when asked.
+* \[x\] Implement Action::TakeDiscard handler. **1.3.2**, **1.4.1**, and **1.4.2** are on `main`. Next is **1.2.4.2**, only when asked.

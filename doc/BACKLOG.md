@@ -58,7 +58,7 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 
 ### **Epic 1.2: Player State & Scoring**
 
-**Status:** complete — 2026-10-06. Player, deal, card penalties, and the hand total. **1.2.4.3** is closed: a short draw pile deals the cards it has, then panics. **1.2.4.2** is fix soon, before Epic 1.4 closes. **1.3.1**, **1.3.2**, and **1.4.1** are on `main`. Next is **1.4.2**, only when asked.
+**Status:** complete — 2026-10-06. Player, deal, card penalties, and the hand total. **1.2.4.3** is closed: a short draw pile deals the cards it has, then panics. **1.2.4.2** is next, only when asked. Epic 1.4 stays open until that lands. **1.3.1**, **1.3.2**, **1.4.1**, and **1.4.2** are on `main`.
 
 **User Story 1.2.1: Player Initialization**
 
@@ -91,7 +91,7 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 
 Wild scoring is sprint story **1.2.5**. The two hand-total lines above are sprint story **1.2.6**. They stay under this heading because the Google export listed every penalty step on story 1.2.3. The sprint order is pips, then face and ace, then wilds, then the hand total.
 
-Face and ace scoring is sprint story **1.2.4.1**. **1.2.4.3** below is closed. **1.2.4.2** is fix soon, before Epic 1.4 closes. **1.3.1**, **1.3.2**, and **1.4.1** are on `main`. Next is **1.4.2**, only when asked.
+Face and ace scoring is sprint story **1.2.4.1**. **1.2.4.3** below is closed. **1.2.4.2** is next, only when asked. Epic 1.4 stays open until that lands. **1.3.1**, **1.3.2**, **1.4.1**, and **1.4.2** are on `main`.
 
 **1.2.4.2: Tech debt**
 
@@ -101,7 +101,7 @@ Face and ace scoring is sprint story **1.2.4.1**. **1.2.4.3** below is closed. *
 * \[ \] Add CI that runs `cargo test -p push_core`. The 2026-10-06 LLVM run (58 tests, 98.1% lines) stays a local measurement until a coverage gate is chosen.  
 * \[x\] Name the evidence sink in `TEST_PLAN.md`, or leave one explicit TBD. `TEST_PLAN.md` leaves it TBD until a runtime log exists.  
 * \[ \] Drop the unused `serde` dependency on `push_core`, or use it (`TECH_DEBT.md`).  
-Hit this before Epic 1.4 closes. It is not the next story while 1.4.2 is waiting.
+Hit this before Epic 1.4 closes. It is the next story, only when asked.
 
 **1.2.4.3: Test gaps**
 
@@ -152,18 +152,20 @@ Hit this before Epic 1.4 closes. It is not the next story while 1.4.2 is waiting
 
 **User Story 1.4.2: Validating Runs & Aces**
 
+**Status:** on `main` — 2026-10-06. Four or more cards of one suit in order are a run. Twos and jokers fill gaps. An ace is low or high. King, ace, a two, and a three is not a run. `feature/1.4.2-validate-runs` is kept.
+
 *As the game engine, I want to validate Runs so that sequential suit plays are strictly enforced.*
 
-* \[ \] Write test test\_validate\_run\_naturals asserting \[4H, 5H, 6H, 7H\] is true, mixed suits false.  
-* \[ \] Implement validate\_run() logic checking suits and sequential ranks.  
-* \[ \] Write test test\_validate\_run\_wilds asserting \[4H, Joker, 6H, 2S\] is true.  
-* \[ \] Update validate\_run() to infer missing sequential values using wild cards.  
-* \[ \] Write test test\_ace\_placement\_low asserting \[AH, 2C, 3H, 4H\] is true (2 is wild).  
-* \[ \] Update validate\_run() for Ace \= 1 logic.  
-* \[ \] Write test test\_ace\_placement\_high asserting \[JH, QH, KH, AH\] is true.  
-* \[ \] Update validate\_run() for Ace \= 14 logic.  
-* \[ \] Write test test\_ace\_wrap\_rejection asserting \[KH, AH, 2C, 3H\] is false.  
-* \[ \] Ensure wrap-around logic is strictly forbidden.
+* \[x\] Write test test\_validate\_run\_naturals asserting \[4H, 5H, 6H, 7H\] is true, mixed suits false.  
+* \[x\] Implement validate\_run() logic checking suits and sequential ranks.  
+* \[x\] Write test test\_validate\_run\_wilds asserting \[4H, Joker, 6H, 2S\] is true.  
+* \[x\] Update validate\_run() to infer missing sequential values using wild cards.  
+* \[x\] Write test test\_ace\_placement\_low asserting \[AH, 2C, 3H, 4H\] is true (2 is wild).  
+* \[x\] Update validate\_run() for Ace \= 1 logic.  
+* \[x\] Write test test\_ace\_placement\_high asserting \[JH, QH, KH, AH\] is true.  
+* \[x\] Update validate\_run() for Ace \= 14 logic.  
+* \[x\] Write test test\_ace\_wrap\_rejection asserting \[KH, AH, 2C, 3H\] is false.  
+* \[x\] Ensure wrap-around logic is strictly forbidden.
 
 ### **Epic 1.5: Melding & Getting on the Board**
 
