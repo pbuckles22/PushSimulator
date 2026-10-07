@@ -23,7 +23,7 @@ Operating model: `.cursor/rules/` ship commands (UCPH, CMPH, SWAT), human check,
 - **1.4.1:** on `main` at `62220b3`. `validate_set` accepts three or more cards of one rank. Twos and jokers fill that rank. A group of only wilds is a set. Two cards, or two different natural ranks, are not. `feature/1.4.1-validate-sets` is kept.
 - **1.4.2:** on `main` at `da56999`. `validate_run` accepts four or more cards of one suit in order. Twos and jokers fill gaps. An ace is low or high. King, ace, a two, and a three is not a run. `feature/1.4.2-validate-runs` is kept.
 - **Epic 1.4:** complete — 2026-10-06. A set is three or more cards of one rank. A run is four or more cards of one suit in order. Twos and jokers fill gaps. An ace is low or high. King, ace, a two, and a three is not a run. This close is on `main`. Content is `2341904`. `feature/1.4-swat` stays.
-- **1.5.1:** on `main`. `check_round_requirements` enforces the five round minimums. A meld counts when it is a set or a run. One meld fills one requirement. Sizes may exceed the minimum. An extra meld fails. A card used twice fails. Six fours may be two sets of three. `feature/1.5.1-round-requirements` is kept.
+- **1.5.1:** on `main` at `e86e8d7`. `check_round_requirements` enforces the five round minimums. A meld counts when it is a set or a run. One meld fills one requirement. Sizes may exceed the minimum. An extra meld fails. A card used twice fails. Six fours may be two sets of three. `feature/1.5.1-round-requirements` is kept.
 - **Next:** 1.5.2 waits until asked. Epic 1.5 stays open.
 - **Full backlog:** [doc/BACKLOG.md](doc/BACKLOG.md)
 - **Commentary / deltas:** [doc/PLAN_COMMENTARY.md](doc/PLAN_COMMENTARY.md) (integration-chain Epic 1.9 suggested; Google export quirks)
