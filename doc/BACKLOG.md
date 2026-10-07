@@ -152,7 +152,7 @@ Hit this before Epic 1.4 closes. It is the next story, only when asked.
 
 **User Story 1.4.2: Validating Runs & Aces**
 
-**Status:** on `main` — 2026-10-06. Four or more cards of one suit in order are a run. Twos and jokers fill gaps. An ace is low or high. King, ace, a two, and a three is not a run. `feature/1.4.2-validate-runs` is kept.
+**Status:** on `main` — 2026-10-06 at `da56999`. Four or more cards of one suit in order are a run. Twos and jokers fill gaps. An ace is low or high. King, ace, a two, and a three is not a run. `feature/1.4.2-validate-runs` is kept.
 
 *As the game engine, I want to validate Runs so that sequential suit plays are strictly enforced.*
 
