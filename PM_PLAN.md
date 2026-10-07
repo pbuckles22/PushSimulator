@@ -18,7 +18,8 @@ Operating model: `.cursor/rules/` ship commands (UCPH, CMPH, SWAT), human check,
 - **Epic 1.1:** complete — 2026-10-06. Empty-deck rule: [doc/requirements/GAME_RULES.md](doc/requirements/GAME_RULES.md).
 - **Epic 1.2:** complete — 2026-10-06. A player starts empty. Two or more players are dealt 10 cards, one at a time. Ranks 3–9 score 5, a 10 through King scores 10, an ace scores 15, and a two or a joker scores 20. A hand of 4, Jack, Ace, and Joker totals 50 and that penalty adds onto `total_score`. `points` stays 0. **1.2.4.2** and **1.2.4.3** stay deferred.
 - **1.3.1:** on `main` at `6a00eff`. `Action::TakeDiscard` moves the discard pile's top card into the player's hand. Cards under that top stay. The draw pile stays. `points` and `total_score` stay 0. `feature/1.3.1-take-discard` is kept.
-- **Next:** 1.3.2 Pushing a Discard. A push moves the top discard to the next player's hand. That player also draws one penalty card from the draw pile. The pushing player then draws to start the turn.
+- **1.3.2:** parked on `feature/1.3.2-push-discard` (not merged). `Action::PushDiscard` gives the next player two cards: the top discard and the top of the draw pile. The pushing player then draws. Cards under the pushed top stay. `points` and `total_score` stay 0.
+- **Next:** 1.4.1 Validating Sets, only when asked.
 - **Full backlog:** [doc/BACKLOG.md](doc/BACKLOG.md)
 - **Commentary / deltas:** [doc/PLAN_COMMENTARY.md](doc/PLAN_COMMENTARY.md) (integration-chain Epic 1.9 suggested; Google export quirks)
 

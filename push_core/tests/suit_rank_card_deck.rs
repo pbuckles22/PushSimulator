@@ -1394,7 +1394,10 @@ fn wild_scores_in_play(players: &[Player], deck: &Deck) -> (usize, usize) {
     }
     let (draw_twos, draw_jokers) = count_wild_penalty(&deck.cards);
     let (discard_twos, discard_jokers) = count_wild_penalty(&deck.discard);
-    (twos + draw_twos + discard_twos, jokers + draw_jokers + discard_jokers)
+    (
+        twos + draw_twos + discard_twos,
+        jokers + draw_jokers + discard_jokers,
+    )
 }
 
 /// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal one card at a time → wild penalty.
@@ -1413,7 +1416,10 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_wild_penalty() {
     assert_eq!(players[1].hand[0].suit, Suit::None);
     assert_eq!(players[1].hand[0].get_penalty_value(), 20);
     assert!(players[1].hand[0].is_wild());
-    assert_eq!(wild_scores_in_play(&players, &deck), (TWO_COUNT, JOKER_COUNT));
+    assert_eq!(
+        wild_scores_in_play(&players, &deck),
+        (TWO_COUNT, JOKER_COUNT)
+    );
     assert_eq!(pip_scores_in_play(&players, &deck), PIP_COUNT);
     assert_eq!(
         face_ace_scores_in_play(&players, &deck),
@@ -1445,7 +1451,10 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_three_hands_wild_penalty() 
         assert_eq!(player.hand.len(), 10);
         assert_eq!(player.points, 0);
     }
-    assert_eq!(wild_scores_in_play(&players, &deck), (TWO_COUNT, JOKER_COUNT));
+    assert_eq!(
+        wild_scores_in_play(&players, &deck),
+        (TWO_COUNT, JOKER_COUNT)
+    );
     assert_eq!(pip_scores_in_play(&players, &deck), PIP_COUNT);
     assert_eq!(
         face_ace_scores_in_play(&players, &deck),
@@ -1542,7 +1551,10 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_leaves_discard_wild_penalty
     for card in &discard {
         none_hold(&players, card.id);
     }
-    assert_eq!(wild_scores_in_play(&players, &deck), (TWO_COUNT, JOKER_COUNT));
+    assert_eq!(
+        wild_scores_in_play(&players, &deck),
+        (TWO_COUNT, JOKER_COUNT)
+    );
     assert_eq!(pip_scores_in_play(&players, &deck), PIP_COUNT);
     assert_eq!(
         face_ace_scores_in_play(&players, &deck),
@@ -1707,7 +1719,7 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_leaves_discard_take_top() {
     let other_penalty = players[1].calculate_hand_penalty();
     let draw_len = deck.cards.len();
 
-    Action::TakeDiscard.apply(&mut players[0], &mut deck);
+    Action::TakeDiscard.apply(&mut players, 0, &mut deck);
 
     assert_eq!(players[0].hand.len(), 11);
     assert_eq!(&players[0].hand[..10], hands[0].as_slice());
@@ -1728,4 +1740,89 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_leaves_discard_take_top() {
     assert!(!players[1].is_on_board);
     assert_eq!(deck.cards.len(), draw_len);
     assert_eq!(deck.cards.len(), deck_size() - 4 - 20);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal around, discard stays → push the top discard.
+/// Player 1 pushes the top ace to Player 2. Player 2 also draws a four. Player 1 then draws a jack.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_leaves_discard_push_top() {
+    let mut deck = shuffled_deck();
+    let penalty = take_rank(&mut deck.cards, Rank::Four);
+    let actor_draw = take_rank(&mut deck.cards, Rank::Jack);
+    let under: Vec<Card> = deck.cards.drain(0..3).collect();
+    let top = take_rank(&mut deck.cards, Rank::Ace);
+    let mut discard = under.clone();
+    discard.push(top);
+    deck.discard = discard;
+    let mut players = deal_table(&mut deck, 2);
+    let hands = hands_of(&players);
+    let before = players[0].calculate_hand_penalty();
+    let other_before = players[1].calculate_hand_penalty();
+    deck.cards.push(actor_draw);
+    deck.cards.push(penalty);
+    let draw_len = deck.cards.len();
+
+    Action::PushDiscard.apply(&mut players, 0, &mut deck);
+
+    assert_eq!(players[0].id, 1);
+    assert_eq!(players[1].id, 2);
+    assert_eq!(players[0].hand.len(), 11);
+    assert_eq!(&players[0].hand[..10], hands[0].as_slice());
+    assert_eq!(players[0].hand[10], actor_draw);
+    assert_eq!(players[1].hand.len(), 12);
+    assert_eq!(&players[1].hand[..10], hands[1].as_slice());
+    assert_eq!(players[1].hand[10], top);
+    assert_eq!(players[1].hand[11], penalty);
+    assert_eq!(deck.discard, under);
+    assert_eq!(top.get_penalty_value(), 15);
+    assert_eq!(penalty.get_penalty_value(), 5);
+    assert_eq!(actor_draw.get_penalty_value(), 10);
+    assert_eq!(players[0].calculate_hand_penalty(), before + 10);
+    assert_eq!(players[1].calculate_hand_penalty(), other_before + 15 + 5);
+    assert_eq!(players[0].points, 0);
+    assert_eq!(players[1].points, 0);
+    assert_eq!(players[0].total_score, 0);
+    assert_eq!(players[1].total_score, 0);
+    assert!(!players[0].is_on_board);
+    assert!(!players[1].is_on_board);
+    assert_eq!(deck.cards.len(), draw_len - 2);
+    assert_eq!(deck.cards.len(), deck_size() - 2 - 3 - 1 - 20);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal around, discard stays → take the top, then push the new top.
+/// The take still adds the ace to Player 1. The push then moves the uncovered card to Player 2 with a penalty draw.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_leaves_discard_take_top_then_push() {
+    let mut deck = shuffled_deck();
+    let penalty = take_rank(&mut deck.cards, Rank::Three);
+    let actor_draw = take_rank(&mut deck.cards, Rank::King);
+    let buried: Vec<Card> = deck.cards.drain(0..2).collect();
+    let pushed = take_rank(&mut deck.cards, Rank::Five);
+    let taken = take_rank(&mut deck.cards, Rank::Ace);
+    let mut discard = buried.clone();
+    discard.push(pushed);
+    discard.push(taken);
+    deck.discard = discard;
+    let mut players = deal_table(&mut deck, 2);
+    let hands = hands_of(&players);
+    deck.cards.push(actor_draw);
+    deck.cards.push(penalty);
+
+    Action::TakeDiscard.apply(&mut players, 0, &mut deck);
+    Action::PushDiscard.apply(&mut players, 0, &mut deck);
+
+    assert_eq!(players[0].hand.len(), 12);
+    assert_eq!(&players[0].hand[..10], hands[0].as_slice());
+    assert_eq!(players[0].hand[10], taken);
+    assert_eq!(players[0].hand[11], actor_draw);
+    assert_eq!(players[1].hand.len(), 12);
+    assert_eq!(&players[1].hand[..10], hands[1].as_slice());
+    assert_eq!(players[1].hand[10], pushed);
+    assert_eq!(players[1].hand[11], penalty);
+    assert_eq!(deck.discard, buried);
+    assert_eq!(taken.get_penalty_value(), 15);
+    assert_eq!(players[0].points, 0);
+    assert_eq!(players[1].points, 0);
+    assert_eq!(players[0].total_score, 0);
+    assert_eq!(players[1].total_score, 0);
 }
