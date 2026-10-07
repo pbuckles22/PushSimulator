@@ -1,6 +1,7 @@
 //! Chain: Suit + Rank + Card, then Deck::new.
 //! Two standard decks, two jokers in each deck.
 
+use push_core::actions::Action;
 use push_core::card::{Card, Rank, Suit};
 use push_core::deck::{Deck, TurnDraw};
 use push_core::player::{deal_initial_hands, Player};
@@ -1688,4 +1689,43 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_add_to_total_score() {
     assert_hands_kept(&players, &hands);
     assert!(deck.discard.is_empty());
     assert_eq!(deck.cards.len(), deck_size() - 20);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal around, discard stays → take the top discard.
+/// The top card joins player 0's hand. Cards under it stay. The other hand stays the dealt 10.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_leaves_discard_take_top() {
+    let mut deck = shuffled_deck();
+    let under: Vec<Card> = deck.cards.drain(0..3).collect();
+    let top = take_rank(&mut deck.cards, Rank::Ace);
+    let mut discard = under.clone();
+    discard.push(top);
+    deck.discard = discard;
+    let mut players = deal_table(&mut deck, 2);
+    let hands = hands_of(&players);
+    let before_penalty = players[0].calculate_hand_penalty();
+    let other_penalty = players[1].calculate_hand_penalty();
+    let draw_len = deck.cards.len();
+
+    Action::TakeDiscard.apply(&mut players[0], &mut deck);
+
+    assert_eq!(players[0].hand.len(), 11);
+    assert_eq!(&players[0].hand[..10], hands[0].as_slice());
+    assert_eq!(players[0].hand[10], top);
+    assert_eq!(deck.discard, under);
+    assert_eq!(players[1].hand, hands[1]);
+    assert_eq!(
+        players[0].calculate_hand_penalty(),
+        before_penalty + top.get_penalty_value()
+    );
+    assert_eq!(players[1].calculate_hand_penalty(), other_penalty);
+    assert_eq!(top.get_penalty_value(), 15);
+    assert_eq!(players[0].points, 0);
+    assert_eq!(players[0].total_score, 0);
+    assert_eq!(players[1].points, 0);
+    assert_eq!(players[1].total_score, 0);
+    assert!(!players[0].is_on_board);
+    assert!(!players[1].is_on_board);
+    assert_eq!(deck.cards.len(), draw_len);
+    assert_eq!(deck.cards.len(), deck_size() - 4 - 20);
 }

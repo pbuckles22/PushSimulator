@@ -58,7 +58,7 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 
 ### **Epic 1.2: Player State & Scoring**
 
-**Status:** complete — 2026-10-06. Player, deal, card penalties, and the hand total. **1.2.4.2** and **1.2.4.3** stay open. Next is **1.3.1**, only when asked.
+**Status:** complete — 2026-10-06. Player, deal, card penalties, and the hand total. **1.2.4.2** and **1.2.4.3** stay open. **1.3.1** is parked. Next is **1.3.2**, only when asked.
 
 **User Story 1.2.1: Player Initialization**
 
@@ -91,7 +91,7 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 
 Wild scoring is sprint story **1.2.5**. The two hand-total lines above are sprint story **1.2.6**. They stay under this heading because the Google export listed every penalty step on story 1.2.3. The sprint order is pips, then face and ace, then wilds, then the hand total.
 
-Face and ace scoring is sprint story **1.2.4.1**. **1.2.4.2** and **1.2.4.3** below are the 2026-10-06 test review. They stay open. Next is **1.3.1**, only when asked.
+Face and ace scoring is sprint story **1.2.4.1**. **1.2.4.2** and **1.2.4.3** below are the 2026-10-06 test review. They stay open. **1.3.1** is parked. Next is **1.3.2**, only when asked.
 
 **1.2.4.2: Tech debt**
 
@@ -114,10 +114,12 @@ Face and ace scoring is sprint story **1.2.4.1**. **1.2.4.2** and **1.2.4.3** be
 
 **User Story 1.3.1: Standard Draw**
 
+**Status:** parked — 2026-10-06 on `feature/1.3.1-take-discard` (not merged). The discard pile's top card moves into the player's hand.
+
 *As the game engine, I want a player to take a discard so they can add it to their hand.*
 
-* \[ \] Write test test\_take\_discard asserting the discard pile's top card moves to the player's hand.  
-* \[ \] Implement Action::TakeDiscard handler.
+* \[x\] Write test test\_take\_discard asserting the discard pile's top card moves to the player's hand.  
+* \[x\] Implement Action::TakeDiscard handler.
 
 **User Story 1.3.2: Pushing a Discard**
 

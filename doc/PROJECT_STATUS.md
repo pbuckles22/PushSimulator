@@ -6,7 +6,7 @@
 
 ## Summary
 
-Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. Epic 1.2 is complete on `main` at `b7e4b93`: a player, a 10-card deal, card penalties, and a hand total. Epic 1.1 (cards, wilds, a 108-card deck, shuffle, draw, and the empty-deck leftovers) is inside that history.
+Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. 1.3.1 is parked on `feature/1.3.1-take-discard` (not merged): the top discard moves into the player's hand. Epic 1.2 stays on `main` at `b7e4b93`: a player, a 10-card deal, card penalties, and a hand total. Epic 1.1 (cards, wilds, a 108-card deck, shuffle, draw, and the empty-deck leftovers) is inside that history.
 
 ---
 
@@ -14,6 +14,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Branch | Role |
 |--------|------|
+| **`feature/1.3.1-take-discard`** | Parked. Top discard moves into the player's hand. Not merged |
 | **`main`** | Epic 1.2 complete — player, 10-card deal, card penalties, hand total |
 | **`feature/1.2.6-hand-total`** | Kept. Same history as this land. Do not merge again |
 | **`feature/1.2.5-wild-scoring`** | Kept. A two and a joker score 20 |
@@ -46,6 +47,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 - **1.2.4.1** A 10 through King scores 10. An ace scores 15
 - **1.2.5** A two and a joker score 20
 - **1.2.6** `calculate_hand_penalty` sums the hand. A hand of 4, Jack, Ace, and Joker is 50. `add_hand_penalty_to_total` adds that onto `total_score`. `points` stays 0
+- **1.3.1** `Action::TakeDiscard` moves the discard pile's top card onto the end of the player's hand. Cards under that top stay. The draw pile stays. `points` and `total_score` stay 0
 
 ---
 
@@ -53,7 +55,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Item | Detail |
 |------|--------|
-| **1.3.1** | Standard Draw — the top discard moves into the player's hand, only when asked |
+| **1.3.2** | Pushing a Discard — the top discard moves to the next player's hand, only when asked |
 | **1.2.4.2** | Tech debt from the 2026-10-06 test review — not the next red/green |
 | **1.2.4.3** | Test gaps from that review — not the next red/green |
 
