@@ -6,7 +6,7 @@
 
 ## Summary
 
-Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. Epic 1.2 is complete on `main`: a player, a 10-card deal, card penalties, and a hand total. Epic 1.1 (cards, wilds, a 108-card deck, shuffle, draw, and the empty-deck leftovers) is inside that history.
+Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. Epic 1.2 is complete on `main` at `b7e4b93`: a player, a 10-card deal, card penalties, and a hand total. Epic 1.1 (cards, wilds, a 108-card deck, shuffle, draw, and the empty-deck leftovers) is inside that history.
 
 ---
 
