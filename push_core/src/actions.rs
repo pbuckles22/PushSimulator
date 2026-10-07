@@ -4,7 +4,7 @@ use crate::card::Card;
 use crate::deck::{Deck, TurnDraw};
 use crate::game_state::GameState;
 use crate::player::Player;
-use crate::validation::check_round_requirements;
+use crate::validation::{check_round_requirements, validate_run, validate_set};
 
 /// A player choice during a turn.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -15,6 +15,18 @@ pub enum Action {
     PushDiscard,
     /// Lay these melds down to get on the board for the current round.
     PlayMeld(Vec<Vec<Card>>),
+    /// Add cards from the actor's hand onto melds already on the board.
+    ///
+    /// Each entry names one meld. One action can name several melds, and each of
+    /// those melds receives only the cards listed for it.
+    HitMeld(Vec<MeldHit>),
+}
+
+/// Cards from the hand added onto one meld already on the board.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MeldHit {
+    pub meld_index: usize,
+    pub cards: Vec<Card>,
 }
 
 impl Action {
@@ -37,6 +49,7 @@ impl Action {
             }
             Self::PushDiscard => push_discard(players, actor_index, deck),
             Self::PlayMeld(_) => panic!("PlayMeld applies on GameState"),
+            Self::HitMeld(_) => panic!("HitMeld applies on GameState"),
         }
     }
 }
@@ -59,8 +72,48 @@ impl GameState {
                 true
             }
             Action::PlayMeld(melds) => play_meld(self, actor_index, &melds),
+            Action::HitMeld(hits) => hit_meld(self, actor_index, &hits),
         }
     }
+}
+
+/// Adds cards from the actor's hand onto one or more board melds.
+///
+/// The actor has to already be on the board. Every card has to be in that hand,
+/// and a card can be used once. Each meld, after every card aimed at it is added,
+/// has to be a set or a run. One card that does not fit refuses the whole action.
+fn hit_meld(state: &mut GameState, actor_index: usize, hits: &[MeldHit]) -> bool {
+    if hits.is_empty() || !state.players[actor_index].is_on_board {
+        return false;
+    }
+    let mut board = state.board.clone();
+    let mut added = vec![Vec::new(); board.len()];
+    let mut removing = Vec::new();
+    for hit in hits {
+        if hit.cards.is_empty() {
+            return false;
+        }
+        let Some(extra) = added.get_mut(hit.meld_index) else {
+            return false;
+        };
+        extra.extend(hit.cards.iter().copied());
+        removing.extend(hit.cards.iter().copied());
+    }
+    for (meld, extra) in board.iter_mut().zip(&added) {
+        if extra.is_empty() {
+            continue;
+        }
+        meld.extend(extra.iter().copied());
+        if !validate_set(meld) && !validate_run(meld) {
+            return false;
+        }
+    }
+    let Some(hand) = hand_without(&state.players[actor_index].hand, &[removing]) else {
+        return false;
+    };
+    state.board = board;
+    state.players[actor_index].hand = hand;
+    true
 }
 
 /// Moves verified melds from the actor's hand onto the board.
@@ -114,7 +167,7 @@ fn draw_one(deck: &mut Deck, why: &str) -> Card {
 
 #[cfg(test)]
 mod tests {
-    use crate::actions::Action;
+    use crate::actions::{Action, MeldHit};
     use crate::card::{Card, Rank, Suit};
     use crate::deck::Deck;
     use crate::player::Player;
@@ -1012,5 +1065,299 @@ mod tests {
         assert_eq!(state.players[0].total_score, 9);
         assert_eq!(keeper.get_penalty_value(), 10);
         assert_eq!(state.players[0].calculate_hand_penalty(), 10);
+    }
+
+    fn board_with(hand: Vec<Card>, meld: Vec<Card>, on_board: bool) -> GameState {
+        let mut state = table(
+            hand,
+            vec![card(60, Suit::Diamonds, Rank::Four)],
+            vec![card(51, Suit::Clubs, Rank::Jack)],
+        );
+        state.board = vec![meld];
+        state.players[0].is_on_board = on_board;
+        state
+    }
+
+    #[test]
+    fn test_hit_rejection_if_not_on_board() {
+        let eight_hearts = card(4, Suit::Hearts, Rank::Eight);
+        let keeper = card(5, Suit::Diamonds, Rank::King);
+        let meld = vec![
+            card(1, Suit::Spades, Rank::Eight),
+            card(2, Suit::Clubs, Rank::Eight),
+            card(3, Suit::None, Rank::Joker),
+        ];
+        let state = board_with(vec![eight_hearts, keeper], meld, false);
+
+        let mut next = state.clone();
+        assert!(!next.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![eight_hearts]
+            }]),
+            0,
+        ));
+        assert_still(&state, &next);
+        assert!(!next.players[0].is_on_board);
+        assert_eq!(next.players[0].points, 4);
+        assert_eq!(next.players[0].total_score, 9);
+    }
+
+    #[test]
+    fn test_valid_hit_set() {
+        let eight_spades = card(1, Suit::Spades, Rank::Eight);
+        let eight_clubs = card(2, Suit::Clubs, Rank::Eight);
+        let joker = card(3, Suit::None, Rank::Joker);
+        let eight_hearts = card(4, Suit::Hearts, Rank::Eight);
+        let nine = card(6, Suit::Hearts, Rank::Nine);
+        let keeper = card(5, Suit::Diamonds, Rank::King);
+        let lookalike = card(50, Suit::Hearts, Rank::Eight);
+        let meld = vec![eight_spades, eight_clubs, joker];
+        let mut state = board_with(vec![eight_hearts, nine, keeper], meld.clone(), true);
+        state.deck.cards.push(lookalike);
+        let before_penalty = state.players[0].calculate_hand_penalty();
+
+        let mut missed = state.clone();
+        assert!(!missed.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![nine]
+            }]),
+            0,
+        ));
+        assert_still(&state, &missed);
+        let mut absent = state.clone();
+        assert!(!absent.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![lookalike]
+            }]),
+            0,
+        ));
+        assert_still(&state, &absent);
+        let mut empty = state.clone();
+        assert!(!empty.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![]
+            }]),
+            0,
+        ));
+        assert_still(&state, &empty);
+        let mut missing = state.clone();
+        assert!(!missing.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 1,
+                cards: vec![eight_hearts]
+            }]),
+            0,
+        ));
+        assert_still(&state, &missing);
+
+        let deck = state.deck.clone();
+        let other = state.players[1].clone();
+        assert!(state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![eight_hearts]
+            }]),
+            0,
+        ));
+
+        assert_eq!(
+            state.board,
+            vec![vec![eight_spades, eight_clubs, joker, eight_hearts]]
+        );
+        assert_eq!(state.players[0].hand, vec![nine, keeper]);
+        assert!(state.players[0].is_on_board);
+        assert!(!state.players[1].is_on_board);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+        assert_eq!(state.players[1].points, 4);
+        assert_eq!(state.players[1].total_score, 9);
+        assert_eq!(state.players[1], other);
+        assert_eq!(state.deck, deck);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(
+            state.players[0].calculate_hand_penalty(),
+            before_penalty - eight_hearts.get_penalty_value()
+        );
+        assert!(state.deck.cards.iter().any(|card| card.id == lookalike.id));
+        assert!(state
+            .board
+            .iter()
+            .flatten()
+            .all(|card| card.id != lookalike.id));
+    }
+
+    #[test]
+    fn test_valid_hit_run() {
+        let five = card(1, Suit::Hearts, Rank::Five);
+        let six = card(2, Suit::Hearts, Rank::Six);
+        let seven = card(3, Suit::Hearts, Rank::Seven);
+        let eight = card(4, Suit::Hearts, Rank::Eight);
+        let eight_spades = card(8, Suit::Spades, Rank::Eight);
+        let keeper = card(5, Suit::Diamonds, Rank::King);
+        let meld = vec![five, six, seven];
+        let state = board_with(vec![eight, eight_spades, keeper], meld, true);
+
+        let mut wrong_suit = state.clone();
+        assert!(!wrong_suit.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![eight_spades]
+            }]),
+            0,
+        ));
+        assert_still(&state, &wrong_suit);
+
+        let mut next = state.clone();
+        let deck = next.deck.clone();
+        let other = next.players[1].clone();
+        assert!(next.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![eight]
+            }]),
+            0,
+        ));
+
+        assert_eq!(next.board, vec![vec![five, six, seven, eight]]);
+        assert_eq!(next.players[0].hand, vec![eight_spades, keeper]);
+        assert!(next.players[0].is_on_board);
+        assert_eq!(next.players[1], other);
+        assert_eq!(next.deck, deck);
+        assert_eq!(next.round_number, 1);
+        assert_eq!(next.players[0].points, 4);
+        assert_eq!(next.players[0].total_score, 9);
+        assert_eq!(eight.get_penalty_value(), 5);
+    }
+
+    /// A 3 joins a set of threes and a 4 of spades joins a spade run in one action.
+    /// The 6 stays in the hand. This action does not discard it.
+    #[test]
+    fn test_hit_several_melds_in_one_action() {
+        let three_hearts = card(1, Suit::Hearts, Rank::Three);
+        let three_diamonds = card(2, Suit::Diamonds, Rank::Three);
+        let three_clubs = card(3, Suit::Clubs, Rank::Three);
+        let five = card(11, Suit::Spades, Rank::Five);
+        let six_spades = card(12, Suit::Spades, Rank::Six);
+        let seven = card(13, Suit::Spades, Rank::Seven);
+        let eight = card(14, Suit::Spades, Rank::Eight);
+        let three_spades = card(21, Suit::Spades, Rank::Three);
+        let four_spades = card(22, Suit::Spades, Rank::Four);
+        let six_hearts = card(23, Suit::Hearts, Rank::Six);
+        let mut state = table(
+            vec![three_spades, four_spades, six_hearts],
+            vec![card(60, Suit::Diamonds, Rank::King)],
+            vec![card(51, Suit::Clubs, Rank::Jack)],
+        );
+        state.board = vec![
+            vec![three_hearts, three_diamonds, three_clubs],
+            vec![five, six_spades, seven, eight],
+        ];
+        state.players[0].is_on_board = true;
+
+        let mut gap = state.clone();
+        gap.board[1] = vec![
+            card(31, Suit::Spades, Rank::Six),
+            card(32, Suit::Spades, Rank::Seven),
+            card(33, Suit::Spades, Rank::Eight),
+            card(34, Suit::Spades, Rank::Nine),
+        ];
+        let gap_before = gap.clone();
+        assert!(!gap.apply(
+            Action::HitMeld(vec![
+                MeldHit {
+                    meld_index: 0,
+                    cards: vec![three_spades],
+                },
+                MeldHit {
+                    meld_index: 1,
+                    cards: vec![four_spades],
+                },
+            ]),
+            0,
+        ));
+        assert_still(&gap_before, &gap);
+
+        let deck = state.deck.clone();
+        let other = state.players[1].clone();
+        assert!(state.apply(
+            Action::HitMeld(vec![
+                MeldHit {
+                    meld_index: 0,
+                    cards: vec![three_spades],
+                },
+                MeldHit {
+                    meld_index: 1,
+                    cards: vec![four_spades],
+                },
+            ]),
+            0,
+        ));
+
+        assert_eq!(
+            state.board[0],
+            vec![three_hearts, three_diamonds, three_clubs, three_spades]
+        );
+        assert_eq!(
+            state.board[1],
+            vec![five, six_spades, seven, eight, four_spades]
+        );
+        assert_eq!(state.players[0].hand, vec![six_hearts]);
+        assert!(state.players[0].is_on_board);
+        assert_eq!(state.players[1], other);
+        assert_eq!(state.deck, deck);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+        assert_eq!(six_hearts.get_penalty_value(), 5);
+    }
+
+    /// Both ends of one run can be added together. A 3 alone does not fill the gap below a 5.
+    #[test]
+    fn test_hit_both_ends_of_one_run() {
+        let five = card(11, Suit::Spades, Rank::Five);
+        let six = card(12, Suit::Spades, Rank::Six);
+        let seven = card(13, Suit::Spades, Rank::Seven);
+        let eight = card(14, Suit::Spades, Rank::Eight);
+        let three = card(21, Suit::Spades, Rank::Three);
+        let four = card(22, Suit::Spades, Rank::Four);
+        let nine = card(23, Suit::Spades, Rank::Nine);
+        let state = board_with(vec![three, four, nine], vec![five, six, seven, eight], true);
+
+        let mut only_three = state.clone();
+        assert!(!only_three.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![three],
+            }]),
+            0,
+        ));
+        assert_still(&state, &only_three);
+
+        let mut next = state.clone();
+        assert!(next.apply(
+            Action::HitMeld(vec![
+                MeldHit {
+                    meld_index: 0,
+                    cards: vec![four, nine],
+                },
+                MeldHit {
+                    meld_index: 0,
+                    cards: vec![three],
+                },
+            ]),
+            0,
+        ));
+        assert_eq!(
+            next.board[0],
+            vec![five, six, seven, eight, four, nine, three]
+        );
+        assert!(next.players[0].hand.is_empty());
+        assert!(next.players[0].is_on_board);
+        assert_eq!(next.players[0].points, 4);
+        assert_eq!(next.players[0].total_score, 9);
     }
 }

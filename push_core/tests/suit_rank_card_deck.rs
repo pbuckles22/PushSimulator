@@ -4,7 +4,7 @@
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 
-use push_core::actions::Action;
+use push_core::actions::{Action, MeldHit};
 use push_core::card::{Card, Rank, Suit};
 use push_core::deck::{Deck, TurnDraw};
 use push_core::game_state::GameState;
@@ -2722,6 +2722,98 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_three_hands_push_play_meld(
     assert_eq!(state.players[2].seat_index, 2);
     assert_eq!(state.players[2].points, 0);
     assert_eq!(state.players[2].total_score, 0);
+    assert_eq!(state.round_number, 1);
+    same_ids(&ids_of(&cards_on_table(&state)), &original);
+    assert_eq!(cards_on_table(&state).len(), deck_size());
+}
+
+/// Chain: Deck::new → is_wild → shuffle → deal → push → play meld → hit.
+/// Seat 0 lays two sets, then adds a fourth four onto that set.
+/// Seat 1 holds another four and is not on the board, so that add is refused.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_push_play_meld_hit() {
+    let original = ids_of(&Deck::new().cards);
+    let mut deck = shuffled_deck();
+    let penalty = take_rank(&mut deck.cards, Rank::Three);
+    let actor_draw = take_rank(&mut deck.cards, Rank::King);
+    let under: Vec<Card> = deck.cards.drain(0..1).collect();
+    let top = take_rank(&mut deck.cards, Rank::Ace);
+    let mut discard = under.clone();
+    discard.push(top);
+    deck.discard = discard;
+    let players = deal_table(&mut deck, 2);
+    deck.cards.push(actor_draw);
+    deck.cards.push(penalty);
+    let mut state = GameState::new(players, deck);
+
+    assert!(state.apply(Action::PushDiscard, 0));
+
+    let four_hearts = take_from_state(&mut state, Suit::Hearts, Rank::Four);
+    let four_spades = take_from_state(&mut state, Suit::Spades, Rank::Four);
+    let four_clubs = take_from_state(&mut state, Suit::Clubs, Rank::Four);
+    let four_diamonds = take_from_state(&mut state, Suit::Diamonds, Rank::Four);
+    let other_four = take_from_state(&mut state, Suit::Hearts, Rank::Four);
+    let five_hearts = take_from_state(&mut state, Suit::Hearts, Rank::Five);
+    let five_spades = take_from_state(&mut state, Suit::Spades, Rank::Five);
+    let five_clubs = take_from_state(&mut state, Suit::Clubs, Rank::Five);
+    let keeper = take_from_state(&mut state, Suit::Diamonds, Rank::Nine);
+    let leftover_actor = std::mem::take(&mut state.players[0].hand);
+    let leftover_next = std::mem::take(&mut state.players[1].hand);
+    state.deck.cards.extend(leftover_actor);
+    state.deck.cards.extend(leftover_next);
+    state.players[0].hand = vec![
+        four_hearts,
+        four_spades,
+        four_clubs,
+        four_diamonds,
+        five_hearts,
+        five_spades,
+        five_clubs,
+        keeper,
+    ];
+    state.players[1].hand = vec![other_four];
+    let fours = vec![four_hearts, four_spades, four_clubs];
+    let fives = vec![five_hearts, five_spades, five_clubs];
+
+    assert!(state.apply(Action::PlayMeld(vec![fours.clone(), fives.clone()]), 0));
+    assert_eq!(state.board, vec![fours.clone(), fives.clone()]);
+    assert!(state.players[0].is_on_board);
+    assert!(!state.players[1].is_on_board);
+
+    let before_refuse = state.clone();
+    assert!(!state.apply(
+        Action::HitMeld(vec![MeldHit {
+            meld_index: 0,
+            cards: vec![other_four]
+        }]),
+        1,
+    ));
+    assert_eq!(state.players, before_refuse.players);
+    assert_eq!(state.board, before_refuse.board);
+    assert_eq!(state.deck, before_refuse.deck);
+    assert_eq!(state.round_number, before_refuse.round_number);
+
+    assert!(state.apply(
+        Action::HitMeld(vec![MeldHit {
+            meld_index: 0,
+            cards: vec![four_diamonds]
+        }]),
+        0,
+    ));
+
+    assert_eq!(
+        state.board[0],
+        vec![four_hearts, four_spades, four_clubs, four_diamonds]
+    );
+    assert_eq!(state.board[1], fives);
+    assert_eq!(state.players[0].hand, vec![keeper]);
+    assert_eq!(state.players[1].hand, vec![other_four]);
+    assert!(state.players[0].is_on_board);
+    assert!(!state.players[1].is_on_board);
+    assert_eq!(state.players[0].points, 0);
+    assert_eq!(state.players[0].total_score, 0);
+    assert_eq!(state.players[1].points, 0);
+    assert_eq!(state.players[1].total_score, 0);
     assert_eq!(state.round_number, 1);
     same_ids(&ids_of(&cards_on_table(&state)), &original);
     assert_eq!(cards_on_table(&state).len(), deck_size());

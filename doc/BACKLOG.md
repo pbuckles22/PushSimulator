@@ -196,12 +196,12 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 *As the game engine, I want players to add cards to existing melds ONLY if they are on the board.*
 
-* \[ \] Write test test\_hit\_rejection\_if\_not\_on\_board asserting action fails if is\_on\_board \= false.  
-* \[ \] Implement guard in Action::HitMeld handler.  
-* \[ \] Write test test\_valid\_hit\_set asserting adding 8H to \[8S, 8C, Joker\] works.  
-* \[ \] Implement hit logic for Sets.  
-* \[ \] Write test test\_valid\_hit\_run asserting adding 8H to \[5H, 6H, 7H\] works.  
-* \[ \] Implement hit logic for Runs.
+* \[x\] Write test test\_hit\_rejection\_if\_not\_on\_board asserting action fails if is\_on\_board \= false.  
+* \[x\] Implement guard in Action::HitMeld handler.  
+* \[x\] Write test test\_valid\_hit\_set asserting adding 8H to \[8S, 8C, Joker\] works.  
+* \[x\] Implement hit logic for Sets.  
+* \[x\] Write test test\_valid\_hit\_run asserting adding 8H to \[5H, 6H, 7H\] works.  
+* \[x\] Implement hit logic for Runs.
 
 **User Story 1.6.2: Stealing Wild Cards**
 

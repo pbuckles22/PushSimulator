@@ -7,7 +7,8 @@ use crate::player::Player;
 /// Seats, piles, the round, and the face-up melds.
 ///
 /// A new table is round 1 and the board is empty. `PlayMeld` reads `round_number`
-/// and moves cards from one hand onto `board`.
+/// and moves cards from one hand onto `board`. `HitMeld` adds cards from the
+/// hand onto one or more of those melds, and only for a player who is on the board.
 #[derive(Clone, Debug)]
 pub struct GameState {
     pub players: Vec<Player>,
