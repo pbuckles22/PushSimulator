@@ -56,7 +56,7 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 
 ## **Epic 1.2: Player State & Scoring**
 
-The 1.1.4 reshuffle lines are done. 1.2.1 is on `feature/1.2.1-player-init`. 1.2.2 is on `feature/1.2.2-deal-hands`. 1.2.3 is on `feature/1.2.3-pip-scoring`. 1.2.4.1 is on `feature/1.2.4-face-ace-scoring`. 1.2.5 is on `feature/1.2.5-wild-scoring`. Next is 1.2.6, only when asked. 1.2.4.2 and 1.2.4.3 stay deferred.
+**Status:** complete — 2026-10-06. A player starts empty. Two or more players are dealt 10 cards, one at a time. Ranks 3–9 score 5, a 10 through King scores 10, an ace scores 15, and a two or a joker scores 20. A hand of 4, Jack, Ace, and Joker totals 50, and that penalty adds onto `total_score`. **1.2.4.2** and **1.2.4.3** stay deferred. Next is **1.3.1**, only when asked.
 
 ### **User Story 1.2.1: Player Initialization**
 
@@ -120,7 +120,7 @@ The 1.1.4 reshuffle lines are done. 1.2.1 is on `feature/1.2.1-player-init`. 1.2
 
 *As the game engine, I want to sum a player's hand so that I can add it to their historical score.*
 
-* \[ \] Write test test\_calculate\_hand\_total passing a hand of \[4, Jack, Ace, Joker\]. Assert total is 50 (5 \+ 10 \+ 15 \+ 20).  
-* \[ \] Implement player.calculate\_hand\_penalty() to iterate over the hand and sum the values to pass test.  
-* \[ \] Write test test\_add\_to\_total\_score asserting a penalty of 50 correctly updates player.total\_score from 0 to 50\.  
-* \[ \] Implement score update logic to pass test.
+* \[x\] Write test test\_calculate\_hand\_total passing a hand of \[4, Jack, Ace, Joker\]. Assert total is 50 (5 \+ 10 \+ 15 \+ 20).  
+* \[x\] Implement player.calculate\_hand\_penalty() to iterate over the hand and sum the values to pass test.  
+* \[x\] Write test test\_add\_to\_total\_score asserting a penalty of 50 correctly updates player.total\_score from 0 to 50\.  
+* \[x\] Implement score update logic to pass test.

@@ -1552,3 +1552,140 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_leaves_discard_wild_penalty
     }
     assert_eq!(deck.cards.len(), deck_size() - 5 - 20);
 }
+
+fn penalty_sum(cards: &[Card]) -> u32 {
+    cards.iter().map(|card| card.get_penalty_value()).sum()
+}
+
+fn assert_dealt_hand_totals(players: &[Player]) {
+    for player in players {
+        let total = player.calculate_hand_penalty();
+        assert_eq!(total, penalty_sum(&player.hand));
+        assert_eq!(player.calculate_hand_penalty(), total);
+        assert_eq!(player.points, 0);
+        assert_eq!(player.total_score, 0);
+        assert_eq!(player.hand.len(), 10);
+    }
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal one card at a time → hand total.
+/// Player 0's first four cards are a 4, Jack, Ace, and Joker (50). The hand total is that hand only.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_hand_total() {
+    let mut deck = shuffled_deck();
+    stack_next_draws(
+        &mut deck.cards,
+        &[
+            Rank::Four,
+            Rank::Three,
+            Rank::Jack,
+            Rank::Five,
+            Rank::Ace,
+            Rank::Six,
+            Rank::Joker,
+            Rank::Seven,
+        ],
+    );
+    let players = deal_table(&mut deck, 2);
+
+    assert_eq!(players[0].hand[0].rank, Rank::Four);
+    assert_eq!(players[0].hand[1].rank, Rank::Jack);
+    assert_eq!(players[0].hand[2].rank, Rank::Ace);
+    assert_eq!(players[0].hand[3].rank, Rank::Joker);
+    assert_eq!(players[0].hand[3].suit, Suit::None);
+    assert_eq!(penalty_sum(&players[0].hand[..4]), 50);
+    assert_dealt_hand_totals(&players);
+    assert!(deck.discard.is_empty());
+    assert_eq!(deck.cards.len(), deck_size() - 20);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → one card at a time around three players → hand total.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_three_hands_hand_total() {
+    let mut deck = shuffled_deck();
+    let players = deal_table(&mut deck, 3);
+
+    assert_dealt_hand_totals(&players);
+    assert!(deck.discard.is_empty());
+    assert_eq!(deck.cards.len(), deck_size() - 30);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal around → draw → hand total.
+/// The drawn card stays out of both hands, so each hand total stays the dealt sum.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_then_draw_hand_total() {
+    let mut deck = shuffled_deck();
+    let players = deal_table(&mut deck, 2);
+    let before: Vec<u32> = players
+        .iter()
+        .map(|player| player.calculate_hand_penalty())
+        .collect();
+    let hands = hands_of(&players);
+
+    let drawn = ordinary(deck.draw());
+
+    assert_eq!(
+        players
+            .iter()
+            .map(|player| player.calculate_hand_penalty())
+            .collect::<Vec<_>>(),
+        before
+    );
+    assert_hands_kept(&players, &hands);
+    none_hold(&players, drawn.id);
+    for player in &players {
+        assert_eq!(player.total_score, 0);
+        assert_eq!(player.points, 0);
+    }
+    assert_eq!(deck.cards.len(), deck_size() - 21);
+    assert!(deck.discard.is_empty());
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal around, discard stays → hand total.
+/// Cards left on the discard pile are not part of either hand total.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_leaves_discard_hand_total() {
+    let mut deck = shuffled_deck();
+    let two = take_rank(&mut deck.cards, Rank::Two);
+    let joker = take_rank(&mut deck.cards, Rank::Joker);
+    let mut discard: Vec<Card> = deck.cards.drain(0..3).collect();
+    discard.push(two);
+    discard.push(joker);
+    deck.discard = discard.clone();
+    let players = deal_table(&mut deck, 2);
+
+    assert_eq!(deck.discard, discard);
+    assert_eq!(two.get_penalty_value(), 20);
+    assert_eq!(joker.get_penalty_value(), 20);
+    assert_dealt_hand_totals(&players);
+    for card in &discard {
+        none_hold(&players, card.id);
+    }
+    assert_eq!(deck.cards.len(), deck_size() - 5 - 20);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal around → add the hand penalty to the total score.
+/// Only the player who records the hand moves off 0. The hand and the other seat stay put.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_add_to_total_score() {
+    let mut deck = shuffled_deck();
+    let mut players = deal_table(&mut deck, 2);
+    let hands = hands_of(&players);
+    let penalty = players[0].calculate_hand_penalty();
+    assert_eq!(penalty, penalty_sum(&players[0].hand));
+    assert_eq!(players[0].total_score, 0);
+    assert_eq!(players[1].total_score, 0);
+
+    players[0].add_hand_penalty_to_total();
+
+    assert_eq!(players[0].total_score, penalty);
+    assert_eq!(players[0].points, 0);
+    assert_eq!(
+        players[1].calculate_hand_penalty(),
+        penalty_sum(&players[1].hand)
+    );
+    assert_eq!(players[1].total_score, 0);
+    assert_hands_kept(&players, &hands);
+    assert!(deck.discard.is_empty());
+    assert_eq!(deck.cards.len(), deck_size() - 20);
+}

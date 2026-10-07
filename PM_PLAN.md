@@ -14,9 +14,10 @@ Operating model: `.cursor/rules/` ship commands (UCPH, CMPH, SWAT), human check,
 
 ## Current
 
-- **Phase 1 / Sprint 1:** Epic 1.1 is complete. Epic 1.2 is next when asked — [doc/sprints/SPRINT_1.md](doc/sprints/SPRINT_1.md)
+- **Phase 1 / Sprint 1:** Epic 1.1 and Epic 1.2 are complete. Epic 1.3 is next when asked — [doc/sprints/SPRINT_1.md](doc/sprints/SPRINT_1.md)
 - **Epic 1.1:** complete — 2026-10-06. Empty-deck rule: [doc/requirements/GAME_RULES.md](doc/requirements/GAME_RULES.md).
-- **Next:** 1.2.6 Total hand calculation, only when asked. 1.2.5 `Card::get_penalty_value` is on `feature/1.2.5-wild-scoring` (a two and a joker score 20). 1.2.4.1 is on `feature/1.2.4-face-ace-scoring` (10 through King score 10, an ace scores 15). 1.2.4.2 is the tech debt from the 2026-10-06 test review. 1.2.4.3 is the test gaps from that review. Neither is the next red/green. 1.2.3 is on `feature/1.2.3-pip-scoring` (ranks 3–9 score 5). 1.2.2 `deal_initial_hands` is on `feature/1.2.2-deal-hands`. 1.2.1 `Player::new` is on `feature/1.2.1-player-init`.
+- **Epic 1.2:** complete — 2026-10-06. A player starts empty. Two or more players are dealt 10 cards, one at a time. Ranks 3–9 score 5, a 10 through King scores 10, an ace scores 15, and a two or a joker scores 20. A hand of 4, Jack, Ace, and Joker totals 50 and that penalty adds onto `total_score`. `points` stays 0. **1.2.4.2** and **1.2.4.3** stay deferred.
+- **Next:** 1.3.1 Standard Draw, only when asked. Take the top discard into the player's hand.
 - **Full backlog:** [doc/BACKLOG.md](doc/BACKLOG.md)
 - **Commentary / deltas:** [doc/PLAN_COMMENTARY.md](doc/PLAN_COMMENTARY.md) (integration-chain Epic 1.9 suggested; Google export quirks)
 

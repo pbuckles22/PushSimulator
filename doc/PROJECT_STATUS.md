@@ -6,7 +6,7 @@
 
 ## Summary
 
-Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. Epic 1.1 is complete on `main` at `248075f`: cards, wilds, a 108-card deck, shuffle, draw, and the empty-deck leftovers.
+Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. Epic 1.2 is complete on `main`: a player, a 10-card deal, card penalties, and a hand total. Epic 1.1 (cards, wilds, a 108-card deck, shuffle, draw, and the empty-deck leftovers) is inside that history.
 
 ---
 
@@ -14,12 +14,13 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Branch | Role |
 |--------|------|
-| **`main`** | Epic 1.1 complete — cards, wilds, 108-card deck, shuffle, draw, empty-deck leftovers |
-| **`feature/1.2.5-wild-scoring`** | Parked. A two and a joker score 20. Not merged |
-| **`feature/1.2.4-face-ace-scoring`** | Parked. 10 through King score 10. An ace scores 15. Not merged |
-| **`feature/1.2.3-pip-scoring`** | Parked. Ranks 3–9 score 5 points. Not merged |
-| **`feature/1.2.2-deal-hands`** | Parked. Deal 10 cards to each of 2 or more players, one card at a time. Not merged |
-| **`feature/1.2.1-player-init`** | Parked. `Player::new` starts empty. Not merged |
+| **`main`** | Epic 1.2 complete — player, 10-card deal, card penalties, hand total |
+| **`feature/1.2.6-hand-total`** | Kept. Same history as this land. Do not merge again |
+| **`feature/1.2.5-wild-scoring`** | Kept. A two and a joker score 20 |
+| **`feature/1.2.4-face-ace-scoring`** | Kept. 10 through King score 10. An ace scores 15 |
+| **`feature/1.2.3-pip-scoring`** | Kept. Ranks 3–9 score 5 points |
+| **`feature/1.2.2-deal-hands`** | Kept. Deal 10 cards to each of 2 or more players, one card at a time |
+| **`feature/1.2.1-player-init`** | Kept. `Player::new` starts empty |
 | **`feature/1.1.4-empty-reshuffle`** | Kept. Empty-deck leftovers |
 | **`feature/1.1.4-shuffle-draw`** | Kept. Same history as this land. Do not merge again |
 | **`feature/1.1.2-wild-cards`** | Ancestor of `main`. Do not merge separately |
@@ -39,6 +40,12 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 - **1.1.3** `Deck::new`: 2 decks × 52 cards + 2 jokers per deck (4 jokers, 8 twos, 108 cards)
 - **1.1.2** `Card::is_wild`: jokers and twos are wild; other ranks are not. A new deck has 12 wilds.
 - **1.1.4** `Deck::shuffle` and `Deck::draw`. Order changes, one draw leaves 107 cards. Three or more discard cards leave the top card and reshuffle. One leftover card goes to the current player. Two leftover cards are shuffled and split. Both piles empty draws nothing.
+- **1.2.1** `Player::new`: 0 points, `total_score` 0, not on the board, empty hand
+- **1.2.2** `deal_initial_hands`: 10 cards, one at a time, to 2 or more players. One player is refused. The discard pile stays put
+- **1.2.3** Ranks 3–9 score 5
+- **1.2.4.1** A 10 through King scores 10. An ace scores 15
+- **1.2.5** A two and a joker score 20
+- **1.2.6** `calculate_hand_penalty` sums the hand. A hand of 4, Jack, Ace, and Joker is 50. `add_hand_penalty_to_total` adds that onto `total_score`. `points` stays 0
 
 ---
 
@@ -46,7 +53,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Item | Detail |
 |------|--------|
-| **1.2.6** | Total hand calculation — sum a hand, only when asked |
+| **1.3.1** | Standard Draw — the top discard moves into the player's hand, only when asked |
 | **1.2.4.2** | Tech debt from the 2026-10-06 test review — not the next red/green |
 | **1.2.4.3** | Test gaps from that review — not the next red/green |
 

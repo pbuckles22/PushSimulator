@@ -3,12 +3,13 @@
 use crate::card::Card;
 use crate::deck::Deck;
 
-/// One seat. A new player has no cards, is not on the board, and has 0 points.
+/// One seat. A new player has no cards, is not on the board, and has 0 points and a 0 total score.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Player {
     pub id: u32,
     pub seat_index: u32,
     pub points: u32,
+    pub total_score: u32,
     pub is_on_board: bool,
     pub hand: Vec<Card>,
 }
@@ -19,9 +20,20 @@ impl Player {
             id,
             seat_index,
             points: 0,
+            total_score: 0,
             is_on_board: false,
             hand: Vec::new(),
         }
+    }
+
+    /// Sum of each card's penalty. The hand and both scores stay as they are.
+    pub fn calculate_hand_penalty(&self) -> u32 {
+        self.hand.iter().map(|card| card.get_penalty_value()).sum()
+    }
+
+    /// Adds this hand's penalty onto the historical total. The hand and `points` stay as they are.
+    pub fn add_hand_penalty_to_total(&mut self) {
+        self.total_score += self.calculate_hand_penalty();
     }
 }
 
@@ -46,6 +58,7 @@ pub fn deal_initial_hands(players: &mut [Player], deck: &mut Deck) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::card::{Rank, Suit};
     use crate::deck::Deck;
 
     #[test]
@@ -128,5 +141,66 @@ mod tests {
         assert!(players[0].hand.is_empty());
         assert_eq!(players[0].points, 0);
         assert!(!players[0].is_on_board);
+    }
+
+    fn penalty_hand() -> Vec<Card> {
+        vec![
+            Card {
+                id: 1,
+                suit: Suit::Hearts,
+                rank: Rank::Four,
+                locked_until_turn: 3,
+            },
+            Card {
+                id: 2,
+                suit: Suit::Spades,
+                rank: Rank::Jack,
+                locked_until_turn: 0,
+            },
+            Card {
+                id: 3,
+                suit: Suit::Diamonds,
+                rank: Rank::Ace,
+                locked_until_turn: 7,
+            },
+            Card {
+                id: 4,
+                suit: Suit::None,
+                rank: Rank::Joker,
+                locked_until_turn: 1,
+            },
+        ]
+    }
+
+    #[test]
+    fn test_calculate_hand_total() {
+        let mut player = Player::new(1, 0);
+        let hand = penalty_hand();
+        player.hand = hand.clone();
+
+        assert_eq!(player.calculate_hand_penalty(), 50);
+        assert_eq!(player.calculate_hand_penalty(), 50);
+        assert_eq!(player.hand, hand);
+        assert_eq!(player.points, 0);
+        assert_eq!(player.total_score, 0);
+        assert!(!player.is_on_board);
+    }
+
+    #[test]
+    fn test_add_to_total_score() {
+        let mut player = Player::new(1, 0);
+        let hand = penalty_hand();
+        player.hand = hand.clone();
+        assert_eq!(player.total_score, 0);
+        assert_eq!(player.calculate_hand_penalty(), 50);
+
+        player.add_hand_penalty_to_total();
+
+        assert_eq!(player.total_score, 50);
+        assert_eq!(player.points, 0);
+        assert_eq!(player.hand, hand);
+        assert!(!player.is_on_board);
+        assert_eq!(player.id, 1);
+        assert_eq!(player.seat_index, 0);
     }
 }

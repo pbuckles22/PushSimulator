@@ -58,6 +58,8 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 
 ### **Epic 1.2: Player State & Scoring**
 
+**Status:** complete — 2026-10-06. Player, deal, card penalties, and the hand total. **1.2.4.2** and **1.2.4.3** stay open. Next is **1.3.1**, only when asked.
+
 **User Story 1.2.1: Player Initialization**
 
 *As the game engine, I want to create a Player so that I can track their hand, board status, and score.*
@@ -84,12 +86,12 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 * \[x\] Implement Ace scoring.  
 * \[x\] Write test test\_score\_card\_wild asserting 2s and Jokers return 20 points.  
 * \[x\] Implement wild card scoring.  
-* \[ \] Write test test\_calculate\_hand\_total asserting hand sums correctly.  
-* \[ \] Implement calculate\_hand\_penalty() iterating over hand.
+* \[x\] Write test test\_calculate\_hand\_total asserting hand sums correctly.  
+* \[x\] Implement calculate\_hand\_penalty() iterating over hand.
 
-Wild scoring is sprint story **1.2.5**, parked on `feature/1.2.5-wild-scoring`. The two hand-total lines above are sprint story **1.2.6**. They stay under this heading because the Google export listed every penalty step on story 1.2.3. The sprint order is pips, then face and ace, then wilds, then the hand total.
+Wild scoring is sprint story **1.2.5**. The two hand-total lines above are sprint story **1.2.6**. They stay under this heading because the Google export listed every penalty step on story 1.2.3. The sprint order is pips, then face and ace, then wilds, then the hand total.
 
-Face and ace scoring is sprint story **1.2.4.1**, parked on `feature/1.2.4-face-ace-scoring`. **1.2.4.2** and **1.2.4.3** below are the 2026-10-06 test review. They are not the next red/green. Next is **1.2.6**, only when asked.
+Face and ace scoring is sprint story **1.2.4.1**. **1.2.4.2** and **1.2.4.3** below are the 2026-10-06 test review. They stay open. Next is **1.3.1**, only when asked.
 
 **1.2.4.2: Tech debt**
 
