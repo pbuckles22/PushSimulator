@@ -6,7 +6,7 @@
 
 ## Summary
 
-Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. 1.3.1 is parked on `feature/1.3.1-take-discard` (not merged): the top discard moves into the player's hand. Epic 1.2 stays on `main` at `b7e4b93`: a player, a 10-card deal, card penalties, and a hand total. Epic 1.1 (cards, wilds, a 108-card deck, shuffle, draw, and the empty-deck leftovers) is inside that history.
+Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. 1.3.1 is parked on `feature/1.3.1-take-discard` at `6a00eff` (not merged): the top discard moves into the player's hand. Epic 1.2 stays on `main` at `b7e4b93`: a player, a 10-card deal, card penalties, and a hand total. Epic 1.1 (cards, wilds, a 108-card deck, shuffle, draw, and the empty-deck leftovers) is inside that history.
 
 ---
 
