@@ -416,6 +416,51 @@ mod tests {
     }
 
     #[test]
+    fn test_validate_run_two_starts_low_and_length_bounds() {
+        let two_low = [
+            card(1, Suit::Hearts, Rank::Two),
+            card(2, Suit::Hearts, Rank::Three),
+            card(3, Suit::Hearts, Rank::Four),
+            card(4, Suit::Hearts, Rank::Five),
+        ];
+        let two_cannot_fill_two_holes = [
+            card(10, Suit::Hearts, Rank::Two),
+            card(11, Suit::Hearts, Rank::Three),
+            card(12, Suit::Hearts, Rank::Five),
+            card(13, Suit::Hearts, Rank::Seven),
+        ];
+        let king_ace_extended = [
+            card(20, Suit::Hearts, Rank::King),
+            card(21, Suit::Hearts, Rank::Ace),
+            card(22, Suit::None, Rank::Joker),
+            card(23, Suit::Spades, Rank::Two),
+        ];
+        let full_suit = [
+            card(30, Suit::Hearts, Rank::Ace),
+            card(31, Suit::Hearts, Rank::Two),
+            card(32, Suit::Hearts, Rank::Three),
+            card(33, Suit::Hearts, Rank::Four),
+            card(34, Suit::Hearts, Rank::Five),
+            card(35, Suit::Hearts, Rank::Six),
+            card(36, Suit::Hearts, Rank::Seven),
+            card(37, Suit::Hearts, Rank::Eight),
+            card(38, Suit::Hearts, Rank::Nine),
+            card(39, Suit::Hearts, Rank::Ten),
+            card(40, Suit::Hearts, Rank::Jack),
+            card(41, Suit::Hearts, Rank::Queen),
+            card(42, Suit::Hearts, Rank::King),
+        ];
+        let mut past_max = full_suit.to_vec();
+        past_max.push(card(50, Suit::None, Rank::Joker));
+
+        assert!(validate_run(&two_low));
+        assert!(!validate_run(&two_cannot_fill_two_holes));
+        assert!(validate_run(&king_ace_extended));
+        assert!(validate_run(&full_suit));
+        assert!(!validate_run(&past_max));
+    }
+
+    #[test]
     fn test_ace_placement_low() {
         let low = [
             card(1, Suit::Hearts, Rank::Ace),
@@ -509,10 +554,27 @@ mod tests {
     }
 
     fn heart_run(id: u32, ranks: &[Rank]) -> Vec<Card> {
+        suited_run(id, Suit::Hearts, ranks)
+    }
+
+    fn suited_run(id: u32, suit: Suit, ranks: &[Rank]) -> Vec<Card> {
         ranks
             .iter()
             .enumerate()
-            .map(|(offset, rank)| card(id + offset as u32, Suit::Hearts, *rank))
+            .map(|(offset, rank)| card(id + offset as u32, suit, *rank))
+            .collect()
+    }
+
+    fn wilds(id: u32, count: usize) -> Vec<Card> {
+        (0..count)
+            .map(|offset| {
+                let offset = offset as u32;
+                if offset % 2 == 0 {
+                    card(id + offset, Suit::None, Rank::Joker)
+                } else {
+                    card(id + offset, Suit::Clubs, Rank::Two)
+                }
+            })
             .collect()
     }
 
@@ -798,5 +860,287 @@ mod tests {
 
         assert!(!check_round_requirements(0, &[&fours, &fives]));
         assert!(!check_round_requirements(6, &[&fours, &fives]));
+        assert!(!check_round_requirements(255, &[&fours, &fives]));
+    }
+
+    #[test]
+    fn test_round_1_six_fours_need_two_melds() {
+        let six = set_of(
+            1,
+            Rank::Four,
+            &[
+                Suit::Hearts,
+                Suit::Spades,
+                Suit::Clubs,
+                Suit::Diamonds,
+                Suit::Hearts,
+                Suit::Spades,
+            ],
+        );
+        let left = six[..3].to_vec();
+        let right = six[3..].to_vec();
+
+        assert!(!check_round_requirements(1, &[&six]));
+        assert!(check_round_requirements(1, &[&left, &right]));
+        assert!(check_round_requirements(1, &[&right, &left]));
+    }
+
+    #[test]
+    fn test_round_requirements_pair_empty_and_duplicate_id() {
+        let fours = set_of(1, Rank::Four, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+        let pair = vec![
+            card(20, Suit::Hearts, Rank::Five),
+            card(21, Suit::Spades, Rank::Five),
+        ];
+        let empty: Vec<Card> = vec![];
+        let doubled = vec![
+            card(30, Suit::Hearts, Rank::Six),
+            card(30, Suit::Spades, Rank::Six),
+            card(31, Suit::Clubs, Rank::Six),
+        ];
+        let shared = card(1, Suit::Hearts, Rank::Four);
+        let run = vec![
+            shared,
+            card(40, Suit::Hearts, Rank::Five),
+            card(41, Suit::Hearts, Rank::Six),
+            card(42, Suit::Hearts, Rank::Seven),
+        ];
+
+        assert!(validate_set(&doubled));
+        assert!(!check_round_requirements(1, &[&fours, &pair]));
+        assert!(!check_round_requirements(1, &[&pair, &pair]));
+        assert!(!check_round_requirements(1, &[&fours, &empty]));
+        assert!(!check_round_requirements(1, &[&doubled, &fours]));
+        assert!(!check_round_requirements(2, &[&fours, &run]));
+    }
+
+    #[test]
+    fn test_four_wilds_fill_one_requirement() {
+        let group_a = wilds(1, 4);
+        let group_b = wilds(10, 4);
+        let group_c = wilds(20, 4);
+        let fours = set_of(40, Rank::Four, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+        let run = heart_run(50, &[Rank::Four, Rank::Five, Rank::Six, Rank::Seven]);
+
+        assert!(check_round_requirements(1, &[&group_a, &fours]));
+        assert!(!check_round_requirements(1, &[&group_a]));
+        assert!(check_round_requirements(1, &[&group_a, &group_b]));
+        assert!(!check_round_requirements(
+            1,
+            &[&group_a, &group_b, &group_c]
+        ));
+
+        assert!(check_round_requirements(2, &[&run, &fours]));
+        assert!(check_round_requirements(2, &[&group_a, &group_b]));
+        assert!(!check_round_requirements(
+            2,
+            &[
+                &run,
+                &heart_run(60, &[Rank::Eight, Rank::Nine, Rank::Ten, Rank::Jack])
+            ]
+        ));
+        assert!(!check_round_requirements(2, &[&fours, &run, &group_a]));
+        assert!(!check_round_requirements(
+            2,
+            &[
+                &fours,
+                &heart_run(70, &[Rank::Four, Rank::Six, Rank::Seven, Rank::Eight])
+            ]
+        ));
+
+        assert!(check_round_requirements(3, &[&group_a, &run]));
+        assert!(check_round_requirements(3, &[&group_a, &group_b]));
+        assert!(!check_round_requirements(
+            3,
+            &[&group_a, &group_b, &group_c]
+        ));
+        assert!(!check_round_requirements(4, &[&group_a, &group_b]));
+        assert!(check_round_requirements(4, &[&group_a, &group_b, &group_c]));
+        assert!(!check_round_requirements(5, &[&group_a, &group_b]));
+    }
+
+    #[test]
+    fn test_round_3_eight_cards_need_two_melds() {
+        let low = heart_run(1, &[Rank::Three, Rank::Four, Rank::Five, Rank::Six]);
+        let high = heart_run(10, &[Rank::Seven, Rank::Eight, Rank::Nine, Rank::Ten]);
+        let mut eight = low.clone();
+        eight.extend(high.iter().copied());
+        let short = heart_run(20, &[Rank::Jack, Rank::Queen, Rank::King]);
+        let ace_low = vec![
+            card(30, Suit::Hearts, Rank::Ace),
+            card(31, Suit::Clubs, Rank::Two),
+            card(32, Suit::Hearts, Rank::Three),
+            card(33, Suit::Hearts, Rank::Four),
+        ];
+        let ace_high = suited_run(
+            40,
+            Suit::Spades,
+            &[Rank::Jack, Rank::Queen, Rank::King, Rank::Ace],
+        );
+        let wrap = vec![
+            card(50, Suit::Diamonds, Rank::King),
+            card(51, Suit::Diamonds, Rank::Ace),
+            card(52, Suit::Clubs, Rank::Two),
+            card(53, Suit::Diamonds, Rank::Three),
+        ];
+        let shared = card(1, Suit::Hearts, Rank::Three);
+        let overlap = vec![
+            shared,
+            card(60, Suit::Hearts, Rank::Four),
+            card(61, Suit::Hearts, Rank::Five),
+            card(62, Suit::Hearts, Rank::Six),
+        ];
+
+        assert!(check_round_requirements(3, &[&low, &high]));
+        assert!(check_round_requirements(3, &[&high, &low]));
+        assert!(!check_round_requirements(3, &[&eight]));
+        assert!(!check_round_requirements(3, &[&low, &short]));
+        assert!(check_round_requirements(3, &[&ace_low, &ace_high]));
+        assert!(!check_round_requirements(3, &[&ace_low, &wrap]));
+        assert!(!check_round_requirements(3, &[&low, &overlap]));
+    }
+
+    #[test]
+    fn test_round_4_a_run_is_not_a_set() {
+        let fours = set_of(1, Rank::Four, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+        let fives = set_of(10, Rank::Five, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+        let sixes = set_of(20, Rank::Six, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+        let run = heart_run(30, &[Rank::Four, Rank::Five, Rank::Six, Rank::Seven]);
+        let other = heart_run(40, &[Rank::Eight, Rank::Nine, Rank::Ten, Rank::Jack]);
+        let third = suited_run(
+            50,
+            Suit::Spades,
+            &[Rank::Three, Rank::Four, Rank::Five, Rank::Six],
+        );
+        let nine = set_of(
+            60,
+            Rank::Nine,
+            &[
+                Suit::Hearts,
+                Suit::Spades,
+                Suit::Clubs,
+                Suit::Diamonds,
+                Suit::Hearts,
+                Suit::Spades,
+                Suit::Clubs,
+                Suit::Diamonds,
+                Suit::Hearts,
+            ],
+        );
+        let shared = card(1, Suit::Hearts, Rank::Four);
+        let overlap = vec![
+            shared,
+            card(80, Suit::Spades, Rank::Four),
+            card(81, Suit::Clubs, Rank::Four),
+        ];
+
+        assert!(check_round_requirements(4, &[&sixes, &fives, &fours]));
+        assert!(!check_round_requirements(4, &[&fours, &fives, &run]));
+        assert!(!check_round_requirements(4, &[&run, &other, &third]));
+        assert!(!check_round_requirements(4, &[&nine]));
+        assert!(!check_round_requirements(4, &[&fours, &fives, &overlap]));
+    }
+
+    #[test]
+    fn test_round_5_ace_runs_and_one_meld() {
+        let fours = set_of(1, Rank::Four, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+        let more = set_of(10, Rank::Five, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+        let seven_nines = set_of(
+            20,
+            Rank::Nine,
+            &[
+                Suit::Hearts,
+                Suit::Spades,
+                Suit::Clubs,
+                Suit::Diamonds,
+                Suit::Hearts,
+                Suit::Spades,
+                Suit::Clubs,
+            ],
+        );
+        let ace_low = vec![
+            card(40, Suit::Hearts, Rank::Ace),
+            card(41, Suit::Clubs, Rank::Two),
+            card(42, Suit::Hearts, Rank::Three),
+            card(43, Suit::Hearts, Rank::Four),
+            card(44, Suit::Hearts, Rank::Five),
+            card(45, Suit::Hearts, Rank::Six),
+            card(46, Suit::Hearts, Rank::Seven),
+        ];
+        let ace_high = suited_run(
+            50,
+            Suit::Spades,
+            &[
+                Rank::Eight,
+                Rank::Nine,
+                Rank::Ten,
+                Rank::Jack,
+                Rank::Queen,
+                Rank::King,
+                Rank::Ace,
+            ],
+        );
+        let unsorted = vec![
+            card(60, Suit::Diamonds, Rank::Ace),
+            card(61, Suit::Diamonds, Rank::Queen),
+            card(62, Suit::Diamonds, Rank::Eight),
+            card(63, Suit::Diamonds, Rank::Jack),
+            card(64, Suit::Diamonds, Rank::Nine),
+            card(65, Suit::Diamonds, Rank::King),
+            card(66, Suit::Diamonds, Rank::Ten),
+        ];
+        let wrap = vec![
+            card(70, Suit::Hearts, Rank::King),
+            card(71, Suit::Hearts, Rank::Ace),
+            card(72, Suit::Clubs, Rank::Two),
+            card(73, Suit::Hearts, Rank::Three),
+            card(74, Suit::Hearts, Rank::Four),
+            card(75, Suit::Hearts, Rank::Five),
+            card(76, Suit::Hearts, Rank::Six),
+        ];
+        let mixed = vec![
+            card(80, Suit::Hearts, Rank::Eight),
+            card(81, Suit::Hearts, Rank::Nine),
+            card(82, Suit::Diamonds, Rank::Ten),
+            card(83, Suit::Hearts, Rank::Jack),
+            card(84, Suit::Hearts, Rank::Queen),
+            card(85, Suit::Hearts, Rank::King),
+            card(86, Suit::Hearts, Rank::Ace),
+        ];
+        let other_run = suited_run(
+            90,
+            Suit::Clubs,
+            &[
+                Rank::Three,
+                Rank::Four,
+                Rank::Five,
+                Rank::Six,
+                Rank::Seven,
+                Rank::Eight,
+                Rank::Nine,
+            ],
+        );
+        let short = heart_run(100, &[Rank::Four, Rank::Five, Rank::Six, Rank::Seven]);
+        let wild_set = wilds(110, 4);
+        let both_a = wilds(120, 7);
+        let both_b = wilds(130, 7);
+        let both_c = wilds(140, 7);
+
+        assert!(check_round_requirements(5, &[&ace_high, &fours]));
+        assert!(check_round_requirements(5, &[&fours, &ace_low]));
+        assert!(check_round_requirements(5, &[&fours, &unsorted]));
+        assert!(check_round_requirements(5, &[&wild_set, &ace_high]));
+        assert!(check_round_requirements(5, &[&seven_nines, &ace_high]));
+        assert!(check_round_requirements(5, &[&both_a, &both_b]));
+        assert!(!check_round_requirements(5, &[&seven_nines, &fours]));
+        assert!(!check_round_requirements(5, &[&seven_nines]));
+        assert!(!check_round_requirements(5, &[&seven_nines, &short]));
+        assert!(!check_round_requirements(5, &[&fours, &ace_high, &more]));
+        assert!(!check_round_requirements(5, &[&ace_high, &other_run]));
+        assert!(!check_round_requirements(5, &[&fours, &wrap]));
+        assert!(!check_round_requirements(5, &[&fours, &mixed]));
+        assert!(!check_round_requirements(5, &[&both_a, &both_b, &both_c]));
+        assert!(!check_round_requirements(0, &[&fours, &ace_high]));
+        assert!(!check_round_requirements(6, &[&fours, &ace_high]));
     }
 }

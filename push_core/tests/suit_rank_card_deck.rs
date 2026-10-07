@@ -2024,7 +2024,7 @@ fn test_suit_rank_card_deck_new_is_wild_seeded_shuffle_deal_draw_reshuffle_push_
 }
 
 /// Chain: Suit → Rank → Card → Deck::new → is_wild → seeded shuffle → deal → draw → three-or-more reshuffle → push → validate a set → validate a run → round requirements.
-/// One seed repeats the order. Card ids survive. A set and a run are judged on that shoe. Round 1 needs two sets of at least 3. One set fails. Two sets of 3 pass. Two sets of 4 pass. A set plus a run is round 2, not round 1. A run of 4 does not meet round 5.
+/// One seed repeats the order. Card ids survive. A set and a run are judged on that shoe. Round 1 needs two sets of at least 3. One set fails. Two sets of 3 pass. Two sets of 4 pass. A set plus a run is round 2, not round 1. A run of 4 does not meet round 5. Six fours from this shoe are two sets. Those six in one meld fail. A card used in both melds fails. Two runs are round 3. Three sets are round 4. A fourth set fails. Jack through ace of hearts meets round 2.
 #[test]
 fn test_suit_rank_card_deck_new_is_wild_seeded_shuffle_deal_draw_reshuffle_push_validate_set_validate_run_round_requirements(
 ) {
@@ -2126,6 +2126,35 @@ fn test_suit_rank_card_deck_new_is_wild_seeded_shuffle_deal_draw_reshuffle_push_
         .copied()
         .find(|card| card.rank == Rank::Joker)
         .expect("the shoe contains a joker");
+    let four_hearts_b = take_suited(&mut shoe, Suit::Hearts, Rank::Four);
+    let four_spades_b = take_suited(&mut shoe, Suit::Spades, Rank::Four);
+    let six_spades = take_suited(&mut shoe, Suit::Spades, Rank::Six);
+    let six_clubs = take_suited(&mut shoe, Suit::Clubs, Rank::Six);
+    let six_diamonds = take_suited(&mut shoe, Suit::Diamonds, Rank::Six);
+    let seven_spades = take_suited(&mut shoe, Suit::Spades, Rank::Seven);
+    let seven_clubs = take_suited(&mut shoe, Suit::Clubs, Rank::Seven);
+    let seven_diamonds = take_suited(&mut shoe, Suit::Diamonds, Rank::Seven);
+    let eight_spades = take_suited(&mut shoe, Suit::Spades, Rank::Eight);
+    let eight_clubs = take_suited(&mut shoe, Suit::Clubs, Rank::Eight);
+    let eight_diamonds = take_suited(&mut shoe, Suit::Diamonds, Rank::Eight);
+    let spade_run = vec![
+        take_suited(&mut shoe, Suit::Spades, Rank::Eight),
+        take_suited(&mut shoe, Suit::Spades, Rank::Nine),
+        take_suited(&mut shoe, Suit::Spades, Rank::Ten),
+        take_suited(&mut shoe, Suit::Spades, Rank::Jack),
+    ];
+    let club_run = vec![
+        take_suited(&mut shoe, Suit::Clubs, Rank::Eight),
+        take_suited(&mut shoe, Suit::Clubs, Rank::Nine),
+        take_suited(&mut shoe, Suit::Clubs, Rank::Ten),
+        take_suited(&mut shoe, Suit::Clubs, Rank::Jack),
+    ];
+    let ace_high = vec![
+        take_suited(&mut shoe, Suit::Hearts, Rank::Jack),
+        take_suited(&mut shoe, Suit::Hearts, Rank::Queen),
+        take_suited(&mut shoe, Suit::Hearts, Rank::King),
+        take_suited(&mut shoe, Suit::Hearts, Rank::Ace),
+    ];
 
     let set_of_three = vec![four_hearts, four_spades, four_clubs];
     let set_of_four = vec![four_hearts, four_spades, four_clubs, four_diamonds];
@@ -2165,6 +2194,39 @@ fn test_suit_rank_card_deck_new_is_wild_seeded_shuffle_deal_draw_reshuffle_push_
     assert!(check_round_requirements(2, &[&other_set, &run_of_four]));
     assert!(!check_round_requirements(5, &[&other_set, &run_of_four]));
     assert!(check_round_requirements(5, &[&other_set, &run_of_seven]));
+
+    let six_fours = vec![
+        four_hearts,
+        four_spades,
+        four_clubs,
+        four_diamonds,
+        four_hearts_b,
+        four_spades_b,
+    ];
+    let fours_left = vec![four_hearts, four_spades, four_clubs];
+    let fours_right = vec![four_diamonds, four_hearts_b, four_spades_b];
+    let doubled_five = vec![five_hearts, five_hearts_b, five_spades];
+    let sixes = vec![six_spades, six_clubs, six_diamonds];
+    let sevens = vec![seven_spades, seven_clubs, seven_diamonds];
+    let eights = vec![eight_spades, eight_clubs, eight_diamonds];
+
+    assert!(!check_round_requirements(1, &[&six_fours]));
+    assert!(check_round_requirements(1, &[&fours_left, &fours_right]));
+    assert!(check_round_requirements(1, &[&doubled_five, &set_of_three]));
+    assert!(!check_round_requirements(1, &[&set_of_three, &set_of_four]));
+    assert!(!check_round_requirements(3, &[&run_of_four, &run_of_seven]));
+    assert!(check_round_requirements(3, &[&spade_run, &club_run]));
+    assert!(!check_round_requirements(
+        3,
+        &[&spade_run, &club_run, &run_of_four]
+    ));
+    assert!(check_round_requirements(4, &[&sixes, &sevens, &eights]));
+    assert!(!check_round_requirements(
+        4,
+        &[&sixes, &sevens, &eights, &other_set]
+    ));
+    assert!(check_round_requirements(2, &[&sixes, &ace_high]));
+    assert!(validate_run(&ace_high));
 
     assert_eq!(players[0].hand.len(), 11);
     assert_eq!(players[1].hand.len(), 12);
