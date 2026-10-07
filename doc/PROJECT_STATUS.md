@@ -6,7 +6,7 @@
 
 ## Summary
 
-Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. Epic 1.4 is complete — 2026-10-06: a set is three or more cards of one rank, and a run is four or more of one suit in order. The close is on `feature/1.4-swat` at `2341904` and is not merged. Epic 1.2 is complete. 1.2.4.2 is on `main` at `1209802`: shuffle and draw take an rng, and card ids survive a reshuffle of three or more. 1.4.2 is on `main` at `da56999`: four or more cards of one suit in order are a run, and an ace is low or high. 1.2.4.3 is on `main` at `b70cfa2`: a short draw pile deals the cards it has, then panics. 1.4.1 is on `main` at `62220b3`: a set is three or more cards of one rank, and twos and jokers can fill that rank. 1.3.2 is on `main` at `1500b02`: the next player receives the top discard and the top draw-pile card, then the pushing player draws. Epic 1.3 is complete. 1.3.1 stays in that history at `1dfdbc6` (`6a00eff`): the top discard moves into the player's hand. Epic 1.1 (cards, wilds, a 108-card deck, shuffle, draw, and the empty-deck leftovers) is inside that history.
+Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. Epic 1.4 is complete — 2026-10-06: a set is three or more cards of one rank, and a run is four or more of one suit in order. The close is on `main`. Content is `2341904`. `feature/1.4-swat` stays. Epic 1.2 is complete. 1.2.4.2 is on `main` at `1209802`: shuffle and draw take an rng, and card ids survive a reshuffle of three or more. 1.4.2 is on `main` at `da56999`: four or more cards of one suit in order are a run, and an ace is low or high. 1.2.4.3 is on `main` at `b70cfa2`: a short draw pile deals the cards it has, then panics. 1.4.1 is on `main` at `62220b3`: a set is three or more cards of one rank, and twos and jokers can fill that rank. 1.3.2 is on `main` at `1500b02`: the next player receives the top discard and the top draw-pile card, then the pushing player draws. Epic 1.3 is complete. 1.3.1 stays in that history at `1dfdbc6` (`6a00eff`): the top discard moves into the player's hand. Epic 1.1 (cards, wilds, a 108-card deck, shuffle, draw, and the empty-deck leftovers) is inside that history.
 
 ---
 
@@ -14,8 +14,8 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Branch | Role |
 |--------|------|
-| **`main`** | Epic 1.2 complete — 1.2.4.2 at `1209802`. Epic 1.4 stories are here. The SWAT close is not merged |
-| **`feature/1.4-swat`** | Epic 1.4 close at `2341904`. Not merged |
+| **`main`** | Epic 1.4 complete. Close content `2341904` |
+| **`feature/1.4-swat`** | Kept. Do not merge again |
 | **`feature/1.2.4.2-tech-debt`** | Kept. Seeded shuffle and draw. Epic 1.2 closes with this land |
 | **`feature/1.4.2-validate-runs`** | Kept. Same history as this land. Do not merge again |
 | **`feature/1.2.4.3-deal-short-deck`** | Kept. Same history as this land. Do not merge again |

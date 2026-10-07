@@ -139,7 +139,7 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 ### **Epic 1.4: Validation Engine**
 
-**Status:** complete — 2026-10-06. A set is three or more cards of one rank. A run is four or more cards of one suit in order. Twos and jokers fill gaps. An ace is low or high. King, ace, a two, and a three is not a run. `feature/1.4.1-validate-sets` and `feature/1.4.2-validate-runs` stay. This close is on `feature/1.4-swat` at `2341904` and is not merged.
+**Status:** complete — 2026-10-06. A set is three or more cards of one rank. A run is four or more cards of one suit in order. Twos and jokers fill gaps. An ace is low or high. King, ace, a two, and a three is not a run. `feature/1.4.1-validate-sets` and `feature/1.4.2-validate-runs` stay. This close is on `main`. Content is `2341904`. `feature/1.4-swat` stays.
 
 **User Story 1.4.1: Validating Sets**
 
