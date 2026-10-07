@@ -6,7 +6,7 @@
 
 ## Summary
 
-Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. 1.3.1 is parked on `feature/1.3.1-take-discard` at `6a00eff` (not merged): the top discard moves into the player's hand. Epic 1.2 stays on `main` at `b7e4b93`: a player, a 10-card deal, card penalties, and a hand total. Epic 1.1 (cards, wilds, a 108-card deck, shuffle, draw, and the empty-deck leftovers) is inside that history.
+Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. 1.3.1 is on `main` at `6a00eff`: the top discard moves into the player's hand. Epic 1.2 stays inside that history at `b7e4b93`: a player, a 10-card deal, card penalties, and a hand total. Epic 1.1 (cards, wilds, a 108-card deck, shuffle, draw, and the empty-deck leftovers) is inside that history.
 
 ---
 
@@ -14,8 +14,8 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Branch | Role |
 |--------|------|
-| **`feature/1.3.1-take-discard`** | Parked. Top discard moves into the player's hand. Not merged |
-| **`main`** | Epic 1.2 complete — player, 10-card deal, card penalties, hand total |
+| **`main`** | 1.3.1 landed — top discard moves into the player's hand |
+| **`feature/1.3.1-take-discard`** | Kept. Same history as this land. Do not merge again |
 | **`feature/1.2.6-hand-total`** | Kept. Same history as this land. Do not merge again |
 | **`feature/1.2.5-wild-scoring`** | Kept. A two and a joker score 20 |
 | **`feature/1.2.4-face-ace-scoring`** | Kept. 10 through King score 10. An ace scores 15 |
@@ -55,7 +55,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Item | Detail |
 |------|--------|
-| **1.3.2** | Pushing a Discard — the top discard moves to the next player's hand, only when asked |
+| **1.3.2** | Pushing a Discard — the top discard moves to the next player's hand, that player draws a penalty card, and the pushing player draws |
 | **1.2.4.2** | Tech debt from the 2026-10-06 test review — not the next red/green |
 | **1.2.4.3** | Test gaps from that review — not the next red/green |
 
