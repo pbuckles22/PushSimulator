@@ -6,7 +6,7 @@
 
 ## Summary
 
-Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. 1.3.2 is parked on `feature/1.3.2-push-discard` (not merged): the next player receives the top discard and the top draw-pile card, then the pushing player draws. 1.3.1 is on `main` at `1dfdbc6` (`6a00eff`): the top discard moves into the player's hand. Epic 1.2 stays inside that history at `b7e4b93`: a player, a 10-card deal, card penalties, and a hand total. Epic 1.1 (cards, wilds, a 108-card deck, shuffle, draw, and the empty-deck leftovers) is inside that history.
+Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. 1.4.1 is parked on `feature/1.4.1-validate-sets` (not merged): a set is three or more cards of one rank, and twos and jokers can fill that rank. 1.3.2 stays parked on `feature/1.3.2-push-discard` (not merged): the next player receives the top discard and the top draw-pile card, then the pushing player draws. 1.3.1 is on `main` at `1dfdbc6` (`6a00eff`): the top discard moves into the player's hand. Epic 1.2 stays inside that history at `b7e4b93`: a player, a 10-card deal, card penalties, and a hand total. Epic 1.1 (cards, wilds, a 108-card deck, shuffle, draw, and the empty-deck leftovers) is inside that history.
 
 ---
 
@@ -14,6 +14,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Branch | Role |
 |--------|------|
+| **`feature/1.4.1-validate-sets`** | Parked. A set is three or more cards of one rank. Not merged |
 | **`feature/1.3.2-push-discard`** | Parked. Next player gets the top discard and the top draw card. Not merged |
 | **`main`** | 1.3.1 landed — top discard moves into the player's hand |
 | **`feature/1.3.1-take-discard`** | Kept. Same history as this land. Do not merge again |
@@ -50,6 +51,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 - **1.2.6** `calculate_hand_penalty` sums the hand. A hand of 4, Jack, Ace, and Joker is 50. `add_hand_penalty_to_total` adds that onto `total_score`. `points` stays 0
 - **1.3.1** `Action::TakeDiscard` moves the discard pile's top card onto the end of the player's hand. Cards under that top stay. The draw pile stays. `points` and `total_score` stay 0
 - **1.3.2** `Action::PushDiscard` gives the next player the top discard and the top draw-pile card. The pushing player then draws. Cards under the pushed top stay. `points` and `total_score` stay 0
+- **1.4.1** `validate_set` accepts three or more cards of one rank. Twos and jokers fill that rank. A group of only wilds is a set. Two cards, or two different natural ranks, are not
 
 ---
 
@@ -57,7 +59,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Item | Detail |
 |------|--------|
-| **1.4.1** | Validating Sets — only when asked |
+| **1.4.2** | Validating Runs & Aces — only when asked |
 | **1.2.4.2** | Tech debt from the 2026-10-06 test review — not the next red/green |
 | **1.2.4.3** | Test gaps from that review — not the next red/green |
 

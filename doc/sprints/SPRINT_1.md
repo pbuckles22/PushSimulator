@@ -56,7 +56,7 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 
 ## **Epic 1.2: Player State & Scoring**
 
-**Status:** complete — 2026-10-06. A player starts empty. Two or more players are dealt 10 cards, one at a time. Ranks 3–9 score 5, a 10 through King scores 10, an ace scores 15, and a two or a joker scores 20. A hand of 4, Jack, Ace, and Joker totals 50, and that penalty adds onto `total_score`. **1.2.4.2** and **1.2.4.3** stay deferred. **1.3.1** is on `main`. **1.3.2** is parked. Next is **1.4.1**, only when asked.
+**Status:** complete — 2026-10-06. A player starts empty. Two or more players are dealt 10 cards, one at a time. Ranks 3–9 score 5, a 10 through King scores 10, an ace scores 15, and a two or a joker scores 20. A hand of 4, Jack, Ace, and Joker totals 50, and that penalty adds onto `total_score`. **1.2.4.2** and **1.2.4.3** stay deferred. **1.3.1** is on `main`. **1.3.2** and **1.4.1** are parked. Next is **1.4.2**, only when asked.
 
 ### **User Story 1.2.1: Player Initialization**
 
@@ -134,4 +134,4 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 *As the game engine, I want a player to take a discard so they can add it to their hand.*
 
 * \[x\] Write test test\_take\_discard asserting the discard pile's top card moves to the player's hand.  
-* \[x\] Implement Action::TakeDiscard handler. **1.3.2** is parked. Next is **1.4.1**, only when asked.
+* \[x\] Implement Action::TakeDiscard handler. **1.3.2** and **1.4.1** are parked. Next is **1.4.2**, only when asked.

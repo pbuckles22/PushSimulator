@@ -5,6 +5,7 @@ use push_core::actions::Action;
 use push_core::card::{Card, Rank, Suit};
 use push_core::deck::{Deck, TurnDraw};
 use push_core::player::{deal_initial_hands, Player};
+use push_core::validation::validate_set;
 
 const DECKS: usize = 2;
 const JOKERS_PER_DECK: usize = 2;
@@ -1076,6 +1077,24 @@ fn take_rank(cards: &mut Vec<Card>, rank: Rank) -> Card {
     cards.remove(index)
 }
 
+fn cards_in_play(players: &[Player], deck: &Deck) -> Vec<Card> {
+    let mut cards = Vec::new();
+    for player in players {
+        cards.extend(player.hand.iter().copied());
+    }
+    cards.extend(deck.cards.iter().copied());
+    cards.extend(deck.discard.iter().copied());
+    cards
+}
+
+fn take_suited(cards: &mut Vec<Card>, suit: Suit, rank: Rank) -> Card {
+    let index = cards
+        .iter()
+        .position(|card| card.suit == suit && card.rank == rank)
+        .expect("the shoe contains this suit and rank");
+    cards.remove(index)
+}
+
 /// Next draws come off the end, so the last pushed card is dealt first.
 fn stack_next_draws(cards: &mut Vec<Card>, ranks: &[Rank]) {
     let stacked: Vec<Card> = ranks
@@ -1825,4 +1844,65 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_leaves_discard_take_top_the
     assert_eq!(players[1].points, 0);
     assert_eq!(players[0].total_score, 0);
     assert_eq!(players[1].total_score, 0);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal around, discard stays → push the top discard → validate a set.
+/// The pushed ace, the penalty four, and Player 1's jack are not a set. Three fours from that shoe are. A four, a joker, and a two are.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_leaves_discard_push_top_validate_set() {
+    let mut deck = shuffled_deck();
+    let penalty = take_rank(&mut deck.cards, Rank::Four);
+    let actor_draw = take_rank(&mut deck.cards, Rank::Jack);
+    let under: Vec<Card> = deck.cards.drain(0..3).collect();
+    let top = take_rank(&mut deck.cards, Rank::Ace);
+    let mut discard = under.clone();
+    discard.push(top);
+    deck.discard = discard;
+    let mut players = deal_table(&mut deck, 2);
+    let hands = hands_of(&players);
+    let before = players[0].calculate_hand_penalty();
+    let other_before = players[1].calculate_hand_penalty();
+    deck.cards.push(actor_draw);
+    deck.cards.push(penalty);
+    let draw_len = deck.cards.len();
+
+    Action::PushDiscard.apply(&mut players, 0, &mut deck);
+
+    assert_eq!(players[0].hand.len(), 11);
+    assert_eq!(&players[0].hand[..10], hands[0].as_slice());
+    assert_eq!(players[0].hand[10], actor_draw);
+    assert_eq!(players[1].hand.len(), 12);
+    assert_eq!(&players[1].hand[..10], hands[1].as_slice());
+    assert_eq!(players[1].hand[10], top);
+    assert_eq!(players[1].hand[11], penalty);
+    assert_eq!(deck.discard, under);
+    assert_eq!(players[0].calculate_hand_penalty(), before + 10);
+    assert_eq!(players[1].calculate_hand_penalty(), other_before + 15 + 5);
+    assert_eq!(players[0].points, 0);
+    assert_eq!(players[1].points, 0);
+    assert_eq!(players[0].total_score, 0);
+    assert_eq!(players[1].total_score, 0);
+    assert_eq!(deck.cards.len(), draw_len - 2);
+
+    let mut shoe = cards_in_play(&players, &deck);
+    let four_hearts = take_suited(&mut shoe, Suit::Hearts, Rank::Four);
+    let four_spades = take_suited(&mut shoe, Suit::Spades, Rank::Four);
+    let four_clubs = take_suited(&mut shoe, Suit::Clubs, Rank::Four);
+    let five_clubs = take_suited(&mut shoe, Suit::Clubs, Rank::Five);
+    let two_spades = take_suited(&mut shoe, Suit::Spades, Rank::Two);
+    let jokers: Vec<Card> = shoe
+        .iter()
+        .copied()
+        .filter(|card| card.rank == Rank::Joker)
+        .take(3)
+        .collect();
+
+    assert!(!validate_set(&[top, penalty, actor_draw]));
+    assert!(validate_set(&[four_hearts, four_spades, four_clubs]));
+    assert!(!validate_set(&[four_hearts, four_spades, five_clubs]));
+    assert!(validate_set(&[four_hearts, jokers[0], two_spades]));
+    assert!(validate_set(&jokers));
+    assert_eq!(players[0].hand.len(), 11);
+    assert_eq!(players[1].hand.len(), 12);
+    assert_eq!(deck.cards.len(), draw_len - 2);
 }
