@@ -6,7 +6,7 @@
 
 ## Summary
 
-Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. 1.4.1 is parked on `feature/1.4.1-validate-sets` (not merged): a set is three or more cards of one rank, and twos and jokers can fill that rank. 1.3.2 stays parked on `feature/1.3.2-push-discard` (not merged): the next player receives the top discard and the top draw-pile card, then the pushing player draws. 1.3.1 is on `main` at `1dfdbc6` (`6a00eff`): the top discard moves into the player's hand. Epic 1.2 stays inside that history at `b7e4b93`: a player, a 10-card deal, card penalties, and a hand total. Epic 1.1 (cards, wilds, a 108-card deck, shuffle, draw, and the empty-deck leftovers) is inside that history.
+Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM debug table shell**. Public repo: **https://github.com/pbuckles22/PushSimulator**. 1.4.1 is on `main` at `62220b3`: a set is three or more cards of one rank, and twos and jokers can fill that rank. 1.3.2 is on `main` at `1500b02`: the next player receives the top discard and the top draw-pile card, then the pushing player draws. Epic 1.3 is complete. 1.3.1 stays in that history at `1dfdbc6` (`6a00eff`): the top discard moves into the player's hand. Epic 1.2 stays inside that history at `b7e4b93`: a player, a 10-card deal, card penalties, and a hand total. Epic 1.1 (cards, wilds, a 108-card deck, shuffle, draw, and the empty-deck leftovers) is inside that history.
 
 ---
 
@@ -14,9 +14,9 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Branch | Role |
 |--------|------|
-| **`feature/1.4.1-validate-sets`** | Parked. A set is three or more cards of one rank. Not merged |
-| **`feature/1.3.2-push-discard`** | Parked. Next player gets the top discard and the top draw card. Not merged |
-| **`main`** | 1.3.1 landed — top discard moves into the player's hand |
+| **`main`** | 1.4.1 landed — a set is three or more cards of one rank. 1.3.2 landed in the same history |
+| **`feature/1.4.1-validate-sets`** | Kept. Same history as this land. Do not merge again |
+| **`feature/1.3.2-push-discard`** | Kept. Same history as this land. Do not merge again |
 | **`feature/1.3.1-take-discard`** | Kept. Same history as this land. Do not merge again |
 | **`feature/1.2.6-hand-total`** | Kept. Same history as this land. Do not merge again |
 | **`feature/1.2.5-wild-scoring`** | Kept. A two and a joker score 20 |

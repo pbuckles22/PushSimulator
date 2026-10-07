@@ -58,7 +58,7 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 
 ### **Epic 1.2: Player State & Scoring**
 
-**Status:** complete — 2026-10-06. Player, deal, card penalties, and the hand total. **1.2.4.2** and **1.2.4.3** stay open. **1.3.1** is on `main`. **1.3.2** and **1.4.1** are parked. Next is **1.4.2**, only when asked.
+**Status:** complete — 2026-10-06. Player, deal, card penalties, and the hand total. **1.2.4.2** and **1.2.4.3** stay open. **1.3.1**, **1.3.2**, and **1.4.1** are on `main`. Next is **1.4.2**, only when asked.
 
 **User Story 1.2.1: Player Initialization**
 
@@ -91,7 +91,7 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 
 Wild scoring is sprint story **1.2.5**. The two hand-total lines above are sprint story **1.2.6**. They stay under this heading because the Google export listed every penalty step on story 1.2.3. The sprint order is pips, then face and ace, then wilds, then the hand total.
 
-Face and ace scoring is sprint story **1.2.4.1**. **1.2.4.2** and **1.2.4.3** below are the 2026-10-06 test review. They stay open. **1.3.1** is on `main`. **1.3.2** and **1.4.1** are parked. Next is **1.4.2**, only when asked.
+Face and ace scoring is sprint story **1.2.4.1**. **1.2.4.2** and **1.2.4.3** below are the 2026-10-06 test review. They stay open. **1.3.1**, **1.3.2**, and **1.4.1** are on `main`. Next is **1.4.2**, only when asked.
 
 **1.2.4.2: Tech debt**
 
@@ -112,6 +112,8 @@ Face and ace scoring is sprint story **1.2.4.1**. **1.2.4.2** and **1.2.4.3** be
 
 ### **Epic 1.3: The "Push" & Draw Phase**
 
+**Status:** complete — 2026-10-06. Take the top discard, or push it to the next player with a draw-pile card. The pushing player then draws.
+
 **User Story 1.3.1: Standard Draw**
 
 **Status:** on `main` — 2026-10-06 at `6a00eff`. The discard pile's top card moves into the player's hand. `feature/1.3.1-take-discard` is kept.
@@ -123,7 +125,7 @@ Face and ace scoring is sprint story **1.2.4.1**. **1.2.4.2** and **1.2.4.3** be
 
 **User Story 1.3.2: Pushing a Discard**
 
-**Status:** parked — 2026-10-06 on `feature/1.3.2-push-discard` (not merged). The next player receives the top discard and the top draw-pile card. The pushing player then draws.
+**Status:** on `main` — 2026-10-06 at `1500b02`. The next player receives the top discard and the top draw-pile card. The pushing player then draws. `feature/1.3.2-push-discard` is kept.
 
 *As the game engine, I want a player to push a discard so they can force a penalty on the next player.*
 
@@ -138,7 +140,7 @@ Face and ace scoring is sprint story **1.2.4.1**. **1.2.4.2** and **1.2.4.3** be
 
 **User Story 1.4.1: Validating Sets**
 
-**Status:** parked — 2026-10-06 on `feature/1.4.1-validate-sets` (not merged). Three or more cards of one rank are a set. Twos and jokers fill that rank.
+**Status:** on `main` — 2026-10-06 at `62220b3`. Three or more cards of one rank are a set. Twos and jokers fill that rank. `feature/1.4.1-validate-sets` is kept.
 
 *As the game engine, I want to validate Sets so that players cannot play illegal groups of cards.*
 
