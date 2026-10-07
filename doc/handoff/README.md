@@ -9,3 +9,5 @@ Session notes under **`NNNN-HANDOFF-*.md`** or **`.cursor/handoff/*-handoff-*.md
 3. [PM_PLAN.md](../PM_PLAN.md)
 
 Update **PROJECT_STATUS.md** and [AGENT_HANDOFF.md](../AGENT_HANDOFF.md) when phases ship — in the same PR as the code.
+
+Every Receiver brief includes this line verbatim, between **Next steps** and **Measured**: `write thorough tests. red, integration, find missing ones of both kinds.`

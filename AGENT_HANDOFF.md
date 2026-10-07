@@ -45,7 +45,7 @@ Viewer: `cd viewer && npx --yes serve .`
 
 - Game rules live only in `push_core`.
 - Strict TDD for Epic 1.x; integration chains after Epic 1.8.
-- **Handoff protocol:** First chat line **`You are the agent to execute the below hand off.`** Body uses **You** …; never tell the receiver to write a handoff. Template: [`.cursor/handoff/_template.md`](.cursor/handoff/_template.md).
+- **Handoff protocol:** First chat line **`You are the agent to execute the below hand off.`** Body uses **You** …; never tell the receiver to write a handoff. Every brief includes this line verbatim, between **Next steps** and **Measured**: `write thorough tests. red, integration, find missing ones of both kinds.` Template: [`.cursor/handoff/_template.md`](.cursor/handoff/_template.md).
 
 ## Git workflow
 

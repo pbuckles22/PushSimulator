@@ -33,7 +33,7 @@ Then status docs, and a GitHub Release when RELEASE.md says so ([epic-close.mdc]
 
 **Receiver brief in chat** — [`.cursor/handoff/_template.md`](../handoff/_template.md).
 
-**Receiver framing (mandatory):** First chat line: **`You are the receiving agent.`** Body uses second person (**You** start Epic …; **You** do not re-merge …). Never instruct the receiver to “write a handoff” or “UCPH” — that describes the *leaving* agent’s job.
+**Receiver framing (mandatory):** First chat line: **`You are the receiving agent.`** Body uses second person (**You** start Epic …; **You** do not re-merge …). Never instruct the receiver to “write a handoff” or “UCPH” — that describes the *leaving* agent’s job. Every brief includes this line verbatim, between **Next steps** and **Measured**: `write thorough tests. red, integration, find missing ones of both kinds.`
 
 **Filename:** `doc/handoff/NNNN-HANDOFF-YYYY-MM-DD_HHmm.md` (never reuse `NNNN`).
 

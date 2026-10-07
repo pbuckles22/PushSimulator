@@ -7,6 +7,7 @@
 1. Open chat with: **`You are the receiving agent.`** (first line, verbatim).
 2. Paste this brief **in chat** (second person: “You …”, not “The next agent should …”).
 3. Write the **same body** to the handoff note.
+4. Include this line in the brief, verbatim, on its own line between **Next steps** and **Measured**: `write thorough tests. red, integration, find missing ones of both kinds.`
 
 A one-line “landed / pushed” is not a handoff. Imperatives like “Write a handoff” or “Update docs” confuse the receiver into thinking they are the *leaving* agent — forbidden.
 
@@ -54,6 +55,8 @@ Receiver brief (0.2 closed)
 
 **Next steps:** 1) Stop. 2) On the next ask, branch from this `main`.
 
+write thorough tests. red, integration, find missing ones of both kinds.
+
 **Measured:** none this turn
 
 **Filename:** `doc/handoff/0001-HANDOFF-YYYY-MM-DD_HHmm.md`
@@ -85,6 +88,8 @@ Receiver brief (N.M open | closed | WIP)
 **Acceptance (already met | not yet):** Tier 1 …; human check …; version …
 
 **Next steps:** 1) … 2) … 3) …
+
+write thorough tests. red, integration, find missing ones of both kinds.
 
 **Measured:** numbers vs the prior run, or `none this turn`
 

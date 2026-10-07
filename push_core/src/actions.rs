@@ -790,4 +790,227 @@ mod tests {
         assert!(!state.players[1].is_on_board);
         assert_eq!(state.deck.cards, vec![card(8, Suit::Diamonds, Rank::King)]);
     }
+
+    #[test]
+    fn test_play_meld_wild_sets_leave_the_hand() {
+        let wild_set = vec![
+            locked(1, Suit::Hearts, Rank::Four, 1),
+            locked(2, Suit::None, Rank::Joker, 4),
+            card(3, Suit::Spades, Rank::Two),
+        ];
+        let jokers = vec![
+            card(4, Suit::None, Rank::Joker),
+            card(5, Suit::None, Rank::Joker),
+            card(6, Suit::None, Rank::Joker),
+        ];
+        let keeper = card(7, Suit::Diamonds, Rank::Nine);
+        let lookalike = card(8, Suit::None, Rank::Joker);
+        let other = card(9, Suit::Clubs, Rank::Ace);
+        let mut state = table(
+            vec![
+                keeper,
+                wild_set[0],
+                wild_set[1],
+                wild_set[2],
+                jokers[0],
+                jokers[1],
+                jokers[2],
+            ],
+            vec![other],
+            vec![lookalike],
+        );
+        let before_penalty = state.players[0].calculate_hand_penalty();
+        let played_penalty: u32 = wild_set
+            .iter()
+            .chain(jokers.iter())
+            .map(|card| card.get_penalty_value())
+            .sum();
+        let deck = state.deck.clone();
+
+        refuse(&state, 0, vec![wild_set.clone()]);
+        assert!(state.apply(Action::PlayMeld(vec![wild_set.clone(), jokers.clone()]), 0));
+
+        assert_eq!(state.players[0].hand, vec![keeper]);
+        assert_eq!(state.board, vec![wild_set.clone(), jokers.clone()]);
+        assert_eq!(state.board[0][1].locked_until_turn, 4);
+        assert_eq!(
+            state.players[0].calculate_hand_penalty(),
+            before_penalty - played_penalty
+        );
+        assert!(state.players[0].is_on_board);
+        assert!(!state.players[1].is_on_board);
+        assert_eq!(state.players[1].hand, vec![other]);
+        assert_eq!(state.deck, deck);
+        assert!(state.deck.cards.iter().any(|card| card.id == lookalike.id));
+        assert!(state
+            .board
+            .iter()
+            .flatten()
+            .all(|card| card.id != lookalike.id));
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+        assert_eq!(state.round_number, 1);
+        refuse(&state, 0, vec![wild_set, jokers]);
+    }
+
+    #[test]
+    fn test_play_meld_oversized_sets_move_every_card() {
+        let nines = vec![
+            card(1, Suit::Hearts, Rank::Nine),
+            card(2, Suit::Spades, Rank::Nine),
+            card(3, Suit::Clubs, Rank::Nine),
+            card(4, Suit::Diamonds, Rank::Nine),
+            card(5, Suit::Hearts, Rank::Nine),
+        ];
+        let fives = vec![
+            card(6, Suit::Hearts, Rank::Five),
+            card(7, Suit::Spades, Rank::Five),
+            card(8, Suit::Clubs, Rank::Five),
+            card(9, Suit::Diamonds, Rank::Five),
+        ];
+        let keeper = card(10, Suit::Diamonds, Rank::King);
+        let mut hand = vec![nines[0], keeper];
+        hand.extend(nines[1..].iter().copied());
+        hand.extend(fives.iter().copied());
+        let mut state = table(hand, vec![card(11, Suit::Clubs, Rank::Ace)], vec![]);
+        let deck = state.deck.clone();
+
+        refuse(&state, 0, vec![nines.clone()]);
+        assert!(state.apply(Action::PlayMeld(vec![nines.clone(), fives.clone()]), 0));
+
+        assert_eq!(state.players[0].hand, vec![keeper]);
+        assert_eq!(state.board, vec![nines, fives]);
+        assert_eq!(state.board.iter().flatten().count(), 9);
+        assert!(state.players[0].is_on_board);
+        assert!(!state.players[1].is_on_board);
+        assert_eq!(state.deck, deck);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+        assert_eq!(keeper.get_penalty_value(), 10);
+        assert_eq!(state.players[0].calculate_hand_penalty(), 10);
+    }
+
+    #[test]
+    fn test_play_meld_second_seat_opens_the_board() {
+        let (mut state, melds, hand_after) = round_1_lay();
+        let opener = state.players[0].hand.clone();
+        let waiting = card(70, Suit::Clubs, Rank::Ace);
+        state.players[0].hand = vec![waiting];
+        state.players[1].hand = opener;
+        let seat_0 = state.players[0].clone();
+        let deck = state.deck.clone();
+
+        refuse(&state, 1, vec![melds[0].clone()]);
+        assert!(state.apply(Action::PlayMeld(melds.clone()), 1));
+
+        assert_eq!(state.players[0], seat_0);
+        assert!(!state.players[0].is_on_board);
+        assert!(state.players[1].is_on_board);
+        assert_eq!(state.players[1].hand, hand_after);
+        assert_eq!(state.board, melds);
+        assert_eq!(state.deck, deck);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.players[1].points, 4);
+        assert_eq!(state.players[1].total_score, 9);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+    }
+
+    #[test]
+    fn test_play_meld_third_seat_only_the_actor_changes() {
+        let fours = vec![
+            card(1, Suit::Hearts, Rank::Four),
+            card(2, Suit::Spades, Rank::Four),
+            card(3, Suit::Clubs, Rank::Four),
+        ];
+        let fives = vec![
+            card(4, Suit::Hearts, Rank::Five),
+            card(5, Suit::Spades, Rank::Five),
+            card(6, Suit::Clubs, Rank::Five),
+        ];
+        let keeper = card(7, Suit::Diamonds, Rank::Nine);
+        let mut players = vec![Player::new(1, 0), Player::new(2, 1), Player::new(3, 2)];
+        for player in &mut players {
+            player.points = 4;
+            player.total_score = 9;
+        }
+        players[0].hand = vec![card(10, Suit::Hearts, Rank::King)];
+        players[1].hand = vec![card(11, Suit::Spades, Rank::Ace)];
+        players[2].hand = fours
+            .iter()
+            .chain(fives.iter())
+            .copied()
+            .chain(std::iter::once(keeper))
+            .collect();
+        let mut deck = Deck::new();
+        deck.cards = vec![card(12, Suit::Clubs, Rank::Jack)];
+        deck.discard = vec![card(13, Suit::Diamonds, Rank::Queen)];
+        let mut state = GameState::new(players, deck);
+        let seat_0 = state.players[0].clone();
+        let seat_1 = state.players[1].clone();
+        let piles = state.deck.clone();
+
+        refuse(&state, 2, vec![fours.clone()]);
+        assert!(state.apply(Action::PlayMeld(vec![fours.clone(), fives.clone()]), 2));
+
+        assert_eq!(state.players[0], seat_0);
+        assert_eq!(state.players[1], seat_1);
+        assert!(!state.players[0].is_on_board);
+        assert!(!state.players[1].is_on_board);
+        assert!(state.players[2].is_on_board);
+        assert_eq!(state.players[2].hand, vec![keeper]);
+        assert_eq!(state.players[2].id, 3);
+        assert_eq!(state.players[2].seat_index, 2);
+        assert_eq!(state.board, vec![fours, fives]);
+        assert_eq!(state.deck, piles);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.players[2].points, 4);
+        assert_eq!(state.players[2].total_score, 9);
+    }
+
+    #[test]
+    fn test_play_meld_four_wilds_fill_the_run_beside_a_set() {
+        let fours = vec![
+            card(1, Suit::Hearts, Rank::Four),
+            card(2, Suit::Spades, Rank::Four),
+            card(3, Suit::Clubs, Rank::Four),
+        ];
+        let wilds = vec![
+            card(4, Suit::None, Rank::Joker),
+            card(5, Suit::Clubs, Rank::Two),
+            card(6, Suit::None, Rank::Joker),
+            card(7, Suit::Spades, Rank::Two),
+        ];
+        let keeper = card(8, Suit::Diamonds, Rank::King);
+        let mut state = table(
+            fours
+                .iter()
+                .chain(wilds.iter())
+                .copied()
+                .chain(std::iter::once(keeper))
+                .collect(),
+            vec![card(9, Suit::Clubs, Rank::Ace)],
+            vec![card(10, Suit::Hearts, Rank::Jack)],
+        );
+        state.round_number = 2;
+        let other = state.players[1].clone();
+        let deck = state.deck.clone();
+
+        refuse(&state, 0, vec![wilds.clone()]);
+        refuse(&state, 0, vec![fours.clone()]);
+        refuse(&state, 0, vec![fours.clone(), fours.clone()]);
+        assert!(state.apply(Action::PlayMeld(vec![wilds.clone(), fours.clone()]), 0));
+
+        assert_eq!(state.board, vec![wilds, fours]);
+        assert_eq!(state.players[0].hand, vec![keeper]);
+        assert!(state.players[0].is_on_board);
+        assert!(!state.players[1].is_on_board);
+        assert_eq!(state.players[1], other);
+        assert_eq!(state.deck, deck);
+        assert_eq!(state.round_number, 2);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+        assert_eq!(keeper.get_penalty_value(), 10);
+        assert_eq!(state.players[0].calculate_hand_penalty(), 10);
+    }
 }

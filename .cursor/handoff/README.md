@@ -7,7 +7,7 @@
 - **`doc/handoff/NNNN-HANDOFF-YYYY-MM-DD_HHmm.md`** — prefer. Body = **Receiver brief**. Last line is **Filename**. Shape: [`_template.md`](_template.md).
 - **`.cursor/handoff/NNNN-handoff-YYYY-MM-DD_HHmm.md`** — copy of the same brief.
 
-UCPH and CMPH **chat** must paste that brief. **First line:** `You are the receiving agent.` Brief body is second person (**You** …). A git-only note with no chat is incomplete. Gates (PASS/WARN) are SWAT only.
+UCPH and CMPH **chat** must paste that brief. **First line:** `You are the receiving agent.` Brief body is second person (**You** …). Every brief includes this line verbatim, between **Next steps** and **Measured**: `write thorough tests. red, integration, find missing ones of both kinds.` A git-only note with no chat is incomplete. Gates (PASS/WARN) are SWAT only.
 
 **Naming rules (do not overwrite history):**
 

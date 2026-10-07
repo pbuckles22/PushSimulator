@@ -52,6 +52,8 @@ If you exceed the budget, remove execution details first.
 
 Required headings: Objective, Git (Story, Version, On, Do not, Next), Decisions, In scope / Out, Acceptance, Next steps, Measured, Filename.
 
+Every brief includes this line verbatim, on its own line between **Next steps** and **Measured**. Do not drop it and do not paraphrase it: `write thorough tests. red, integration, find missing ones of both kinds.`
+
 **Measured** is numbers versus the prior run, or `none this turn`. **Gates** live in the SWAT file only, not in the CMPH chat.
 
 Keep the chat brief near the worked example length. Strip logs first.

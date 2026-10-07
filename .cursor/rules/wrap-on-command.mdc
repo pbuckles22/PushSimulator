@@ -18,6 +18,8 @@ Close-out words name the **work**. Green tests are not permission.
 
 **UCPH** = update docs, commit, push the feature branch, handoff. Synonyms: “park the branch”, “docs commit push handoff”. **Not** merge permission.
 
+Every UCPH and CMPH Receiver brief includes this line verbatim, between **Next steps** and **Measured**: `write thorough tests. red, integration, find missing ones of both kinds.`
+
 **WRAP** / “land it” / “merge to main” / “ship to main” = **CMPH** (keep the branch). **CMPHD** = the same land, then delete. After they say it, do not ask “merge?” again.
 
 **Do not merge** until both are true: the CMPH work above is done or running this turn, **and** they granted CMPH permission this conversation. See [no-auto-merge-main.mdc](no-auto-merge-main.mdc).
