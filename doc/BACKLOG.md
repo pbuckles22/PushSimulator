@@ -58,7 +58,7 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 
 ### **Epic 1.2: Player State & Scoring**
 
-**Status:** complete — 2026-10-06. Player, deal, card penalties, and the hand total. **1.2.4.3** is closed: a short draw pile deals the cards it has, then panics. **1.2.4.2** seeds shuffle and draw and closes Epic 1.2. Epic 1.4 stays open until SWAT. **1.3.1**, **1.3.2**, **1.4.1**, and **1.4.2** are on `main`.
+**Status:** complete — 2026-10-06. Player, deal, card penalties, and the hand total. **1.2.4.3** is closed: a short draw pile deals the cards it has, then panics. **1.2.4.2** seeds shuffle and draw and closes Epic 1.2. Epic 1.4 is complete — 2026-10-06. **1.3.1**, **1.3.2**, **1.4.1**, and **1.4.2** are on `main`.
 
 **User Story 1.2.1: Player Initialization**
 
@@ -91,7 +91,7 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 
 Wild scoring is sprint story **1.2.5**. The two hand-total lines above are sprint story **1.2.6**. They stay under this heading because the Google export listed every penalty step on story 1.2.3. The sprint order is pips, then face and ace, then wilds, then the hand total.
 
-Face and ace scoring is sprint story **1.2.4.1**. **1.2.4.3** below is closed. **1.2.4.2** seeds shuffle and draw and closes Epic 1.2. Epic 1.4 stays open until SWAT. **1.3.1**, **1.3.2**, **1.4.1**, and **1.4.2** are on `main`.
+Face and ace scoring is sprint story **1.2.4.1**. **1.2.4.3** below is closed. **1.2.4.2** seeds shuffle and draw and closes Epic 1.2. Epic 1.4 is complete — 2026-10-06. **1.3.1**, **1.3.2**, **1.4.1**, and **1.4.2** are on `main`.
 
 **1.2.4.2: Tech debt**
 
@@ -101,7 +101,7 @@ Face and ace scoring is sprint story **1.2.4.1**. **1.2.4.3** below is closed. *
 * \[x\] Add CI that runs `cargo test -p push_core`. The 2026-10-06 LLVM run (58 tests, 98.1% lines) stays a local measurement until a coverage gate is chosen.  
 * \[x\] Name the evidence sink in `TEST_PLAN.md`, or leave one explicit TBD. `TEST_PLAN.md` leaves it TBD until a runtime log exists.  
 * \[x\] Drop the unused `serde` dependency on `push_core`, or use it (`TECH_DEBT.md`).  
-This closes Epic 1.2. Epic 1.4 stays open until SWAT.
+This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 **1.2.4.3: Test gaps**
 
@@ -138,6 +138,8 @@ This closes Epic 1.2. Epic 1.4 stays open until SWAT.
 * \[x\] Update state machine to handle post-push turn execution.
 
 ### **Epic 1.4: Validation Engine**
+
+**Status:** complete — 2026-10-06. A set is three or more cards of one rank. A run is four or more cards of one suit in order. Twos and jokers fill gaps. An ace is low or high. King, ace, a two, and a three is not a run. `feature/1.4.1-validate-sets` and `feature/1.4.2-validate-runs` stay. This close is on `feature/1.4-swat` and is not merged.
 
 **User Story 1.4.1: Validating Sets**
 

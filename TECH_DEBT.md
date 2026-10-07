@@ -17,9 +17,9 @@ This is the durable home for technical debt across sessions. Handoff notes can m
 
 ## Fix soon
 
-(High ROI; frequent pain; not blocking. Hit before Epic 1.4 closes.)
+(High ROI; frequent pain; not blocking.)
 
-- (none). **1.2.4.2** closed the seeded shuffle, the card-id property test, the uncalled reshuffle arms, the extra `Player::new` chains, CI for `cargo test -p push_core`, and the unused `serde` dependency.
+- (none). **1.2.4.2** closed the seeded shuffle, the card-id property test, the uncalled reshuffle arms, the extra `Player::new` chains, CI for `cargo test -p push_core`, and the unused `serde` dependency. The Epic 1.4 close added no new Do-first item.
 
 ## Accept for now
 
