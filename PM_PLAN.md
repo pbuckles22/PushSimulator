@@ -22,7 +22,7 @@ Operating model: `.cursor/rules/` ship commands (UCPH, CMPH, SWAT), human check,
 - **1.3.2:** on `main` at `1500b02`. `Action::PushDiscard` gives the next player two cards: the top discard and the top of the draw pile. The pushing player then draws. Cards under the pushed top stay. `points` and `total_score` stay 0. `feature/1.3.2-push-discard` is kept.
 - **1.4.1:** on `main` at `62220b3`. `validate_set` accepts three or more cards of one rank. Twos and jokers fill that rank. A group of only wilds is a set. Two cards, or two different natural ranks, are not. `feature/1.4.1-validate-sets` is kept.
 - **1.4.2:** on `main` at `da56999`. `validate_run` accepts four or more cards of one suit in order. Twos and jokers fill gaps. An ace is low or high. King, ace, a two, and a three is not a run. `feature/1.4.2-validate-runs` is kept.
-- **Epic 1.4:** complete — 2026-10-06. A set is three or more cards of one rank. A run is four or more cards of one suit in order. Twos and jokers fill gaps. An ace is low or high. King, ace, a two, and a three is not a run. This close is on `feature/1.4-swat` and is not merged.
+- **Epic 1.4:** complete — 2026-10-06. A set is three or more cards of one rank. A run is four or more cards of one suit in order. Twos and jokers fill gaps. An ace is low or high. King, ace, a two, and a three is not a run. This close is on `feature/1.4-swat` at `2341904` and is not merged.
 - **Next:** Epic 1.5 waits until asked.
 - **Full backlog:** [doc/BACKLOG.md](doc/BACKLOG.md)
 - **Commentary / deltas:** [doc/PLAN_COMMENTARY.md](doc/PLAN_COMMENTARY.md) (integration-chain Epic 1.9 suggested; Google export quirks)
