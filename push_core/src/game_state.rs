@@ -4,6 +4,15 @@ use crate::card::Card;
 use crate::deck::Deck;
 use crate::player::Player;
 
+/// Where a turn is. Penalty drawing continues until a safe card is discarded.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TurnPhase {
+    /// The player may play, hit, steal, and discard.
+    Playing,
+    /// An off-board discard was refused because the card fits a meld.
+    PenaltyDrawing,
+}
+
 /// Seats, piles, the round, and the face-up melds.
 ///
 /// A new table is round 1 and the board is empty. `PlayMeld` reads `round_number`
@@ -14,7 +23,8 @@ use crate::player::Player;
 /// that counter cannot be played, hit, or used to replace a wild. A new table
 /// starts that counter at 0. `drawn_card_id` is the card this turn's take or
 /// push just put into the actor's hand. That card may be discarded even when
-/// it fits a meld. `advance_turn` clears it.
+/// it fits a meld. `advance_turn` clears it and returns the phase to playing.
+/// A new table starts in [`TurnPhase::Playing`].
 #[derive(Clone, Debug)]
 pub struct GameState {
     pub players: Vec<Player>,
@@ -23,6 +33,7 @@ pub struct GameState {
     pub board: Vec<Vec<Card>>,
     pub turn_counter: u32,
     pub drawn_card_id: Option<u32>,
+    pub turn_phase: TurnPhase,
 }
 
 impl GameState {
@@ -34,6 +45,7 @@ impl GameState {
             board: Vec::new(),
             turn_counter: 0,
             drawn_card_id: None,
+            turn_phase: TurnPhase::Playing,
         }
     }
 
@@ -42,9 +54,10 @@ impl GameState {
     /// Hands, the board, the piles, the round, and both scores stay as they were.
     /// A card locked until the old counter plus one can be played after this.
     /// The card drawn on the turn that just ended is no longer exempt from the
-    /// safe-discard rule.
+    /// safe-discard rule. A penalty draw does not carry into the next turn.
     pub fn advance_turn(&mut self) {
         self.turn_counter = self.turn_counter.saturating_add(1);
         self.drawn_card_id = None;
+        self.turn_phase = TurnPhase::Playing;
     }
 }

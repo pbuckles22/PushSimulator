@@ -2,7 +2,7 @@
 
 use crate::card::{Card, Rank, Suit};
 use crate::deck::{Deck, TurnDraw};
-use crate::game_state::GameState;
+use crate::game_state::{GameState, TurnPhase};
 use crate::player::Player;
 use crate::validation::{card_can_be_played, check_round_requirements, validate_run, validate_set};
 
@@ -27,7 +27,10 @@ pub enum Action {
     /// A player who is off the board cannot discard a card that could be added to
     /// a meld already on the table. The card this turn's take or push just drew
     /// is the exception. A player on the board can discard a card that fits.
+    /// Refusing that discard for an off-board player enters penalty drawing.
     DiscardCard(Card),
+    /// While the turn is in penalty drawing, draw until a card that fits nothing is discarded.
+    DrawFromDeck,
 }
 
 /// Cards from the hand added onto one meld already on the board.
@@ -68,6 +71,7 @@ impl Action {
             Self::HitMeld(_) => panic!("HitMeld applies on GameState"),
             Self::StealWild(_) => panic!("StealWild applies on GameState"),
             Self::DiscardCard(_) => panic!("DiscardCard applies on GameState"),
+            Self::DrawFromDeck => panic!("DrawFromDeck applies on GameState"),
         }
     }
 }
@@ -107,6 +111,7 @@ impl GameState {
             Action::HitMeld(hits) => hit_meld(self, actor_index, &hits),
             Action::StealWild(steal) => steal_wild(self, actor_index, &steal),
             Action::DiscardCard(card) => discard_card(self, actor_index, card),
+            Action::DrawFromDeck => draw_from_deck(self, actor_index),
         }
     }
 }
@@ -125,6 +130,7 @@ fn discard_card(state: &mut GameState, actor_index: usize, card: Card) -> bool {
         && !quick
         && card_fits_board(&state.board, &card, state.turn_counter)
     {
+        state.turn_phase = TurnPhase::PenaltyDrawing;
         return false;
     }
     let Some(hand) = hand_without(&state.players[actor_index].hand, &[vec![card]]) else {
@@ -135,7 +141,40 @@ fn discard_card(state: &mut GameState, actor_index: usize, card: Card) -> bool {
     if quick {
         state.drawn_card_id = None;
     }
+    state.turn_phase = TurnPhase::Playing;
     true
+}
+
+/// Draws until a card that fits nothing can be discarded.
+///
+/// Only a turn already in [`TurnPhase::PenaltyDrawing`] may draw. Playable cards
+/// stay in the hand. The first safe card goes onto the discard pile and the
+/// phase returns to playing. An empty pile leaves the phase as it was.
+fn draw_from_deck(state: &mut GameState, actor_index: usize) -> bool {
+    if state.turn_phase != TurnPhase::PenaltyDrawing {
+        return false;
+    }
+    let mut drew = false;
+    loop {
+        let card = match state.deck.draw() {
+            TurnDraw::One(card) | TurnDraw::LastCard(card) => card,
+            TurnDraw::LastTwo { current, next } => {
+                let next_index = (actor_index + 1) % state.players.len();
+                state.players[next_index].hand.push(next);
+                current
+            }
+            TurnDraw::Empty => break,
+        };
+        drew = true;
+        if card_fits_board(&state.board, &card, state.turn_counter) {
+            state.players[actor_index].hand.push(card);
+            continue;
+        }
+        state.deck.discard.push(card);
+        state.turn_phase = TurnPhase::Playing;
+        return true;
+    }
+    drew
 }
 
 /// A card fits the board when it can be played and adding it to some meld is a set or a run.
@@ -568,7 +607,7 @@ mod tests {
         assert!(!players[1].is_on_board);
     }
 
-    use crate::game_state::GameState;
+    use crate::game_state::{GameState, TurnPhase};
 
     fn locked(id: u32, suit: Suit, rank: Rank, locked_until_turn: u32) -> Card {
         Card {
@@ -2425,6 +2464,7 @@ mod tests {
 
         assert!(state.apply(Action::DiscardCard(king), 0));
 
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
         assert_eq!(state.players[0].hand, vec![seven]);
         assert_eq!(state.deck.discard, vec![queen, king]);
         assert_eq!(state.board, board);
@@ -2476,6 +2516,7 @@ mod tests {
         assert_eq!(safe_first.board, vec![vec![five, six, wild]]);
 
         assert!(state.apply(Action::DiscardCard(drawn), 0));
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
         assert_eq!(state.drawn_card_id, None);
         assert_eq!(state.players[0].hand, vec![other_seven, king]);
         assert_eq!(state.deck.discard, vec![buried, drawn]);
@@ -2558,6 +2599,7 @@ mod tests {
 
         assert!(state.apply(Action::DiscardCard(seven), 0));
 
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
         assert_eq!(state.players[0].hand, vec![king]);
         assert_eq!(state.deck.discard, vec![queen, seven]);
         assert_eq!(state.board, board);
@@ -2610,6 +2652,7 @@ mod tests {
 
         let mut allowed = state.clone();
         assert!(allowed.apply(Action::DiscardCard(seven), 0));
+        assert_eq!(allowed.turn_phase, TurnPhase::Playing);
         assert_eq!(allowed.players[0].hand, vec![king]);
         assert_eq!(allowed.deck.discard, vec![queen, seven]);
         assert_eq!(allowed.board, board);
@@ -2681,5 +2724,409 @@ mod tests {
         refuse_discard(&state, 0, seven);
         assert_eq!(state.players[0].hand, vec![seven]);
         assert_eq!(state.board.len(), 2);
+    }
+
+    #[test]
+    fn test_penalty_draw_initiation() {
+        let seven = card(4, Suit::Hearts, Rank::Seven);
+        let king = card(5, Suit::Spades, Rank::King);
+        let mut state = heart_gap(vec![seven, king], false);
+        let queen = state.deck.discard[0];
+        let board = state.board.clone();
+        let other = state.players[1].clone();
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+
+        assert!(!state.apply(Action::DiscardCard(seven), 0));
+
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(state.players[0].hand, vec![seven, king]);
+        assert_eq!(state.board, board);
+        assert_eq!(state.deck.discard, vec![queen]);
+        assert_eq!(state.players[1], other);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+        assert!(!state.players[0].is_on_board);
+
+        assert!(state.apply(Action::DiscardCard(king), 0));
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.players[0].hand, vec![seven]);
+        assert_eq!(state.deck.discard, vec![queen, king]);
+        assert_eq!(state.board, board);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.round_number, 1);
+    }
+
+    #[test]
+    fn test_discard_of_an_absent_card_stays_in_playing() {
+        let seven = card(4, Suit::Hearts, Rank::Seven);
+        let lookalike = card(50, Suit::Hearts, Rank::Seven);
+        let mut state = heart_gap(vec![seven], false);
+        state.deck.cards = vec![lookalike];
+
+        refuse_discard(&state, 0, lookalike);
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+    }
+
+    #[test]
+    fn test_draw_from_deck_refuses_outside_penalty() {
+        let seven = card(4, Suit::Hearts, Rank::Seven);
+        let mut state = heart_gap(vec![seven], false);
+        let before = state.clone();
+
+        assert!(!state.apply(Action::DrawFromDeck, 0));
+        assert_eq!(state.players, before.players);
+        assert_eq!(state.board, before.board);
+        assert_eq!(state.deck, before.deck);
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.round_number, 1);
+    }
+
+    #[test]
+    fn test_penalty_draw_execution() {
+        let held = card(4, Suit::Hearts, Rank::Seven);
+        let first = card(6, Suit::Hearts, Rank::Seven);
+        let second = card(7, Suit::Hearts, Rank::Eight);
+        let third = card(8, Suit::Hearts, Rank::Four);
+        let safe = card(9, Suit::Spades, Rank::King);
+        let mut state = heart_gap(vec![held], false);
+        let queen = state.deck.discard[0];
+        let other = state.players[1].clone();
+        let board = state.board.clone();
+        state.deck.cards = vec![safe, third, second, first];
+
+        assert!(!state.apply(Action::DiscardCard(held), 0));
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(state.players[0].hand, vec![held]);
+
+        assert!(state.apply(Action::DrawFromDeck, 0));
+
+        assert_eq!(state.players[0].hand, vec![held, first, second, third]);
+        assert_eq!(state.deck.discard, vec![queen, safe]);
+        assert!(state.deck.cards.is_empty());
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.board, board);
+        assert_eq!(state.players[1], other);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+        assert_eq!(safe.get_penalty_value(), 10);
+        assert!(!state.players[0].is_on_board);
+
+        let finished = state.clone();
+        assert!(!state.apply(Action::DrawFromDeck, 0));
+        assert_eq!(state.players, finished.players);
+        assert_eq!(state.deck, finished.deck);
+        assert_eq!(state.board, finished.board);
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.turn_counter, 0);
+    }
+
+    #[test]
+    fn test_penalty_draw_keeps_playable_cards_when_the_pile_runs_out() {
+        let held = card(4, Suit::Hearts, Rank::Seven);
+        let first = card(6, Suit::Hearts, Rank::Eight);
+        let second = card(7, Suit::Hearts, Rank::Four);
+        let mut state = heart_gap(vec![held], false);
+        state.deck.discard.clear();
+        state.deck.cards = vec![second, first];
+
+        assert!(!state.apply(Action::DiscardCard(held), 0));
+        assert!(state.apply(Action::DrawFromDeck, 0));
+
+        assert_eq!(state.players[0].hand, vec![held, first, second]);
+        assert!(state.deck.cards.is_empty());
+        assert!(state.deck.discard.is_empty());
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.round_number, 1);
+    }
+
+    #[test]
+    fn test_penalty_last_two_playable_cards_stay_in_the_hands() {
+        let held = card(4, Suit::Hearts, Rank::Seven);
+        let low = card(6, Suit::Hearts, Rank::Four);
+        let high = card(7, Suit::Hearts, Rank::Eight);
+        let mut state = heart_gap(vec![held], false);
+        let other_before = state.players[1].hand.clone();
+        state.deck.cards.clear();
+        state.deck.discard = vec![low, high];
+
+        assert!(!state.apply(Action::DiscardCard(held), 0));
+        assert!(state.apply(Action::DrawFromDeck, 0));
+
+        assert_eq!(state.players[0].hand.len(), 2);
+        assert_eq!(state.players[0].hand[0], held);
+        assert_eq!(state.players[1].hand.len(), other_before.len() + 1);
+        assert!(state.deck.cards.is_empty());
+        assert!(state.deck.discard.is_empty());
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        let mut moved = vec![
+            state.players[0].hand[1],
+            state.players[1].hand[other_before.len()],
+        ];
+        moved.sort_by_key(|card| card.id);
+        let mut expect = vec![low, high];
+        expect.sort_by_key(|card| card.id);
+        assert_eq!(moved, expect);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.round_number, 1);
+    }
+
+    #[test]
+    fn test_advance_turn_leaves_the_penalty() {
+        let seven = card(4, Suit::Hearts, Rank::Seven);
+        let mut state = heart_gap(vec![seven], false);
+        assert!(!state.apply(Action::DiscardCard(seven), 0));
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        let before = state.clone();
+
+        state.advance_turn();
+
+        assert_eq!(state.turn_counter, 1);
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.players, before.players);
+        assert_eq!(state.board, before.board);
+        assert_eq!(state.deck, before.deck);
+        assert_eq!(state.round_number, 1);
+    }
+
+    #[test]
+    fn test_penalty_draw_keeps_a_wild_that_fits() {
+        let held = card(4, Suit::Hearts, Rank::Seven);
+        let joker = card(6, Suit::None, Rank::Joker);
+        let two = card(7, Suit::Clubs, Rank::Two);
+        let safe = card(9, Suit::Spades, Rank::King);
+        let mut state = heart_gap(vec![held], false);
+        let queen = state.deck.discard[0];
+        let other = state.players[1].clone();
+        state.deck.cards = vec![safe, two, joker];
+
+        assert!(!state.apply(Action::DiscardCard(held), 0));
+        assert!(state.apply(Action::DrawFromDeck, 0));
+
+        assert_eq!(state.players[0].hand, vec![held, joker, two]);
+        assert_eq!(state.deck.discard, vec![queen, safe]);
+        assert!(state.deck.cards.is_empty());
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.players[1], other);
+        assert_eq!(joker.get_penalty_value(), 20);
+        assert_eq!(two.get_penalty_value(), 20);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+    }
+
+    #[test]
+    fn test_penalty_draw_keeps_a_card_that_fits_only_the_second_meld() {
+        let held = card(4, Suit::Hearts, Rank::Seven);
+        let four = card(14, Suit::Clubs, Rank::Four);
+        let safe = card(9, Suit::Spades, Rank::King);
+        let mut state = heart_gap(vec![held], false);
+        let queen = state.deck.discard[0];
+        let fours = vec![
+            card(11, Suit::Spades, Rank::Four),
+            card(12, Suit::Hearts, Rank::Four),
+            card(13, Suit::Diamonds, Rank::Four),
+        ];
+        state.board.push(fours);
+        state.deck.cards = vec![safe, four];
+
+        assert!(!state.apply(Action::DiscardCard(held), 0));
+        assert!(state.apply(Action::DrawFromDeck, 0));
+
+        assert_eq!(state.players[0].hand, vec![held, four]);
+        assert_eq!(state.deck.discard, vec![queen, safe]);
+        assert_eq!(state.board.len(), 2);
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.round_number, 1);
+    }
+
+    #[test]
+    fn test_penalty_draw_discards_a_locked_card() {
+        let held = card(4, Suit::Hearts, Rank::Seven);
+        let locked_seven = locked(6, Suit::Hearts, Rank::Seven, 5);
+        let mut state = heart_gap(vec![held], false);
+        let queen = state.deck.discard[0];
+        let board = state.board.clone();
+        state.deck.cards = vec![locked_seven];
+
+        assert!(!state.apply(Action::DiscardCard(held), 0));
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert!(state.apply(Action::DrawFromDeck, 0));
+
+        assert_eq!(state.players[0].hand, vec![held]);
+        assert_eq!(state.deck.discard, vec![queen, locked_seven]);
+        assert_eq!(state.deck.discard.last().unwrap().locked_until_turn, 5);
+        assert!(state.deck.cards.is_empty());
+        assert_eq!(state.board, board);
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(locked_seven.get_penalty_value(), 5);
+    }
+
+    #[test]
+    fn test_penalty_draw_refuses_when_nothing_is_left() {
+        let held = card(4, Suit::Hearts, Rank::Seven);
+        let mut state = heart_gap(vec![held], false);
+        assert!(!state.apply(Action::DiscardCard(held), 0));
+        state.deck.cards.clear();
+        state.deck.discard.clear();
+        let before = state.clone();
+
+        assert!(!state.apply(Action::DrawFromDeck, 0));
+
+        assert_eq!(state.players, before.players);
+        assert_eq!(state.board, before.board);
+        assert_eq!(state.deck, before.deck);
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(state.drawn_card_id, None);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.round_number, 1);
+    }
+
+    #[test]
+    fn test_penalty_draw_puts_the_last_safe_discard_card_back() {
+        let held = card(4, Suit::Hearts, Rank::Seven);
+        let king = card(9, Suit::Spades, Rank::King);
+        let mut state = heart_gap(vec![held], false);
+        let other = state.players[1].clone();
+        state.deck.cards.clear();
+        state.deck.discard = vec![king];
+
+        assert!(!state.apply(Action::DiscardCard(held), 0));
+        assert!(state.apply(Action::DrawFromDeck, 0));
+
+        assert_eq!(state.players[0].hand, vec![held]);
+        assert_eq!(state.players[1], other);
+        assert_eq!(state.deck.discard, vec![king]);
+        assert!(state.deck.cards.is_empty());
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.turn_counter, 0);
+    }
+
+    #[test]
+    fn test_penalty_draw_keeps_the_last_discard_card_when_it_fits() {
+        let held = card(4, Suit::Hearts, Rank::Seven);
+        let eight = card(8, Suit::Hearts, Rank::Eight);
+        let mut state = heart_gap(vec![held], false);
+        let other = state.players[1].clone();
+        state.deck.cards.clear();
+        state.deck.discard = vec![eight];
+
+        assert!(!state.apply(Action::DiscardCard(held), 0));
+        assert!(state.apply(Action::DrawFromDeck, 0));
+
+        assert_eq!(state.players[0].hand, vec![held, eight]);
+        assert_eq!(state.players[1], other);
+        assert!(state.deck.discard.is_empty());
+        assert!(state.deck.cards.is_empty());
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.round_number, 1);
+    }
+
+    #[test]
+    fn test_penalty_draw_splits_the_last_two_safe_cards() {
+        let held = card(4, Suit::Hearts, Rank::Seven);
+        let king = card(9, Suit::Spades, Rank::King);
+        let queen = card(10, Suit::Clubs, Rank::Queen);
+        let bystander = card(70, Suit::Diamonds, Rank::Nine);
+        let mut state = heart_gap(vec![held], false);
+        state.players.push(Player::new(3, 2));
+        state.players[2].hand = vec![bystander];
+        let other_before = state.players[1].hand.clone();
+        state.deck.cards.clear();
+        state.deck.discard = vec![king, queen];
+
+        assert!(!state.apply(Action::DiscardCard(held), 0));
+        assert!(state.apply(Action::DrawFromDeck, 0));
+
+        assert_eq!(state.players[0].hand, vec![held]);
+        assert_eq!(state.players[2].hand, vec![bystander]);
+        assert_eq!(state.players[1].hand.len(), other_before.len() + 1);
+        assert_eq!(state.deck.discard.len(), 1);
+        assert!(state.deck.cards.is_empty());
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        let mut moved = vec![
+            state.deck.discard[0],
+            state.players[1].hand[other_before.len()],
+        ];
+        moved.sort_by_key(|card| card.id);
+        let mut expect = vec![king, queen];
+        expect.sort_by_key(|card| card.id);
+        assert_eq!(moved, expect);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.round_number, 1);
+        assert!(!state.players[0].is_on_board);
+    }
+
+    #[test]
+    fn test_penalty_draw_reshuffle_keeps_playable_cards_then_discards_the_top() {
+        let held = card(4, Suit::Hearts, Rank::Seven);
+        let four = card(6, Suit::Hearts, Rank::Four);
+        let eight = card(7, Suit::Hearts, Rank::Eight);
+        let another = card(8, Suit::Hearts, Rank::Seven);
+        let king = card(9, Suit::Clubs, Rank::King);
+        let mut state = heart_gap(vec![held], false);
+        let other = state.players[1].clone();
+        let board = state.board.clone();
+        state.deck.cards.clear();
+        state.deck.discard = vec![four, eight, another, king];
+
+        assert!(!state.apply(Action::DiscardCard(held), 0));
+        assert!(state.apply(Action::DrawFromDeck, 0));
+
+        let mut hand = state.players[0].hand.clone();
+        hand.sort_by_key(|card| card.id);
+        let mut expect = vec![held, four, eight, another];
+        expect.sort_by_key(|card| card.id);
+        assert_eq!(hand, expect);
+        assert_eq!(state.deck.discard, vec![king]);
+        assert!(state.deck.cards.is_empty());
+        assert_eq!(state.board, board);
+        assert_eq!(state.players[1], other);
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+    }
+
+    #[test]
+    fn test_penalty_draw_keeps_the_quick_discard_exemption() {
+        let other = card(4, Suit::Hearts, Rank::Seven);
+        let drawn = card(6, Suit::Hearts, Rank::Seven);
+        let safe = card(9, Suit::Spades, Rank::King);
+        let mut state = heart_gap(vec![other], false);
+        let queen = state.deck.discard[0];
+        state.deck.discard.push(drawn);
+
+        assert!(state.apply(Action::TakeDiscard, 0));
+        assert_eq!(state.drawn_card_id, Some(drawn.id));
+        assert!(!state.apply(Action::DiscardCard(other), 0));
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        state.deck.cards = vec![safe];
+        assert!(state.apply(Action::DrawFromDeck, 0));
+
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.drawn_card_id, Some(drawn.id));
+        assert_eq!(state.players[0].hand, vec![other, drawn]);
+        assert_eq!(state.deck.discard, vec![queen, safe]);
+        assert_eq!(state.turn_counter, 0);
+
+        assert!(state.apply(Action::DiscardCard(drawn), 0));
+        assert_eq!(state.drawn_card_id, None);
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.players[0].hand, vec![other]);
+        assert_eq!(state.deck.discard, vec![queen, safe, drawn]);
+        assert_eq!(state.round_number, 1);
+        assert!(!state.players[0].is_on_board);
     }
 }

@@ -240,10 +240,10 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 *As the game engine, I want to trap players who cannot discard into drawing until they find a safe card.*
 
-* \[ \] Write test test\_penalty\_draw\_initiation asserting failure to discard changes state to TurnPhase::PenaltyDrawing.  
-* \[ \] Implement phase change on failed discard.  
-* \[ \] Write test test\_penalty\_draw\_execution mocking 3 playable draws and 1 safe draw, asserting hand size increases and turn ends on safe discard.  
-* \[ \] Implement loop logic in Action::DrawFromDeck when in Penalty phase.
+* \[x\] Write test test\_penalty\_draw\_initiation asserting failure to discard changes state to TurnPhase::PenaltyDrawing.  
+* \[x\] Implement phase change on failed discard.  
+* \[x\] Write test test\_penalty\_draw\_execution mocking 3 playable draws and 1 safe draw, asserting hand size increases and turn ends on safe discard.  
+* \[x\] Implement loop logic in Action::DrawFromDeck when in Penalty phase.
 
 **User Story 1.7.3: Round Victory**
 
