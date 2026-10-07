@@ -14,7 +14,7 @@ Operating model: `.cursor/rules/` ship commands (UCPH, CMPH, SWAT), human check,
 
 ## Current
 
-- **Phase 1 / Sprint 1:** Epic 1.1, Epic 1.2, Epic 1.3, Epic 1.4, and Epic 1.5 are complete — [doc/sprints/SPRINT_1.md](doc/sprints/SPRINT_1.md)
+- **Phase 1 / Sprint 1:** Epic 1.1 through Epic 1.7 are complete — [doc/sprints/SPRINT_1.md](doc/sprints/SPRINT_1.md)
 - **Epic 1.1:** complete — 2026-10-06. Empty-deck rule: [doc/requirements/GAME_RULES.md](doc/requirements/GAME_RULES.md).
 - **Epic 1.2:** complete — 2026-10-06. A player starts empty. Two or more players are dealt 10 cards, one at a time. Ranks 3–9 score 5, a 10 through King scores 10, an ace scores 15, and a two or a joker scores 20. A hand of 4, Jack, Ace, and Joker totals 50 and that penalty adds onto `total_score`. `points` stays 0. **1.2.4.3** is closed. **1.2.4.2** seeds shuffle and draw, keeps card ids through a reshuffle, and closes the epic.
 - **1.3.1:** on `main` at `6a00eff`. `Action::TakeDiscard` moves the discard pile's top card into the player's hand. Cards under that top stay. The draw pile stays. `points` and `total_score` stay 0. `feature/1.3.1-take-discard` is kept.
@@ -33,8 +33,10 @@ Operating model: `.cursor/rules/` ship commands (UCPH, CMPH, SWAT), human check,
 - **1.6.3:** on `main` at `2abbf4e`. A card whose `locked_until_turn` is ahead of the turn counter cannot be played, hit, or used to replace a wild. `GameState::advance_turn` moves the counter up by one and leaves the rest of the table as it was. The round does not end. `points` and `total_score` stay as they were. `feature/1.6.3-wild-lock` is kept.
 - **Epic 1.6:** complete — 2026-10-07. A player on the board can add cards onto melds already there, and can swap a natural card for a wild. That wild locks until the turn counter plus one and cannot be played until the counter catches up. The close is on `main`. Content is `2abbf4e`. The close commit is `e5de020`. `feature/1.6.3-wild-lock` stays.
 - **1.7.1:** on `main` at `c61f3aa`. `Action::DiscardCard` places one card from the hand onto the discard pile. An off-board player cannot discard a card that could join a meld. The card just taken, or drawn on a push, can. `advance_turn` clears that exemption. A locked card that cannot be played is safe to discard until the counter catches up. A player on the board can discard a card that fits. The round does not end. `points` and `total_score` stay as they were. `feature/1.7.1-safe-discard` is kept.
-- **1.7.2:** parked on `feature/1.7.2-penalty-draw`. Not on `main`. A failed discard of a card that fits sets `TurnPhase::PenaltyDrawing`. `Action::DrawFromDeck` keeps cards that fit, including a wild, and discards the first safe card. A locked card is discarded. An empty pile stays in that phase. The last two safe cards split. `advance_turn` returns to playing. The round does not end. `points` and `total_score` stay as they were.
-- **Next:** 1.7.3. Epic 1.7 stays open.
+- **1.7.2:** on `main` at `8375560`. A failed discard of a card that fits sets `TurnPhase::PenaltyDrawing`. `Action::DrawFromDeck` keeps cards that fit, including a wild, and discards the first safe card. A locked card is discarded. An empty pile stays in that phase. The last two safe cards split. `advance_turn` returns to playing. The round does not end. `points` and `total_score` stay as they were. `feature/1.7.2-penalty-draw` is kept.
+- **1.7.3:** on `main` at `6b97524`. A play, a hit, or a discard that leaves the hand empty sets `round_over`. A card left in the hand does not. `round_number`, `points`, and `total_score` stay as they were. `feature/1.7.3-round-victory` is kept.
+- **Epic 1.7:** complete — 2026-10-07. An off-board player cannot discard a card that fits a meld. The card just taken can. A failed discard draws until a safe card. An empty hand ends the round. The close is on `main`. Content is `6b97524`. `feature/1.7.3-round-victory` stays.
+- **Next:** 1.8.1.
 - **Full backlog:** [doc/BACKLOG.md](doc/BACKLOG.md)
 - **Commentary / deltas:** [doc/PLAN_COMMENTARY.md](doc/PLAN_COMMENTARY.md) (integration-chain Epic 1.9 suggested; Google export quirks)
 

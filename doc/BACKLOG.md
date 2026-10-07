@@ -227,6 +227,8 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 ### **Epic 1.7: Discarding & Penalties**
 
+**Status:** complete — 2026-10-07. Content is `6b97524`.
+
 **User Story 1.7.1: Safe vs. Unsafe Discards**
 
 *As the game engine, I want to enforce that off-board players cannot discard playable cards.*
