@@ -194,7 +194,7 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 ### **Epic 1.6: Hitting & Wild Card Stealing**
 
-**Status:** complete — 2026-10-07. A player on the board can add cards onto melds already there, and can swap a natural card for a wild. That wild locks until the turn counter plus one and cannot be played until the counter catches up. 1.6.3 is `2abbf4e`. This close is on `feature/1.6.3-wild-lock`, not on `main` until CMPH.
+**Status:** complete — 2026-10-07. A player on the board can add cards onto melds already there, and can swap a natural card for a wild. That wild locks until the turn counter plus one and cannot be played until the counter catches up. The close is on `main`. Content is `2abbf4e`. The close commit is `e5de020`. `feature/1.6.3-wild-lock` stays.
 
 **User Story 1.6.1: Hitting Existing Melds**
 
