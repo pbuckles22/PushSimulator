@@ -185,10 +185,10 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 *As the game engine, I want to move verified melds to the board and flag the player.*
 
-* \[ \] Write test test\_play\_meld\_success asserting valid cards move from hand to GameState.board.  
-* \[ \] Implement Action::PlayMeld handler.  
-* \[ \] Write test test\_play\_meld\_flags\_player asserting successful play sets player.is\_on\_board \= true.  
-* \[ \] Update Action::PlayMeld state mutation.
+* \[x\] Write test test\_play\_meld\_success asserting valid cards move from hand to GameState.board.  
+* \[x\] Implement Action::PlayMeld handler.  
+* \[x\] Write test test\_play\_meld\_flags\_player asserting successful play sets player.is\_on\_board \= true.  
+* \[x\] Update Action::PlayMeld state mutation.
 
 ### **Epic 1.6: Hitting & Wild Card Stealing**
 

@@ -7,6 +7,7 @@ use rand::SeedableRng;
 use push_core::actions::Action;
 use push_core::card::{Card, Rank, Suit};
 use push_core::deck::{Deck, TurnDraw};
+use push_core::game_state::GameState;
 use push_core::player::{deal_initial_hands, Player};
 use push_core::validation::{check_round_requirements, validate_run, validate_set};
 
@@ -2236,4 +2237,157 @@ fn test_suit_rank_card_deck_new_is_wild_seeded_shuffle_deal_draw_reshuffle_push_
     assert_eq!(players[0].total_score, 0);
     assert_eq!(players[1].total_score, 0);
     same_ids(&ids_of(&cards_in_play(&players, &deck)), &original);
+}
+
+fn take_from_state(state: &mut GameState, suit: Suit, rank: Rank) -> Card {
+    for player in &mut state.players {
+        if let Some(index) = player
+            .hand
+            .iter()
+            .position(|card| card.suit == suit && card.rank == rank)
+        {
+            return player.hand.remove(index);
+        }
+    }
+    if let Some(index) = state
+        .deck
+        .cards
+        .iter()
+        .position(|card| card.suit == suit && card.rank == rank)
+    {
+        return state.deck.cards.remove(index);
+    }
+    let index = state
+        .deck
+        .discard
+        .iter()
+        .position(|card| card.suit == suit && card.rank == rank)
+        .expect("the shoe contains this suit and rank");
+    state.deck.discard.remove(index)
+}
+
+fn cards_on_table(state: &GameState) -> Vec<Card> {
+    let mut cards = cards_in_play(&state.players, &state.deck);
+    for meld in &state.board {
+        cards.extend(meld.iter().copied());
+    }
+    cards
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → seeded shuffle → deal → push → round requirements → play meld.
+/// The push still moves the ace and the penalty. Round 1 then lays two sets from that shoe onto the board.
+/// One set stays in the hand. A run of spades stays in the hand. A second four of hearts stays off the board.
+/// The other seat, the piles, and every card id stay put.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_push_round_requirements_play_meld() {
+    let original = ids_of(&Deck::new().cards);
+    let mut deck = shuffled_deck();
+    let penalty = take_rank(&mut deck.cards, Rank::Three);
+    let actor_draw = take_rank(&mut deck.cards, Rank::King);
+    let under: Vec<Card> = deck.cards.drain(0..3).collect();
+    let top = take_rank(&mut deck.cards, Rank::Ace);
+    let mut discard = under.clone();
+    discard.push(top);
+    deck.discard = discard;
+    let players = deal_table(&mut deck, 2);
+    deck.cards.push(actor_draw);
+    deck.cards.push(penalty);
+    let mut state = GameState::new(players, deck);
+    assert!(state.board.is_empty());
+    assert_eq!(state.round_number, 1);
+
+    assert!(state.apply(Action::PushDiscard, 0));
+
+    assert_eq!(state.players[0].hand.len(), 11);
+    assert_eq!(state.players[0].hand[10], actor_draw);
+    assert_eq!(state.players[1].hand.len(), 12);
+    assert_eq!(state.players[1].hand[10], top);
+    assert_eq!(state.players[1].hand[11], penalty);
+    assert_eq!(state.deck.discard, under);
+    assert!(!state.players[0].is_on_board);
+    assert!(!state.players[1].is_on_board);
+    assert_eq!(state.players[0].points, 0);
+    assert_eq!(state.players[1].points, 0);
+    same_ids(&ids_of(&cards_on_table(&state)), &original);
+
+    let set_a = vec![
+        take_from_state(&mut state, Suit::Hearts, Rank::Four),
+        take_from_state(&mut state, Suit::Spades, Rank::Four),
+        take_from_state(&mut state, Suit::Clubs, Rank::Four),
+    ];
+    let set_b = vec![
+        take_from_state(&mut state, Suit::Hearts, Rank::Five),
+        take_from_state(&mut state, Suit::Spades, Rank::Five),
+        take_from_state(&mut state, Suit::Clubs, Rank::Five),
+    ];
+    let run = vec![
+        take_from_state(&mut state, Suit::Spades, Rank::Eight),
+        take_from_state(&mut state, Suit::Spades, Rank::Nine),
+        take_from_state(&mut state, Suit::Spades, Rank::Ten),
+        take_from_state(&mut state, Suit::Spades, Rank::Jack),
+    ];
+    let keeper = take_from_state(&mut state, Suit::Diamonds, Rank::Nine);
+    let lookalike = take_from_state(&mut state, Suit::Hearts, Rank::Four);
+    let leftover = std::mem::take(&mut state.players[0].hand);
+    state.deck.cards.extend(leftover);
+    state.deck.cards.push(lookalike);
+    let mut hand = vec![keeper];
+    hand.extend(set_a.iter().copied());
+    hand.extend(set_b.iter().copied());
+    hand.extend(run.iter().copied());
+    state.players[0].hand = hand;
+    let other = state.players[1].clone();
+    let piles = state.deck.clone();
+    let before_penalty = state.players[0].calculate_hand_penalty();
+
+    assert!(validate_set(&set_a));
+    assert!(validate_set(&set_b));
+    assert!(validate_run(&run));
+    assert!(!check_round_requirements(1, &[&set_a]));
+    assert!(!check_round_requirements(1, &[&set_a, &run]));
+    assert!(check_round_requirements(1, &[&set_a, &set_b]));
+    assert!(!state.apply(Action::PlayMeld(vec![set_a.clone()]), 0));
+    assert!(!state.apply(Action::PlayMeld(vec![set_a.clone(), run.clone()]), 0));
+    assert!(!state.players[0].is_on_board);
+    assert_eq!(state.players[1], other);
+    assert_eq!(state.deck, piles);
+    assert!(state.board.is_empty());
+
+    assert!(state.apply(Action::PlayMeld(vec![set_a.clone(), set_b.clone()]), 0));
+
+    assert_eq!(state.board, vec![set_a.clone(), set_b.clone()]);
+    assert_eq!(
+        state.players[0].hand,
+        std::iter::once(keeper)
+            .chain(run.iter().copied())
+            .collect::<Vec<_>>()
+    );
+    assert!(state.players[0].is_on_board);
+    assert!(!state.players[1].is_on_board);
+    assert_eq!(state.players[1], other);
+    assert_eq!(state.deck, piles);
+    assert_eq!(state.players[0].points, 0);
+    assert_eq!(state.players[0].total_score, 0);
+    assert_eq!(state.players[1].points, 0);
+    assert_eq!(state.players[1].total_score, 0);
+    assert_eq!(
+        state.players[0].calculate_hand_penalty(),
+        before_penalty
+            - set_a
+                .iter()
+                .map(|card| card.get_penalty_value())
+                .sum::<u32>()
+            - set_b
+                .iter()
+                .map(|card| card.get_penalty_value())
+                .sum::<u32>()
+    );
+    assert!(state
+        .board
+        .iter()
+        .flatten()
+        .all(|card| card.id != lookalike.id));
+    assert!(state.deck.cards.iter().any(|card| card.id == lookalike.id));
+    same_ids(&ids_of(&cards_on_table(&state)), &original);
+    assert_eq!(cards_on_table(&state).len(), deck_size());
 }
