@@ -8,7 +8,6 @@ description = "Headless rules, state machine, and game engine for Push"
 
 [dependencies]
 rand = { workspace = true }
-serde = { workspace = true }
 
 [lib]
 name = "push_core"

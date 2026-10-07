@@ -58,7 +58,7 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 
 ### **Epic 1.2: Player State & Scoring**
 
-**Status:** complete — 2026-10-06. Player, deal, card penalties, and the hand total. **1.2.4.3** is closed: a short draw pile deals the cards it has, then panics. **1.2.4.2** is next, only when asked. Epic 1.4 stays open until that lands. **1.3.1**, **1.3.2**, **1.4.1**, and **1.4.2** are on `main`.
+**Status:** complete — 2026-10-06. Player, deal, card penalties, and the hand total. **1.2.4.3** is closed: a short draw pile deals the cards it has, then panics. **1.2.4.2** seeds shuffle and draw and closes Epic 1.2. Epic 1.4 stays open until SWAT. **1.3.1**, **1.3.2**, **1.4.1**, and **1.4.2** are on `main`.
 
 **User Story 1.2.1: Player Initialization**
 
@@ -91,17 +91,17 @@ This master backlog translates the entire Project Management Plan into ultra-gra
 
 Wild scoring is sprint story **1.2.5**. The two hand-total lines above are sprint story **1.2.6**. They stay under this heading because the Google export listed every penalty step on story 1.2.3. The sprint order is pips, then face and ace, then wilds, then the hand total.
 
-Face and ace scoring is sprint story **1.2.4.1**. **1.2.4.3** below is closed. **1.2.4.2** is next, only when asked. Epic 1.4 stays open until that lands. **1.3.1**, **1.3.2**, **1.4.1**, and **1.4.2** are on `main`.
+Face and ace scoring is sprint story **1.2.4.1**. **1.2.4.3** below is closed. **1.2.4.2** seeds shuffle and draw and closes Epic 1.2. Epic 1.4 stays open until SWAT. **1.3.1**, **1.3.2**, **1.4.1**, and **1.4.2** are on `main`.
 
 **1.2.4.2: Tech debt**
 
-* \[ \] Seed `Deck::shuffle` in tests, or inject the rng, so the order check does not depend on `thread_rng` (`TECH_DEBT.md`). Then add the property test that the same card ids survive shuffle, draw, and a three-or-more reshuffle. Fixed chain tests already lock those ids.  
-* \[ \] Remove the uncalled arms, or make them real behavior: `reshuffle_discard` on an empty discard, `reshuffle_discard` putting a single card back, and `TurnDraw::Empty` after a reshuffle. `draw` does not reach those paths.  
-* \[ \] Keep one chain test that `Player::new` does not take a drawn card. The other "player starts empty" chains repeat that.  
-* \[ \] Add CI that runs `cargo test -p push_core`. The 2026-10-06 LLVM run (58 tests, 98.1% lines) stays a local measurement until a coverage gate is chosen.  
+* \[x\] Seed `Deck::shuffle` in tests, or inject the rng, so the order check does not depend on `thread_rng` (`TECH_DEBT.md`). Then add the property test that the same card ids survive shuffle, draw, and a three-or-more reshuffle. Fixed chain tests already lock those ids.  
+* \[x\] Remove the uncalled arms, or make them real behavior: `reshuffle_discard` on an empty discard, `reshuffle_discard` putting a single card back, and `TurnDraw::Empty` after a reshuffle. `draw` does not reach those paths.  
+* \[x\] Keep one chain test that `Player::new` does not take a drawn card. The other "player starts empty" chains repeat that.  
+* \[x\] Add CI that runs `cargo test -p push_core`. The 2026-10-06 LLVM run (58 tests, 98.1% lines) stays a local measurement until a coverage gate is chosen.  
 * \[x\] Name the evidence sink in `TEST_PLAN.md`, or leave one explicit TBD. `TEST_PLAN.md` leaves it TBD until a runtime log exists.  
-* \[ \] Drop the unused `serde` dependency on `push_core`, or use it (`TECH_DEBT.md`).  
-Hit this before Epic 1.4 closes. It is the next story, only when asked.
+* \[x\] Drop the unused `serde` dependency on `push_core`, or use it (`TECH_DEBT.md`).  
+This closes Epic 1.2. Epic 1.4 stays open until SWAT.
 
 **1.2.4.3: Test gaps**
 

@@ -15,6 +15,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 | Branch | Role |
 |--------|------|
 | **`main`** | 1.4.2 landed — a run is four or more cards of one suit in order |
+| **`feature/1.2.4.2-tech-debt`** | Kept. Seeded shuffle and draw. Epic 1.2 closes with this land |
 | **`feature/1.4.2-validate-runs`** | Kept. Same history as this land. Do not merge again |
 | **`feature/1.2.4.3-deal-short-deck`** | Kept. Same history as this land. Do not merge again |
 | **`feature/1.4.1-validate-sets`** | Kept. Same history as this land. Do not merge again |
@@ -62,7 +63,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 
 | Item | Detail |
 |------|--------|
-| **1.2.4.2** | Tech debt — next, only when asked. Epic 1.4 stays open until this lands |
+| **Epic 1.4** | Stays open until SWAT. Epic 1.2 is complete with 1.2.4.2. |
 
 ---
 
