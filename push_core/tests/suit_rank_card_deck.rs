@@ -8,7 +8,7 @@ use push_core::actions::Action;
 use push_core::card::{Card, Rank, Suit};
 use push_core::deck::{Deck, TurnDraw};
 use push_core::player::{deal_initial_hands, Player};
-use push_core::validation::{validate_run, validate_set};
+use push_core::validation::{check_round_requirements, validate_run, validate_set};
 
 const DECKS: usize = 2;
 const JOKERS_PER_DECK: usize = 2;
@@ -2020,5 +2020,158 @@ fn test_suit_rank_card_deck_new_is_wild_seeded_shuffle_deal_draw_reshuffle_push_
     assert_eq!(players[0].hand.len(), 11);
     assert_eq!(players[1].hand.len(), 12);
     assert_eq!(deck.cards.len(), draw_len - 2);
+    same_ids(&ids_of(&cards_in_play(&players, &deck)), &original);
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → seeded shuffle → deal → draw → three-or-more reshuffle → push → validate a set → validate a run → round requirements.
+/// One seed repeats the order. Card ids survive. A set and a run are judged on that shoe. Round 1 needs two sets of at least 3. One set fails. Two sets of 3 pass. Two sets of 4 pass. A set plus a run is round 2, not round 1. A run of 4 does not meet round 5.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_seeded_shuffle_deal_draw_reshuffle_push_validate_set_validate_run_round_requirements(
+) {
+    let original = ids_of(&Deck::new().cards);
+    let mut deck = Deck::new();
+    assert_eq!(deck.cards.len(), deck_size());
+    assert_wilds(&deck.cards);
+    let mut rng = StdRng::seed_from_u64(1_424);
+    deck.shuffle_with(&mut rng);
+    let shuffled = ids_of(&deck.cards);
+    assert_ne!(shuffled, original, "this seed changes the order");
+    same_ids(&shuffled, &original);
+
+    let mut again = Deck::new();
+    let mut rng_again = StdRng::seed_from_u64(1_424);
+    again.shuffle_with(&mut rng_again);
+    assert_eq!(ids_of(&again.cards), shuffled, "one seed repeats the order");
+
+    let mut players = deal_table(&mut deck, 2);
+    let mut drawn = Vec::new();
+    loop {
+        match deck.draw_with(&mut rng) {
+            TurnDraw::One(card) => drawn.push(card),
+            TurnDraw::Empty => break,
+            other => panic!("the cards left after the deal drain one at a time, got {other:?}"),
+        }
+    }
+    assert_eq!(drawn.len(), deck_size() - 20);
+    assert!(deck.cards.is_empty());
+    assert!(deck.discard.is_empty());
+    assert_eq!(deck.draw_with(&mut rng), TurnDraw::Empty);
+
+    let top = drawn[drawn.len() - 1];
+    deck.discard = drawn;
+    let recycled = match deck.draw_with(&mut rng) {
+        TurnDraw::One(card) => card,
+        other => panic!("three or more discard cards yield one card, got {other:?}"),
+    };
+    assert_ne!(recycled.id, top.id);
+    assert_eq!(deck.discard.as_slice(), &[top]);
+    deck.cards.push(recycled);
+
+    let hands = hands_of(&players);
+    let before = players[0].calculate_hand_penalty();
+    let other_before = players[1].calculate_hand_penalty();
+    let draw_len = deck.cards.len();
+
+    Action::PushDiscard.apply(&mut players, 0, &mut deck);
+
+    let actor_card = players[0].hand[10];
+    let penalty_card = players[1].hand[11];
+    assert_eq!(players[0].hand.len(), 11);
+    assert_eq!(&players[0].hand[..10], hands[0].as_slice());
+    assert_eq!(players[0].hand[10], actor_card);
+    assert_eq!(players[1].hand.len(), 12);
+    assert_eq!(&players[1].hand[..10], hands[1].as_slice());
+    assert_eq!(players[1].hand[10], top);
+    assert_eq!(players[1].hand[11], penalty_card);
+    assert!(deck.discard.is_empty());
+    assert_eq!(deck.cards.len(), draw_len - 2);
+    assert_eq!(
+        players[0].calculate_hand_penalty(),
+        before + actor_card.get_penalty_value()
+    );
+    assert_eq!(
+        players[1].calculate_hand_penalty(),
+        other_before + top.get_penalty_value() + penalty_card.get_penalty_value()
+    );
+    assert_eq!(players[0].points, 0);
+    assert_eq!(players[1].points, 0);
+    assert_eq!(players[0].total_score, 0);
+    assert_eq!(players[1].total_score, 0);
+
+    let live = cards_in_play(&players, &deck);
+    same_ids(&ids_of(&live), &original);
+    assert_eq!(
+        live.iter().filter(|card| card.is_wild()).count(),
+        wild_count()
+    );
+
+    let mut shoe = live;
+    let four_hearts = take_suited(&mut shoe, Suit::Hearts, Rank::Four);
+    let four_spades = take_suited(&mut shoe, Suit::Spades, Rank::Four);
+    let four_clubs = take_suited(&mut shoe, Suit::Clubs, Rank::Four);
+    let four_diamonds = take_suited(&mut shoe, Suit::Diamonds, Rank::Four);
+    let five_hearts = take_suited(&mut shoe, Suit::Hearts, Rank::Five);
+    let five_hearts_b = take_suited(&mut shoe, Suit::Hearts, Rank::Five);
+    let five_spades = take_suited(&mut shoe, Suit::Spades, Rank::Five);
+    let five_clubs = take_suited(&mut shoe, Suit::Clubs, Rank::Five);
+    let five_diamonds = take_suited(&mut shoe, Suit::Diamonds, Rank::Five);
+    let six_hearts = take_suited(&mut shoe, Suit::Hearts, Rank::Six);
+    let seven_hearts = take_suited(&mut shoe, Suit::Hearts, Rank::Seven);
+    let eight_hearts = take_suited(&mut shoe, Suit::Hearts, Rank::Eight);
+    let nine_hearts = take_suited(&mut shoe, Suit::Hearts, Rank::Nine);
+    let three_hearts = take_suited(&mut shoe, Suit::Hearts, Rank::Three);
+    let two_spades = take_suited(&mut shoe, Suit::Spades, Rank::Two);
+    let joker = shoe
+        .iter()
+        .copied()
+        .find(|card| card.rank == Rank::Joker)
+        .expect("the shoe contains a joker");
+
+    let set_of_three = vec![four_hearts, four_spades, four_clubs];
+    let set_of_four = vec![four_hearts, four_spades, four_clubs, four_diamonds];
+    let other_set = vec![five_hearts, five_spades, five_clubs];
+    let other_set_of_four = vec![five_hearts, five_spades, five_clubs, five_diamonds];
+    let wild_set = vec![four_hearts, joker, two_spades];
+    let run_of_four = vec![four_hearts, five_hearts_b, six_hearts, seven_hearts];
+    let run_of_seven = vec![
+        three_hearts,
+        four_hearts,
+        five_hearts_b,
+        six_hearts,
+        seven_hearts,
+        eight_hearts,
+        nine_hearts,
+    ];
+    let not_a_set = vec![four_hearts, four_spades, five_hearts];
+
+    assert!(validate_set(&set_of_three));
+    assert!(validate_set(&set_of_four));
+    assert!(validate_set(&wild_set));
+    assert!(!validate_set(&not_a_set));
+    assert!(validate_run(&run_of_four));
+    assert!(validate_run(&run_of_seven));
+    assert!(!validate_run(&[eight_hearts, nine_hearts, three_hearts]));
+
+    assert!(!check_round_requirements(1, &[&set_of_three]));
+    assert!(!check_round_requirements(1, &[&set_of_four]));
+    assert!(check_round_requirements(1, &[&set_of_three, &other_set]));
+    assert!(check_round_requirements(
+        1,
+        &[&set_of_four, &other_set_of_four]
+    ));
+    assert!(check_round_requirements(1, &[&wild_set, &other_set]));
+    assert!(!check_round_requirements(1, &[&set_of_three, &run_of_four]));
+    assert!(!check_round_requirements(1, &[&set_of_three, &not_a_set]));
+    assert!(check_round_requirements(2, &[&other_set, &run_of_four]));
+    assert!(!check_round_requirements(5, &[&other_set, &run_of_four]));
+    assert!(check_round_requirements(5, &[&other_set, &run_of_seven]));
+
+    assert_eq!(players[0].hand.len(), 11);
+    assert_eq!(players[1].hand.len(), 12);
+    assert_eq!(deck.cards.len(), draw_len - 2);
+    assert_eq!(players[0].points, 0);
+    assert_eq!(players[1].points, 0);
+    assert_eq!(players[0].total_score, 0);
+    assert_eq!(players[1].total_score, 0);
     same_ids(&ids_of(&cards_in_play(&players, &deck)), &original);
 }

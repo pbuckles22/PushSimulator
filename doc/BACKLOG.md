@@ -175,11 +175,11 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 *As the game engine, I want to strictly enforce round minimums before letting a player on the board.*
 
-* \[ \] Write test test\_round\_1\_minimum\_rejection asserting playing one Set of 3 fails in Round 1\.  
-* \[ \] Implement check\_round\_requirements(round\_number, melds).  
-* \[ \] Write test test\_round\_1\_minimum\_acceptance asserting playing two Sets of 3 passes.  
-* \[ \] Write test test\_round\_1\_exceeding\_minimum asserting playing two Sets of 4 passes.  
-* \[ \] Refactor checking logic to allow \> minimum sizes.
+* \[x\] Write test test\_round\_1\_minimum\_rejection asserting playing one Set of 3 fails in Round 1\.  
+* \[x\] Implement check\_round\_requirements(round\_number, melds).  
+* \[x\] Write test test\_round\_1\_minimum\_acceptance asserting playing two Sets of 3 passes.  
+* \[x\] Write test test\_round\_1\_exceeding\_minimum asserting playing two Sets of 4 passes.  
+* \[x\] Refactor checking logic to allow \> minimum sizes.
 
 **User Story 1.5.2: Board Entry Execution**
 

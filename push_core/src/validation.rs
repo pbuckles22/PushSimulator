@@ -1,5 +1,7 @@
 //! Set/run validation and round requirements (Epics 1.4–1.5).
 
+use std::collections::HashSet;
+
 use crate::card::{Card, Rank};
 
 /// A set is three or more cards of one rank. Twos and jokers stand in for that rank.
@@ -82,6 +84,140 @@ fn fits(naturals: &[Rank], total: usize, ace_high: bool) -> bool {
     extra <= before + after
 }
 
+/// Round minimums for getting on the board.
+///
+/// A meld counts only when it is a set or a run. One meld fills one requirement.
+/// Four or more wilds are both, and still fill only one. A meld may be larger
+/// than the minimum. An extra meld fails, and so does a card used twice.
+/// Six fours may be two sets of three.
+///
+/// - Round 1: two sets of at least 3
+/// - Round 2: one set of at least 3 and one run of at least 4
+/// - Round 3: two runs of at least 4
+/// - Round 4: three sets of at least 3
+/// - Round 5: one set of at least 3 and one run of at least 7
+pub fn check_round_requirements<M: AsRef<[Card]>>(round_number: u8, melds: &[M]) -> bool {
+    let Some(needs) = round_requirements(round_number) else {
+        return false;
+    };
+    if melds.is_empty()
+        || melds.iter().any(|meld| !legal_meld(meld.as_ref()))
+        || !each_card_once(melds)
+    {
+        return false;
+    }
+
+    let mut used = vec![false; melds.len()];
+    for need in &needs {
+        let mut filled = 0;
+        for exclusive in [true, false] {
+            for (index, meld) in melds.iter().enumerate() {
+                if used[index] || filled == need.count {
+                    continue;
+                }
+                let cards = meld.as_ref();
+                if !is_requirement(cards, need) {
+                    continue;
+                }
+                if exclusive && fills_other(cards, &needs, need.kind) {
+                    continue;
+                }
+                used[index] = true;
+                filled += 1;
+            }
+        }
+        if filled < need.count {
+            return false;
+        }
+    }
+    used.iter().all(|was_used| *was_used)
+}
+
+fn each_card_once<M: AsRef<[Card]>>(melds: &[M]) -> bool {
+    let mut seen = HashSet::new();
+    melds
+        .iter()
+        .flat_map(|meld| meld.as_ref())
+        .all(|card| seen.insert(card.id))
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum MeldKind {
+    Set,
+    Run,
+}
+
+struct Requirement {
+    kind: MeldKind,
+    min_len: usize,
+    count: usize,
+}
+
+fn round_requirements(round_number: u8) -> Option<Vec<Requirement>> {
+    match round_number {
+        1 => Some(vec![Requirement {
+            kind: MeldKind::Set,
+            min_len: 3,
+            count: 2,
+        }]),
+        2 => Some(vec![
+            Requirement {
+                kind: MeldKind::Set,
+                min_len: 3,
+                count: 1,
+            },
+            Requirement {
+                kind: MeldKind::Run,
+                min_len: 4,
+                count: 1,
+            },
+        ]),
+        3 => Some(vec![Requirement {
+            kind: MeldKind::Run,
+            min_len: 4,
+            count: 2,
+        }]),
+        4 => Some(vec![Requirement {
+            kind: MeldKind::Set,
+            min_len: 3,
+            count: 3,
+        }]),
+        5 => Some(vec![
+            Requirement {
+                kind: MeldKind::Set,
+                min_len: 3,
+                count: 1,
+            },
+            Requirement {
+                kind: MeldKind::Run,
+                min_len: 7,
+                count: 1,
+            },
+        ]),
+        _ => None,
+    }
+}
+
+fn legal_meld(cards: &[Card]) -> bool {
+    validate_set(cards) || validate_run(cards)
+}
+
+fn is_requirement(cards: &[Card], need: &Requirement) -> bool {
+    if cards.len() < need.min_len {
+        return false;
+    }
+    match need.kind {
+        MeldKind::Set => validate_set(cards),
+        MeldKind::Run => validate_run(cards),
+    }
+}
+
+fn fills_other(cards: &[Card], needs: &[Requirement], kind: MeldKind) -> bool {
+    needs
+        .iter()
+        .any(|need| need.kind != kind && is_requirement(cards, need))
+}
+
 fn rank_value(rank: Rank, ace_high: bool) -> u8 {
     match rank {
         Rank::Ace => {
@@ -109,7 +245,7 @@ fn rank_value(rank: Rank, ace_high: bool) -> u8 {
 #[cfg(test)]
 mod tests {
     use crate::card::{Card, Rank, Suit};
-    use crate::validation::{validate_run, validate_set};
+    use crate::validation::{check_round_requirements, validate_run, validate_set};
 
     fn card(id: u32, suit: Suit, rank: Rank) -> Card {
         Card {
@@ -362,5 +498,305 @@ mod tests {
         assert!(!validate_run(&wrap));
         assert!(!validate_run(&wrap_same_suit_two));
         assert!(!validate_run(&low_ace_plus_king));
+    }
+
+    fn set_of(id: u32, rank: Rank, suits: &[Suit]) -> Vec<Card> {
+        suits
+            .iter()
+            .enumerate()
+            .map(|(offset, suit)| card(id + offset as u32, *suit, rank))
+            .collect()
+    }
+
+    fn heart_run(id: u32, ranks: &[Rank]) -> Vec<Card> {
+        ranks
+            .iter()
+            .enumerate()
+            .map(|(offset, rank)| card(id + offset as u32, Suit::Hearts, *rank))
+            .collect()
+    }
+
+    #[test]
+    fn test_round_1_minimum_rejection() {
+        let one_set = set_of(1, Rank::Four, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+        let oversized = set_of(
+            10,
+            Rank::Five,
+            &[Suit::Hearts, Suit::Spades, Suit::Clubs, Suit::Diamonds],
+        );
+
+        assert!(!check_round_requirements(1, &[&one_set]));
+        assert!(!check_round_requirements(1, &[&oversized]));
+        assert!(!check_round_requirements::<&Vec<Card>>(1, &[]));
+    }
+
+    #[test]
+    fn test_round_1_minimum_acceptance() {
+        let fours = set_of(1, Rank::Four, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+        let fives = set_of(10, Rank::Five, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+
+        assert!(check_round_requirements(1, &[&fours, &fives]));
+    }
+
+    #[test]
+    fn test_round_1_exceeding_minimum() {
+        let fours = set_of(
+            1,
+            Rank::Four,
+            &[Suit::Hearts, Suit::Spades, Suit::Clubs, Suit::Diamonds],
+        );
+        let fives = set_of(
+            10,
+            Rank::Five,
+            &[Suit::Hearts, Suit::Spades, Suit::Clubs, Suit::Diamonds],
+        );
+        let sixes = set_of(20, Rank::Six, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+        let sevens = set_of(30, Rank::Seven, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+        let eights = set_of(40, Rank::Eight, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+        let five_wide = vec![
+            card(50, Suit::Hearts, Rank::Nine),
+            card(51, Suit::Spades, Rank::Nine),
+            card(52, Suit::Clubs, Rank::Nine),
+            card(53, Suit::Diamonds, Rank::Nine),
+            card(54, Suit::Hearts, Rank::Nine),
+        ];
+        let run = heart_run(60, &[Rank::Three, Rank::Four, Rank::Five, Rank::Six]);
+
+        assert!(check_round_requirements(1, &[&fours, &fives]));
+        assert!(check_round_requirements(1, &[&five_wide, &sixes]));
+        assert!(!check_round_requirements(1, &[&sixes, &sevens, &eights]));
+        assert!(!check_round_requirements(1, &[&fours, &fives, &run]));
+    }
+
+    #[test]
+    fn test_round_requirements_reused_card_rejection() {
+        let fours = set_of(1, Rank::Four, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+        let shared = card(1, Suit::Hearts, Rank::Four);
+        let other = vec![
+            shared,
+            card(10, Suit::Spades, Rank::Five),
+            card(11, Suit::Clubs, Rank::Five),
+        ];
+
+        assert!(!check_round_requirements(1, &[&fours, &fours]));
+        assert!(!check_round_requirements(1, &[&fours, &other]));
+    }
+
+    #[test]
+    fn test_round_1_non_set_rejection() {
+        let mixed = vec![
+            card(1, Suit::Hearts, Rank::Four),
+            card(2, Suit::Spades, Rank::Four),
+            card(3, Suit::Clubs, Rank::Five),
+        ];
+        let also_mixed = vec![
+            card(4, Suit::Hearts, Rank::Six),
+            card(5, Suit::Spades, Rank::Seven),
+            card(6, Suit::Clubs, Rank::Eight),
+        ];
+        let fours = set_of(10, Rank::Four, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+        let run = heart_run(20, &[Rank::Four, Rank::Five, Rank::Six, Rank::Seven]);
+        let garbage = vec![
+            card(30, Suit::Hearts, Rank::Nine),
+            card(31, Suit::Spades, Rank::Nine),
+        ];
+        let fives = set_of(40, Rank::Five, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+
+        assert!(!check_round_requirements(1, &[&mixed, &also_mixed]));
+        assert!(!check_round_requirements(1, &[&fours, &run]));
+        assert!(!check_round_requirements(1, &[&fours, &fives, &garbage]));
+    }
+
+    #[test]
+    fn test_round_1_wild_sets_acceptance() {
+        let with_wilds = vec![
+            card(1, Suit::Hearts, Rank::Four),
+            card(2, Suit::None, Rank::Joker),
+            card(3, Suit::Spades, Rank::Two),
+        ];
+        let jokers = vec![
+            card(4, Suit::None, Rank::Joker),
+            card(5, Suit::None, Rank::Joker),
+            card(6, Suit::None, Rank::Joker),
+        ];
+
+        assert!(check_round_requirements(1, &[&with_wilds, &jokers]));
+    }
+
+    #[test]
+    fn test_round_1_same_rank_sets_acceptance() {
+        let fours = set_of(1, Rank::Four, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+        let more_fours = set_of(
+            10,
+            Rank::Four,
+            &[Suit::Diamonds, Suit::Hearts, Suit::Spades],
+        );
+
+        assert!(check_round_requirements(1, &[&fours, &more_fours]));
+    }
+
+    #[test]
+    fn test_round_2_set_and_run() {
+        let fours = set_of(1, Rank::Four, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+        let fives = set_of(10, Rank::Five, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+        let run = heart_run(20, &[Rank::Four, Rank::Five, Rank::Six, Rank::Seven]);
+        let short_run = heart_run(30, &[Rank::Four, Rank::Five, Rank::Six]);
+        let wilds = vec![
+            card(40, Suit::None, Rank::Joker),
+            card(41, Suit::None, Rank::Joker),
+            card(42, Suit::None, Rank::Joker),
+            card(43, Suit::Clubs, Rank::Two),
+        ];
+        let longer = heart_run(
+            50,
+            &[Rank::Three, Rank::Four, Rank::Five, Rank::Six, Rank::Seven],
+        );
+
+        assert!(check_round_requirements(2, &[&fours, &run]));
+        assert!(check_round_requirements(2, &[&fours, &longer]));
+        assert!(!check_round_requirements(2, &[&fours, &fives]));
+        assert!(!check_round_requirements(2, &[&fours, &short_run]));
+        assert!(!check_round_requirements(2, &[&wilds]));
+        assert!(check_round_requirements(2, &[&wilds, &run]));
+        assert!(check_round_requirements(2, &[&wilds, &fours]));
+        assert!(!check_round_requirements(2, &[&fours, &fives, &run]));
+    }
+
+    #[test]
+    fn test_round_3_two_runs() {
+        let hearts = heart_run(1, &[Rank::Four, Rank::Five, Rank::Six, Rank::Seven]);
+        let diamonds = vec![
+            card(10, Suit::Diamonds, Rank::Eight),
+            card(11, Suit::Diamonds, Rank::Nine),
+            card(12, Suit::Diamonds, Rank::Ten),
+            card(13, Suit::Diamonds, Rank::Jack),
+        ];
+        let long = heart_run(
+            20,
+            &[
+                Rank::Three,
+                Rank::Four,
+                Rank::Five,
+                Rank::Six,
+                Rank::Seven,
+                Rank::Eight,
+                Rank::Nine,
+            ],
+        );
+        let fours = set_of(30, Rank::Four, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+
+        assert!(check_round_requirements(3, &[&hearts, &diamonds]));
+        assert!(check_round_requirements(3, &[&long, &diamonds]));
+        assert!(!check_round_requirements(3, &[&long]));
+        assert!(!check_round_requirements(3, &[&hearts, &fours]));
+        assert!(!check_round_requirements(3, &[&hearts, &diamonds, &long]));
+    }
+
+    #[test]
+    fn test_round_4_three_sets() {
+        let fours = set_of(1, Rank::Four, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+        let fives = set_of(
+            10,
+            Rank::Five,
+            &[Suit::Hearts, Suit::Spades, Suit::Clubs, Suit::Diamonds],
+        );
+        let sixes = set_of(20, Rank::Six, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+        let sevens = set_of(30, Rank::Seven, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+
+        assert!(check_round_requirements(4, &[&fours, &fives, &sixes]));
+        assert!(!check_round_requirements(
+            4,
+            &[&fours, &fives, &sixes, &sevens]
+        ));
+        assert!(!check_round_requirements(4, &[&fours, &fives]));
+    }
+
+    #[test]
+    fn test_round_5_set_and_run_of_seven() {
+        let fours = set_of(
+            1,
+            Rank::Four,
+            &[Suit::Hearts, Suit::Spades, Suit::Clubs, Suit::Diamonds],
+        );
+        let run7 = heart_run(
+            10,
+            &[
+                Rank::Three,
+                Rank::Four,
+                Rank::Five,
+                Rank::Six,
+                Rank::Seven,
+                Rank::Eight,
+                Rank::Nine,
+            ],
+        );
+        let run8 = heart_run(
+            20,
+            &[
+                Rank::Three,
+                Rank::Four,
+                Rank::Five,
+                Rank::Six,
+                Rank::Seven,
+                Rank::Eight,
+                Rank::Nine,
+                Rank::Ten,
+            ],
+        );
+        let run6 = heart_run(
+            30,
+            &[
+                Rank::Four,
+                Rank::Five,
+                Rank::Six,
+                Rank::Seven,
+                Rank::Eight,
+                Rank::Nine,
+            ],
+        );
+        let gapped = vec![
+            card(40, Suit::Hearts, Rank::Three),
+            card(41, Suit::Hearts, Rank::Four),
+            card(42, Suit::Hearts, Rank::Five),
+            card(43, Suit::Hearts, Rank::Six),
+            card(44, Suit::Hearts, Rank::Eight),
+            card(45, Suit::Hearts, Rank::Nine),
+            card(46, Suit::Hearts, Rank::Ten),
+        ];
+        let wild_run = vec![
+            card(50, Suit::Hearts, Rank::Four),
+            card(51, Suit::None, Rank::Joker),
+            card(52, Suit::Hearts, Rank::Six),
+            card(53, Suit::Hearts, Rank::Seven),
+            card(54, Suit::Hearts, Rank::Eight),
+            card(55, Suit::Hearts, Rank::Nine),
+            card(56, Suit::Hearts, Rank::Ten),
+        ];
+        let seven_wilds = vec![
+            card(60, Suit::Hearts, Rank::Two),
+            card(61, Suit::Spades, Rank::Two),
+            card(62, Suit::Clubs, Rank::Two),
+            card(63, Suit::Diamonds, Rank::Two),
+            card(64, Suit::None, Rank::Joker),
+            card(65, Suit::None, Rank::Joker),
+            card(66, Suit::None, Rank::Joker),
+        ];
+
+        assert!(check_round_requirements(5, &[&fours, &run7]));
+        assert!(check_round_requirements(5, &[&fours, &run8]));
+        assert!(check_round_requirements(5, &[&fours, &wild_run]));
+        assert!(!check_round_requirements(5, &[&fours, &run6]));
+        assert!(!check_round_requirements(5, &[&fours, &gapped]));
+        assert!(!check_round_requirements(5, &[&seven_wilds]));
+        assert!(check_round_requirements(5, &[&fours, &seven_wilds]));
+    }
+
+    #[test]
+    fn test_round_requirements_unknown_round_rejection() {
+        let fours = set_of(1, Rank::Four, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+        let fives = set_of(10, Rank::Five, &[Suit::Hearts, Suit::Spades, Suit::Clubs]);
+
+        assert!(!check_round_requirements(0, &[&fours, &fives]));
+        assert!(!check_round_requirements(6, &[&fours, &fives]));
     }
 }
