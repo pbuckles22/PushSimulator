@@ -218,10 +218,10 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 *As the game engine, I want to prevent players from using stolen wild cards immediately.*
 
-* \[ \] Write test test\_stolen\_wild\_play\_rejection asserting playing a locked wild card fails.  
-* \[ \] Update validation engine to check locked\_until\_turn against global\_turn\_counter.  
-* \[ \] Write test test\_stolen\_wild\_play\_acceptance asserting play succeeds after turn counter advances.  
-* \[ \] Ensure state machine properly advances turn counters.
+* \[x\] Write test test\_stolen\_wild\_play\_rejection asserting playing a locked wild card fails.  
+* \[x\] Update validation engine to check locked\_until\_turn against global\_turn\_counter.  
+* \[x\] Write test test\_stolen\_wild\_play\_acceptance asserting play succeeds after turn counter advances.  
+* \[x\] Ensure state machine properly advances turn counters.
 
 ### **Epic 1.7: Discarding & Penalties**
 

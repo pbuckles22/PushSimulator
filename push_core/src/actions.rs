@@ -4,7 +4,7 @@ use crate::card::{Card, Rank, Suit};
 use crate::deck::{Deck, TurnDraw};
 use crate::game_state::GameState;
 use crate::player::Player;
-use crate::validation::{check_round_requirements, validate_run, validate_set};
+use crate::validation::{card_can_be_played, check_round_requirements, validate_run, validate_set};
 
 /// A player choice during a turn.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -73,9 +73,12 @@ impl GameState {
     /// or that player is already on the board. A successful play appends the melds to
     /// `board`, removes those cards from the hand, and sets `is_on_board`.
     /// A steal returns false, and leaves the table as it was, when that player is off
-    /// the board or the natural is not the card the wild is standing in for. A successful
+    /// the board, the natural is still locked, or the natural is not the card the wild
+    /// is standing in for. A successful
     /// steal puts the natural where the wild sat and moves the wild onto the end of the
     /// hand, locked until `turn_counter` plus one.
+    /// A play or a hit returns false when a card in that action is still locked:
+    /// `locked_until_turn` is ahead of `turn_counter`. The table stays as it was.
     pub fn apply(&mut self, action: Action, actor_index: usize) -> bool {
         match action {
             Action::TakeDiscard => {
@@ -100,6 +103,13 @@ impl GameState {
 /// has to be a set or a run. One card that does not fit refuses the whole action.
 fn hit_meld(state: &mut GameState, actor_index: usize, hits: &[MeldHit]) -> bool {
     if hits.is_empty() || !state.players[actor_index].is_on_board {
+        return false;
+    }
+    if hits
+        .iter()
+        .flat_map(|hit| &hit.cards)
+        .any(|card| !card_can_be_played(card, state.turn_counter))
+    {
         return false;
     }
     let mut board = state.board.clone();
@@ -135,11 +145,15 @@ fn hit_meld(state: &mut GameState, actor_index: usize, hits: &[MeldHit]) -> bool
 /// Swaps a natural card for a wild that is standing in for it.
 ///
 /// The actor has to be on the board. The natural has to be in that hand, and it
-/// has to be the card the wild is standing in for. The wild moves onto the end
-/// of the hand and locks until `turn_counter` plus one. The counter stays put.
+/// has to be the card the wild is standing in for. A natural that is still locked
+/// stays in the hand. The wild moves onto the end of the hand and locks until
+/// `turn_counter` plus one. The counter stays put.
 /// A refusal leaves the table as it was.
 fn steal_wild(state: &mut GameState, actor_index: usize, steal: &WildSteal) -> bool {
     if !state.players[actor_index].is_on_board || steal.natural.is_wild() || !steal.wild.is_wild() {
+        return false;
+    }
+    if !card_can_be_played(&steal.natural, state.turn_counter) {
         return false;
     }
     let Some(meld) = state.board.get(steal.meld_index) else {
@@ -316,6 +330,13 @@ fn rank_value(rank: Rank, ace_high: bool) -> u8 {
 /// Moves verified melds from the actor's hand onto the board.
 fn play_meld(state: &mut GameState, actor_index: usize, melds: &[Vec<Card>]) -> bool {
     if state.players[actor_index].is_on_board {
+        return false;
+    }
+    if melds
+        .iter()
+        .flatten()
+        .any(|card| !card_can_be_played(card, state.turn_counter))
+    {
         return false;
     }
     if !check_round_requirements(state.round_number, melds) {
@@ -537,6 +558,7 @@ mod tests {
     }
 
     /// Two sets of three, a second four of hearts that stays, and a lookalike four in the draw pile.
+    /// The four that is played is locked until 3. The counter has caught up, so that lock is not ahead.
     fn round_1_lay() -> (GameState, Vec<Vec<Card>>, Vec<Card>) {
         let keep_four = locked(1, Suit::Hearts, Rank::Four, 2);
         let play_four = locked(2, Suit::Hearts, Rank::Four, 3);
@@ -553,7 +575,7 @@ mod tests {
         let other_ace = card(61, Suit::Spades, Rank::Ace);
         let fours = vec![play_four, four_spades, four_clubs];
         let fives = vec![five_hearts, five_spades, five_clubs];
-        let state = table(
+        let mut state = table(
             vec![
                 keep_four,
                 play_four,
@@ -568,6 +590,7 @@ mod tests {
             vec![other_four, other_ace],
             vec![lookalike, marker],
         );
+        state.turn_counter = 3;
         (
             state,
             vec![fours, fives],
@@ -1078,6 +1101,7 @@ mod tests {
             .map(|card| card.get_penalty_value())
             .sum();
         let deck = state.deck.clone();
+        state.turn_counter = 4;
 
         refuse(&state, 0, vec![wild_set.clone()]);
         assert!(state.apply(Action::PlayMeld(vec![wild_set.clone(), jokers.clone()]), 0));
@@ -1956,5 +1980,322 @@ mod tests {
         assert_eq!(holes.round_number, 1);
         assert_eq!(holes.players[1].points, 4);
         assert_eq!(holes.players[1].total_score, 9);
+    }
+
+    /// A stolen wild cannot be played while its lock is still ahead of the turn counter.
+    /// Hitting that joker back onto the set is refused. Laying a locked wild down to get
+    /// on the board is refused. The hand, the board, the piles, and both scores stay put.
+    #[test]
+    fn test_stolen_wild_play_rejection() {
+        let five_hearts = card(1, Suit::Hearts, Rank::Five);
+        let five_spades = card(2, Suit::Spades, Rank::Five);
+        let joker = card(3, Suit::None, Rank::Joker);
+        let five_diamonds = card(4, Suit::Diamonds, Rank::Five);
+        let extra_five = card(5, Suit::Clubs, Rank::Five);
+        let mut state = board_with(
+            vec![five_diamonds, extra_five],
+            vec![five_hearts, five_spades, joker],
+            true,
+        );
+        state.turn_counter = 4;
+        assert!(state.apply(
+            Action::StealWild(WildSteal {
+                meld_index: 0,
+                wild: joker,
+                natural: five_diamonds,
+            }),
+            0,
+        ));
+        let stolen = state.players[0].hand[1];
+        assert_eq!(stolen.id, joker.id);
+        assert_eq!(stolen.rank, Rank::Joker);
+        assert_eq!(stolen.locked_until_turn, 5);
+        assert_eq!(state.turn_counter, 4);
+
+        let before_hit = state.clone();
+        assert!(!state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![stolen],
+            }]),
+            0,
+        ));
+        assert_still(&before_hit, &state);
+        assert_eq!(state.players[0].hand[1].locked_until_turn, 5);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+        assert_eq!(state.round_number, 1);
+        assert!(state.players[0].is_on_board);
+
+        let locked_joker = locked(10, Suit::None, Rank::Joker, 1);
+        let fours = vec![
+            card(11, Suit::Hearts, Rank::Four),
+            card(12, Suit::Spades, Rank::Four),
+            locked_joker,
+        ];
+        let sixes = vec![
+            card(13, Suit::Hearts, Rank::Six),
+            card(14, Suit::Spades, Rank::Six),
+            card(15, Suit::Clubs, Rank::Six),
+        ];
+        let laying = table(
+            fours.iter().chain(sixes.iter()).copied().collect(),
+            vec![card(16, Suit::Clubs, Rank::Ace)],
+            vec![card(17, Suit::Diamonds, Rank::King)],
+        );
+        refuse(&laying, 0, vec![fours, sixes]);
+        assert!(!laying.players[0].is_on_board);
+        assert!(laying.board.is_empty());
+        assert_eq!(laying.turn_counter, 0);
+        assert_eq!(laying.players[0].points, 4);
+        assert_eq!(laying.players[0].total_score, 9);
+    }
+
+    /// After the turn counter advances, the stolen wild can be played. The lock on the
+    /// card stays. The round does not end. One advance is not enough when the lock is
+    /// still two turns ahead.
+    #[test]
+    fn test_stolen_wild_play_acceptance() {
+        let five_hearts = card(1, Suit::Hearts, Rank::Five);
+        let five_spades = card(2, Suit::Spades, Rank::Five);
+        let joker = card(3, Suit::None, Rank::Joker);
+        let five_diamonds = card(4, Suit::Diamonds, Rank::Five);
+        let mut state = board_with(
+            vec![five_diamonds],
+            vec![five_hearts, five_spades, joker],
+            true,
+        );
+        state.turn_counter = 4;
+        assert!(state.apply(
+            Action::StealWild(WildSteal {
+                meld_index: 0,
+                wild: joker,
+                natural: five_diamonds,
+            }),
+            0,
+        ));
+        let stolen = state.players[0].hand[0];
+        assert_eq!(stolen.locked_until_turn, 5);
+        let before_advance = state.clone();
+        assert!(!state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![stolen],
+            }]),
+            0,
+        ));
+        assert_still(&before_advance, &state);
+
+        state.advance_turn();
+        assert_eq!(state.turn_counter, 5);
+        assert_eq!(state.players, before_advance.players);
+        assert_eq!(state.board, before_advance.board);
+        assert_eq!(state.deck, before_advance.deck);
+        assert_eq!(state.round_number, before_advance.round_number);
+        assert_eq!(state.players[0].hand[0].locked_until_turn, 5);
+
+        assert!(state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![stolen],
+            }]),
+            0,
+        ));
+        assert_eq!(
+            state.board[0],
+            vec![five_hearts, five_spades, five_diamonds, stolen]
+        );
+        assert_eq!(state.board[0][3].locked_until_turn, 5);
+        assert!(state.players[0].hand.is_empty());
+        assert!(state.players[0].is_on_board);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.turn_counter, 5);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+        assert_eq!(state.players[1].points, 4);
+        assert_eq!(state.players[1].total_score, 9);
+        assert!(!state.players[1].is_on_board);
+
+        let locked_joker = locked(10, Suit::None, Rank::Joker, 1);
+        let fours = vec![
+            card(11, Suit::Hearts, Rank::Four),
+            card(12, Suit::Spades, Rank::Four),
+            locked_joker,
+        ];
+        let sixes = vec![
+            card(13, Suit::Hearts, Rank::Six),
+            card(14, Suit::Spades, Rank::Six),
+            card(15, Suit::Clubs, Rank::Six),
+        ];
+        let mut laying = table(
+            fours.iter().chain(sixes.iter()).copied().collect(),
+            vec![card(16, Suit::Clubs, Rank::Ace)],
+            vec![card(17, Suit::Diamonds, Rank::King)],
+        );
+        refuse(&laying, 0, vec![fours.clone(), sixes.clone()]);
+        laying.advance_turn();
+        assert_eq!(laying.turn_counter, 1);
+        assert!(laying.apply(Action::PlayMeld(vec![fours.clone(), sixes.clone()]), 0));
+        assert_eq!(laying.board, vec![fours, sixes]);
+        assert_eq!(laying.board[0][2].locked_until_turn, 1);
+        assert!(laying.players[0].hand.is_empty());
+        assert!(laying.players[0].is_on_board);
+        assert!(!laying.players[1].is_on_board);
+        assert_eq!(laying.round_number, 1);
+        assert_eq!(laying.players[0].points, 4);
+        assert_eq!(laying.players[0].total_score, 9);
+
+        let early = locked(20, Suit::None, Rank::Joker, 6);
+        let eights = vec![
+            card(21, Suit::Hearts, Rank::Eight),
+            card(22, Suit::Spades, Rank::Eight),
+            card(23, Suit::Clubs, Rank::Eight),
+        ];
+        let nines = vec![
+            card(24, Suit::Hearts, Rank::Nine),
+            card(25, Suit::Spades, Rank::Nine),
+            early,
+        ];
+        let mut still = table(
+            eights.iter().chain(nines.iter()).copied().collect(),
+            vec![card(26, Suit::Clubs, Rank::Ace)],
+            vec![card(27, Suit::Diamonds, Rank::King)],
+        );
+        still.turn_counter = 4;
+        refuse(&still, 0, vec![eights.clone(), nines.clone()]);
+        still.advance_turn();
+        assert_eq!(still.turn_counter, 5);
+        refuse(&still, 0, vec![eights.clone(), nines.clone()]);
+        still.advance_turn();
+        assert_eq!(still.turn_counter, 6);
+        assert!(still.apply(Action::PlayMeld(vec![eights.clone(), nines.clone()]), 0));
+        assert_eq!(still.board[1][2].locked_until_turn, 6);
+        assert!(still.players[0].is_on_board);
+        assert_eq!(still.round_number, 1);
+    }
+
+    /// A locked wild sitting in the hand does not stop an unlocked card. Putting both
+    /// in one hit refuses the whole action, and the unlocked card stays in the hand.
+    /// A locked natural is refused the same way. The other meld stays put.
+    #[test]
+    fn test_locked_wild_does_not_block_an_unlocked_card() {
+        let five_hearts = card(1, Suit::Hearts, Rank::Five);
+        let five_spades = card(2, Suit::Spades, Rank::Five);
+        let five_clubs = card(3, Suit::Clubs, Rank::Five);
+        let five_diamonds = locked(4, Suit::Diamonds, Rank::Five, 5);
+        let joker = locked(5, Suit::None, Rank::Joker, 5);
+        let eight_diamonds = card(6, Suit::Diamonds, Rank::Eight);
+        let meld = vec![five_hearts, five_spades, five_clubs];
+        let other = vec![
+            card(7, Suit::Hearts, Rank::Eight),
+            card(8, Suit::Spades, Rank::Eight),
+            card(9, Suit::Clubs, Rank::Eight),
+        ];
+        let mut state = table(
+            vec![five_diamonds, joker, eight_diamonds],
+            vec![card(60, Suit::Diamonds, Rank::Four)],
+            vec![card(51, Suit::Clubs, Rank::Jack)],
+        );
+        state.board = vec![meld.clone(), other.clone()];
+        state.players[0].is_on_board = true;
+        state.turn_counter = 4;
+
+        let before_both = state.clone();
+        assert!(!state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![five_diamonds, joker],
+            }]),
+            0,
+        ));
+        assert_still(&before_both, &state);
+
+        let before_natural = state.clone();
+        assert!(!state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![five_diamonds],
+            }]),
+            0,
+        ));
+        assert_still(&before_natural, &state);
+
+        assert!(state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 1,
+                cards: vec![eight_diamonds],
+            }]),
+            0,
+        ));
+        assert_eq!(state.board[0], meld);
+        assert_eq!(
+            state.board[1],
+            vec![other[0], other[1], other[2], eight_diamonds]
+        );
+        assert_eq!(state.players[0].hand, vec![five_diamonds, joker]);
+        assert_eq!(state.players[0].hand[0].locked_until_turn, 5);
+        assert_eq!(state.players[0].hand[1].locked_until_turn, 5);
+        assert_eq!(state.turn_counter, 4);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+        assert!(state.players[0].is_on_board);
+
+        state.advance_turn();
+        assert!(state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![five_diamonds, joker],
+            }]),
+            0,
+        ));
+        assert_eq!(
+            state.board[0],
+            vec![five_hearts, five_spades, five_clubs, five_diamonds, joker]
+        );
+        assert_eq!(state.board[0][3].locked_until_turn, 5);
+        assert_eq!(state.board[0][4].locked_until_turn, 5);
+        assert!(state.players[0].hand.is_empty());
+        assert_eq!(state.board[1].len(), 4);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.turn_counter, 5);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+    }
+
+    /// A locked natural cannot take a wild's place while that lock is ahead of the counter.
+    /// After the counter catches up, the swap works and the stolen wild gets a new lock.
+    #[test]
+    fn test_locked_natural_cannot_steal_until_the_counter_catches_up() {
+        let five_hearts = card(1, Suit::Hearts, Rank::Five);
+        let five_spades = card(2, Suit::Spades, Rank::Five);
+        let joker = card(3, Suit::None, Rank::Joker);
+        let five_diamonds = locked(4, Suit::Diamonds, Rank::Five, 3);
+        let mut state = board_with(
+            vec![five_diamonds],
+            vec![five_hearts, five_spades, joker],
+            true,
+        );
+        state.turn_counter = 2;
+        refuse_steal(&state, 0, 0, joker, five_diamonds);
+        state.advance_turn();
+        assert_eq!(state.turn_counter, 3);
+        assert!(state.apply(
+            Action::StealWild(WildSteal {
+                meld_index: 0,
+                wild: joker,
+                natural: five_diamonds,
+            }),
+            0,
+        ));
+        assert_eq!(state.board[0][2].id, five_diamonds.id);
+        assert_eq!(state.board[0][2].locked_until_turn, 3);
+        assert_eq!(state.players[0].hand[0].id, joker.id);
+        assert_eq!(state.players[0].hand[0].locked_until_turn, 4);
+        assert_eq!(state.turn_counter, 3);
+        assert_eq!(state.round_number, 1);
+        assert!(state.players[0].is_on_board);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
     }
 }

@@ -10,7 +10,9 @@ use crate::player::Player;
 /// and moves cards from one hand onto `board`. `HitMeld` adds cards from the
 /// hand onto one or more of those melds, and only for a player who is on the board.
 /// `StealWild` swaps a natural card for a wild on one of those melds. The stolen
-/// wild locks until `turn_counter` plus one. A new table starts that counter at 0.
+/// wild locks until `turn_counter` plus one. A card whose lock is still ahead of
+/// that counter cannot be played, hit, or used to replace a wild. A new table
+/// starts that counter at 0.
 #[derive(Clone, Debug)]
 pub struct GameState {
     pub players: Vec<Player>,
@@ -29,5 +31,13 @@ impl GameState {
             board: Vec::new(),
             turn_counter: 0,
         }
+    }
+
+    /// Moves the table on by one turn.
+    ///
+    /// Hands, the board, the piles, the round, and both scores stay as they were.
+    /// A card locked until the old counter plus one can be played after this.
+    pub fn advance_turn(&mut self) {
+        self.turn_counter = self.turn_counter.saturating_add(1);
     }
 }

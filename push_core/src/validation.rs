@@ -1,8 +1,16 @@
-//! Set/run validation and round requirements (Epics 1.4–1.5).
+//! Set/run validation, round requirements, and the steal lock (Epics 1.4–1.6).
 
 use std::collections::HashSet;
 
 use crate::card::{Card, Rank};
+
+/// A card can be played when `locked_until_turn` is not still ahead of `turn_counter`.
+///
+/// A stolen wild locks until the counter plus one, so it stays in the hand for the
+/// rest of that turn. Once the counter catches up, the same card can be played.
+pub fn card_can_be_played(card: &Card, turn_counter: u32) -> bool {
+    card.locked_until_turn <= turn_counter
+}
 
 /// A set is three or more cards of one rank. Twos and jokers stand in for that rank.
 ///
