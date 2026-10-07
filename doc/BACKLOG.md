@@ -231,10 +231,10 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 *As the game engine, I want to enforce that off-board players cannot discard playable cards.*
 
-* \[ \] Write test test\_quick\_discard asserting a drawn card can be immediately discarded.  
-* \[ \] Implement tracking of the currently drawn card to bypass safety checks.  
-* \[ \] Write test test\_pre\_board\_discard\_rejection asserting discarding 7H when a \[5H, 6H, 8H(wild)\] exists fails.  
-* \[ \] Implement board-scanning logic inside Action::DiscardCard to detect playability.
+* \[x\] Write test test\_quick\_discard asserting a drawn card can be immediately discarded.  
+* \[x\] Implement tracking of the currently drawn card to bypass safety checks.  
+* \[x\] Write test test\_pre\_board\_discard\_rejection asserting discarding 7H when a \[5H, 6H, 8H(wild)\] exists fails.  
+* \[x\] Implement board-scanning logic inside Action::DiscardCard to detect playability.
 
 **User Story 1.7.2: The Penalty Draw Loop**
 

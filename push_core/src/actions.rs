@@ -22,6 +22,12 @@ pub enum Action {
     HitMeld(Vec<MeldHit>),
     /// Swap one natural card from the hand for a wild on a meld. The wild moves into the hand.
     StealWild(WildSteal),
+    /// Place one card from the hand onto the discard pile.
+    ///
+    /// A player who is off the board cannot discard a card that could be added to
+    /// a meld already on the table. The card this turn's take or push just drew
+    /// is the exception. A player on the board can discard a card that fits.
+    DiscardCard(Card),
 }
 
 /// Cards from the hand added onto one meld already on the board.
@@ -61,6 +67,7 @@ impl Action {
             Self::PlayMeld(_) => panic!("PlayMeld applies on GameState"),
             Self::HitMeld(_) => panic!("HitMeld applies on GameState"),
             Self::StealWild(_) => panic!("StealWild applies on GameState"),
+            Self::DiscardCard(_) => panic!("DiscardCard applies on GameState"),
         }
     }
 }
@@ -79,21 +86,68 @@ impl GameState {
     /// hand, locked until `turn_counter` plus one.
     /// A play or a hit returns false when a card in that action is still locked:
     /// `locked_until_turn` is ahead of `turn_counter`. The table stays as it was.
+    ///
+    /// A discard returns false, and leaves the table as it was, when the card is
+    /// not in that hand, or when that player is off the board and the card could
+    /// be added to a meld. The card just taken or drawn on a push may still be
+    /// discarded. A successful discard of that card clears `drawn_card_id`.
     pub fn apply(&mut self, action: Action, actor_index: usize) -> bool {
         match action {
             Action::TakeDiscard => {
                 Action::TakeDiscard.apply(&mut self.players, actor_index, &mut self.deck);
+                self.drawn_card_id = self.players[actor_index].hand.last().map(|card| card.id);
                 true
             }
             Action::PushDiscard => {
                 Action::PushDiscard.apply(&mut self.players, actor_index, &mut self.deck);
+                self.drawn_card_id = self.players[actor_index].hand.last().map(|card| card.id);
                 true
             }
             Action::PlayMeld(melds) => play_meld(self, actor_index, &melds),
             Action::HitMeld(hits) => hit_meld(self, actor_index, &hits),
             Action::StealWild(steal) => steal_wild(self, actor_index, &steal),
+            Action::DiscardCard(card) => discard_card(self, actor_index, card),
         }
     }
+}
+
+/// Places one card from the actor's hand onto the discard pile.
+///
+/// The card has to be in that hand. Off the board, a card that could join a meld
+/// stays in the hand, unless it is the card `drawn_card_id` names. A locked card
+/// cannot be played, so it is safe to discard. The round does not end.
+fn discard_card(state: &mut GameState, actor_index: usize, card: Card) -> bool {
+    if !state.players[actor_index].hand.contains(&card) {
+        return false;
+    }
+    let quick = state.drawn_card_id == Some(card.id);
+    if !state.players[actor_index].is_on_board
+        && !quick
+        && card_fits_board(&state.board, &card, state.turn_counter)
+    {
+        return false;
+    }
+    let Some(hand) = hand_without(&state.players[actor_index].hand, &[vec![card]]) else {
+        return false;
+    };
+    state.players[actor_index].hand = hand;
+    state.deck.discard.push(card);
+    if quick {
+        state.drawn_card_id = None;
+    }
+    true
+}
+
+/// A card fits the board when it can be played and adding it to some meld is a set or a run.
+fn card_fits_board(board: &[Vec<Card>], card: &Card, turn_counter: u32) -> bool {
+    if !card_can_be_played(card, turn_counter) {
+        return false;
+    }
+    board.iter().any(|meld| {
+        let mut with = meld.clone();
+        with.push(*card);
+        validate_set(&with) || validate_run(&with)
+    })
 }
 
 /// Adds cards from the actor's hand onto one or more board melds.
@@ -540,6 +594,7 @@ mod tests {
         assert_eq!(state.round_number, 1);
         assert!(state.board.is_empty());
         assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.drawn_card_id, None);
         state
     }
 
@@ -549,6 +604,7 @@ mod tests {
         assert_eq!(after.round_number, before.round_number);
         assert_eq!(after.deck, before.deck);
         assert_eq!(after.turn_counter, before.turn_counter);
+        assert_eq!(after.drawn_card_id, before.drawn_card_id);
     }
 
     fn refuse(state: &GameState, actor: usize, melds: Vec<Vec<Card>>) {
@@ -2297,5 +2353,333 @@ mod tests {
         assert!(state.players[0].is_on_board);
         assert_eq!(state.players[0].points, 4);
         assert_eq!(state.players[0].total_score, 9);
+    }
+
+    fn refuse_discard(state: &GameState, actor: usize, card: Card) {
+        let mut next = state.clone();
+        assert!(!next.apply(Action::DiscardCard(card), actor));
+        assert_still(state, &next);
+    }
+
+    /// 5♥ 6♥ and a joker. The joker can stand in for 8♥, so 7♥ fits between them.
+    fn heart_gap(hand: Vec<Card>, on_board: bool) -> GameState {
+        board_with(
+            hand,
+            vec![
+                card(1, Suit::Hearts, Rank::Five),
+                card(2, Suit::Hearts, Rank::Six),
+                card(3, Suit::None, Rank::Joker),
+            ],
+            on_board,
+        )
+    }
+
+    #[test]
+    fn test_pre_board_discard_rejection() {
+        let seven = card(4, Suit::Hearts, Rank::Seven);
+        let king = card(5, Suit::Spades, Rank::King);
+        let state = heart_gap(vec![seven, king], false);
+        let under = state.deck.discard.clone();
+
+        refuse_discard(&state, 0, seven);
+
+        assert_eq!(state.players[0].hand, vec![seven, king]);
+        assert_eq!(state.deck.discard, under);
+        assert!(!state.players[0].is_on_board);
+        assert_eq!(state.board.len(), 1);
+        assert_eq!(state.board[0].len(), 3);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.drawn_card_id, None);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+        assert_eq!(state.players[1].points, 4);
+        assert_eq!(state.players[1].total_score, 9);
+        assert_eq!(seven.get_penalty_value(), 5);
+    }
+
+    #[test]
+    fn test_pre_board_set_discard_rejection() {
+        let eight = card(4, Suit::Hearts, Rank::Eight);
+        let king = card(5, Suit::Spades, Rank::King);
+        let meld = vec![
+            card(1, Suit::Spades, Rank::Eight),
+            card(2, Suit::Clubs, Rank::Eight),
+            card(3, Suit::Diamonds, Rank::Eight),
+        ];
+        let state = board_with(vec![eight, king], meld, false);
+
+        refuse_discard(&state, 0, eight);
+        assert_eq!(state.players[0].hand, vec![eight, king]);
+        assert!(!state.players[0].is_on_board);
+    }
+
+    #[test]
+    fn test_pre_board_safe_discard() {
+        let seven = card(4, Suit::Hearts, Rank::Seven);
+        let king = card(5, Suit::Spades, Rank::King);
+        let mut state = heart_gap(vec![seven, king], false);
+        let queen = state.deck.discard[0];
+        let other = state.players[1].clone();
+        let board = state.board.clone();
+
+        assert!(state.apply(Action::DiscardCard(king), 0));
+
+        assert_eq!(state.players[0].hand, vec![seven]);
+        assert_eq!(state.deck.discard, vec![queen, king]);
+        assert_eq!(state.board, board);
+        assert_eq!(state.players[1], other);
+        assert_eq!(state.drawn_card_id, None);
+        assert!(!state.players[0].is_on_board);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+        assert_eq!(king.get_penalty_value(), 10);
+    }
+
+    #[test]
+    fn test_quick_discard() {
+        let five = card(1, Suit::Hearts, Rank::Five);
+        let six = card(2, Suit::Hearts, Rank::Six);
+        let wild = card(3, Suit::None, Rank::Joker);
+        let other_seven = card(4, Suit::Hearts, Rank::Seven);
+        let king = card(5, Suit::Spades, Rank::King);
+        let drawn = card(6, Suit::Hearts, Rank::Seven);
+        let penalty = card(7, Suit::Clubs, Rank::Three);
+        let buried = card(8, Suit::Diamonds, Rank::Queen);
+        let top = card(9, Suit::Spades, Rank::Ace);
+        let next_kept = card(10, Suit::Clubs, Rank::Nine);
+        let mut state = heart_gap(vec![other_seven, king], false);
+        state.players[1].hand = vec![next_kept];
+        state.deck.cards = vec![drawn, penalty];
+        state.deck.discard = vec![buried, top];
+
+        refuse_discard(&state, 0, other_seven);
+        assert!(state.apply(Action::PushDiscard, 0));
+
+        assert_eq!(state.players[0].hand, vec![other_seven, king, drawn]);
+        assert_eq!(state.drawn_card_id, Some(drawn.id));
+        assert_eq!(state.players[1].hand, vec![next_kept, top, penalty]);
+        assert_eq!(state.deck.discard, vec![buried]);
+        assert!(state.deck.cards.is_empty());
+        refuse_discard(&state, 0, other_seven);
+
+        let mut safe_first = state.clone();
+        assert!(safe_first.apply(Action::DiscardCard(king), 0));
+        assert_eq!(safe_first.drawn_card_id, Some(drawn.id));
+        assert_eq!(safe_first.players[0].hand, vec![other_seven, drawn]);
+        assert!(safe_first.apply(Action::DiscardCard(drawn), 0));
+        assert_eq!(safe_first.drawn_card_id, None);
+        assert_eq!(safe_first.players[0].hand, vec![other_seven]);
+        assert_eq!(safe_first.deck.discard, vec![buried, king, drawn]);
+        assert_eq!(safe_first.board, vec![vec![five, six, wild]]);
+
+        assert!(state.apply(Action::DiscardCard(drawn), 0));
+        assert_eq!(state.drawn_card_id, None);
+        assert_eq!(state.players[0].hand, vec![other_seven, king]);
+        assert_eq!(state.deck.discard, vec![buried, drawn]);
+        assert_eq!(state.board, vec![vec![five, six, wild]]);
+        refuse_discard(&state, 0, other_seven);
+        assert!(state.apply(Action::DiscardCard(king), 0));
+        assert_eq!(state.players[0].hand, vec![other_seven]);
+        assert_eq!(state.deck.discard, vec![buried, drawn, king]);
+        assert!(!state.players[0].is_on_board);
+        assert!(!state.players[1].is_on_board);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+        assert_eq!(state.players[1].points, 4);
+        assert_eq!(state.players[1].total_score, 9);
+        assert_eq!(drawn.get_penalty_value(), 5);
+    }
+
+    #[test]
+    fn test_quick_discard_of_the_card_just_taken() {
+        let seven = card(4, Suit::Hearts, Rank::Seven);
+        let king = card(5, Suit::Spades, Rank::King);
+        let other_seven = card(6, Suit::Hearts, Rank::Seven);
+        let mut state = heart_gap(vec![other_seven, king], false);
+        let queen = state.deck.discard[0];
+        state.deck.discard.push(seven);
+
+        refuse_discard(&state, 0, other_seven);
+        assert!(state.apply(Action::TakeDiscard, 0));
+        assert_eq!(state.players[0].hand, vec![other_seven, king, seven]);
+        assert_eq!(state.drawn_card_id, Some(seven.id));
+        assert_eq!(state.deck.discard, vec![queen]);
+        refuse_discard(&state, 0, other_seven);
+
+        assert!(state.apply(Action::DiscardCard(seven), 0));
+        assert_eq!(state.drawn_card_id, None);
+        assert_eq!(state.players[0].hand, vec![other_seven, king]);
+        assert_eq!(state.deck.discard, vec![queen, seven]);
+        assert!(!state.players[0].is_on_board);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.turn_counter, 0);
+        refuse_discard(&state, 0, other_seven);
+    }
+
+    #[test]
+    fn test_advance_turn_ends_the_quick_discard() {
+        let seven = card(4, Suit::Hearts, Rank::Seven);
+        let king = card(5, Suit::Spades, Rank::King);
+        let mut state = heart_gap(vec![king], false);
+        state.deck.discard.push(seven);
+        assert!(state.apply(Action::TakeDiscard, 0));
+        assert_eq!(state.drawn_card_id, Some(seven.id));
+
+        let mut this_turn = state.clone();
+        assert!(this_turn.apply(Action::DiscardCard(seven), 0));
+        assert_eq!(this_turn.drawn_card_id, None);
+        assert_eq!(this_turn.players[0].hand, vec![king]);
+
+        let before = state.clone();
+        state.advance_turn();
+        assert_eq!(state.turn_counter, 1);
+        assert_eq!(state.drawn_card_id, None);
+        assert_eq!(state.players, before.players);
+        assert_eq!(state.board, before.board);
+        assert_eq!(state.deck, before.deck);
+        assert_eq!(state.round_number, 1);
+        refuse_discard(&state, 0, seven);
+        assert_eq!(state.players[0].hand, vec![king, seven]);
+    }
+
+    #[test]
+    fn test_on_board_discard_allows_a_playable_card() {
+        let seven = card(4, Suit::Hearts, Rank::Seven);
+        let king = card(5, Suit::Spades, Rank::King);
+        let mut state = heart_gap(vec![seven, king], true);
+        let queen = state.deck.discard[0];
+        let board = state.board.clone();
+        let other = state.players[1].clone();
+
+        assert!(state.apply(Action::DiscardCard(seven), 0));
+
+        assert_eq!(state.players[0].hand, vec![king]);
+        assert_eq!(state.deck.discard, vec![queen, seven]);
+        assert_eq!(state.board, board);
+        assert_eq!(state.players[1], other);
+        assert!(state.players[0].is_on_board);
+        assert_eq!(state.drawn_card_id, None);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+
+        state.players[0].hand = vec![seven];
+        state.deck.discard = vec![queen];
+        assert!(state.apply(Action::DiscardCard(seven), 0));
+        assert!(state.players[0].hand.is_empty());
+        assert_eq!(state.deck.discard, vec![queen, seven]);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.board, board);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+    }
+
+    #[test]
+    fn test_discard_refuses_a_card_that_is_not_held() {
+        let seven = card(4, Suit::Hearts, Rank::Seven);
+        let king = card(5, Suit::Spades, Rank::King);
+        let lookalike = card(50, Suit::Hearts, Rank::Seven);
+        let mut state = heart_gap(vec![seven, king], false);
+        let other = state.players[1].hand[0];
+        let on_the_board = state.board[0][0];
+        state.deck.cards = vec![lookalike];
+
+        refuse_discard(&state, 0, lookalike);
+        refuse_discard(&state, 0, other);
+        refuse_discard(&state, 0, on_the_board);
+        state.players[0].hand.clear();
+        refuse_discard(&state, 0, seven);
+        assert!(state.players[0].hand.is_empty());
+        assert_eq!(state.deck.cards, vec![lookalike]);
+        assert_eq!(state.round_number, 1);
+    }
+
+    #[test]
+    fn test_locked_card_is_safe_to_discard_until_it_can_be_played() {
+        let seven = locked(4, Suit::Hearts, Rank::Seven, 3);
+        let king = card(5, Suit::Spades, Rank::King);
+        let mut state = heart_gap(vec![seven, king], false);
+        let queen = state.deck.discard[0];
+        let board = state.board.clone();
+
+        let mut allowed = state.clone();
+        assert!(allowed.apply(Action::DiscardCard(seven), 0));
+        assert_eq!(allowed.players[0].hand, vec![king]);
+        assert_eq!(allowed.deck.discard, vec![queen, seven]);
+        assert_eq!(allowed.board, board);
+        assert_eq!(allowed.deck.discard.last().unwrap().locked_until_turn, 3);
+        assert_eq!(allowed.round_number, 1);
+        assert_eq!(allowed.turn_counter, 0);
+
+        state.advance_turn();
+        state.advance_turn();
+        state.advance_turn();
+        assert_eq!(state.turn_counter, 3);
+        refuse_discard(&state, 0, seven);
+        assert_eq!(state.players[0].hand, vec![seven, king]);
+        assert_eq!(state.board, board);
+        assert_eq!(state.round_number, 1);
+    }
+
+    #[test]
+    fn test_off_board_cannot_discard_a_wild_that_fits_a_set() {
+        let joker = card(4, Suit::None, Rank::Joker);
+        let king = card(5, Suit::Spades, Rank::King);
+        let meld = vec![
+            card(1, Suit::Spades, Rank::Eight),
+            card(2, Suit::Clubs, Rank::Eight),
+            card(3, Suit::Diamonds, Rank::Eight),
+        ];
+        let mut state = board_with(vec![joker, king], meld.clone(), false);
+        let queen = state.deck.discard[0];
+
+        refuse_discard(&state, 0, joker);
+        assert!(state.apply(Action::DiscardCard(king), 0));
+        assert_eq!(state.players[0].hand, vec![joker]);
+        assert_eq!(state.deck.discard, vec![queen, king]);
+        assert_eq!(state.board, vec![meld]);
+        assert!(!state.players[0].is_on_board);
+        assert_eq!(joker.get_penalty_value(), 20);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.turn_counter, 0);
+    }
+
+    #[test]
+    fn test_empty_board_discard() {
+        let seven = card(4, Suit::Hearts, Rank::Seven);
+        let mut state = heart_gap(vec![seven], false);
+        state.board.clear();
+        let queen = state.deck.discard[0];
+
+        assert!(state.apply(Action::DiscardCard(seven), 0));
+        assert!(state.players[0].hand.is_empty());
+        assert_eq!(state.deck.discard, vec![queen, seven]);
+        assert!(state.board.is_empty());
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+    }
+
+    #[test]
+    fn test_discard_that_fits_only_the_second_meld() {
+        let seven = card(4, Suit::Hearts, Rank::Seven);
+        let mut state = heart_gap(vec![seven], false);
+        let fours = vec![
+            card(11, Suit::Spades, Rank::Four),
+            card(12, Suit::Clubs, Rank::Four),
+            card(13, Suit::Diamonds, Rank::Four),
+        ];
+        state.board.insert(0, fours);
+
+        refuse_discard(&state, 0, seven);
+        assert_eq!(state.players[0].hand, vec![seven]);
+        assert_eq!(state.board.len(), 2);
     }
 }

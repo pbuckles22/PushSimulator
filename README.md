@@ -1,6 +1,6 @@
 # PushSimulator
 
-Rust-centric engine and simulator for the card game **Push**. Agentic Cursor foundation from AgenticTemplate. Epics 1.1 through 1.6 are complete: a deck, a deal, scoring, take and push, checks for a set and a run, and getting on the board. A player on the board can add cards onto melds already there, and can swap a natural card for a wild. That wild cannot be played until the turn counter catches up. Epic 1.7 is next when asked.
+Rust-centric engine and simulator for the card game **Push**. Agentic Cursor foundation from AgenticTemplate. Epics 1.1 through 1.6 are complete: a deck, a deal, scoring, take and push, checks for a set and a run, and getting on the board. A player on the board can add cards onto melds already there, and can swap a natural card for a wild. That wild cannot be played until the turn counter catches up. An off-board player cannot discard a card that fits a meld. The card just taken or drawn can.
 
 **Repository:** https://github.com/pbuckles22/PushSimulator
 
