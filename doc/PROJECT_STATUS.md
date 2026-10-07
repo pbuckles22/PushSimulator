@@ -60,8 +60,7 @@ Push card-game simulator: **Rust workspace** + **agentic foundation** + **WASM d
 | Item | Detail |
 |------|--------|
 | **1.4.2** | Validating Runs & Aces — only when asked |
-| **1.2.4.2** | Tech debt from the 2026-10-06 test review — not the next red/green |
-| **1.2.4.3** | Test gaps from that review — not the next red/green |
+| **1.2.4.2** | Tech debt — fix soon, before Epic 1.4 closes. Not the next story while 1.4.2 is waiting |
 
 ---
 

@@ -56,7 +56,7 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 
 ## **Epic 1.2: Player State & Scoring**
 
-**Status:** complete — 2026-10-06. A player starts empty. Two or more players are dealt 10 cards, one at a time. Ranks 3–9 score 5, a 10 through King scores 10, an ace scores 15, and a two or a joker scores 20. A hand of 4, Jack, Ace, and Joker totals 50, and that penalty adds onto `total_score`. **1.2.4.2** and **1.2.4.3** stay deferred. **1.3.1**, **1.3.2**, and **1.4.1** are on `main`. Next is **1.4.2**, only when asked.
+**Status:** complete — 2026-10-06. A player starts empty. Two or more players are dealt 10 cards, one at a time. Ranks 3–9 score 5, a 10 through King scores 10, an ace scores 15, and a two or a joker scores 20. A hand of 4, Jack, Ace, and Joker totals 50, and that penalty adds onto `total_score`. **1.2.4.3** is closed. **1.2.4.2** is fix soon, before Epic 1.4 closes. **1.3.1**, **1.3.2**, and **1.4.1** are on `main`. Next is **1.4.2**, only when asked.
 
 ### **User Story 1.2.1: Player Initialization**
 
@@ -85,7 +85,7 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 
 *As the game engine, I want to calculate the value of high cards so that appropriate penalties are applied.*
 
-**1.2.4.1** is the scoring below, parked on `feature/1.2.4-face-ace-scoring`. **1.2.4.2** and **1.2.4.3** are the 2026-10-06 test review. They are not the next red/green.
+**1.2.4.1** is the scoring below, parked on `feature/1.2.4-face-ace-scoring`. **1.2.4.3** is closed. **1.2.4.2** is fix soon, before Epic 1.4 closes. It is not the next story while 1.4.2 is waiting.
 
 * \[x\] Write test test\_score\_card\_face passing a 10, Jack, Queen, and King, asserting each returns 10 points.  
 * \[x\] Update card.get\_penalty\_value() to handle face cards to pass test.  
@@ -94,20 +94,21 @@ This backlog translates the Project Management Plan into ultra-granular, sequent
 
 **1.2.4.2: Tech debt**
 
-* \[ \] Seed `Deck::shuffle` in tests, or inject the rng, so the order check does not depend on `thread_rng` (`TECH_DEBT.md`).  
+* \[ \] Seed `Deck::shuffle` in tests, or inject the rng, so the order check does not depend on `thread_rng` (`TECH_DEBT.md`). Then add the property test for card ids. Fixed chain tests already lock those ids.  
 * \[ \] Remove the uncalled arms, or make them real behavior: `reshuffle_discard` on an empty discard, `reshuffle_discard` putting a single card back, and `TurnDraw::Empty` after a reshuffle. `draw` does not reach those paths.  
 * \[ \] Keep one chain test that `Player::new` does not take a drawn card. The other "player starts empty" chains repeat that.  
 * \[ \] Add CI that runs `cargo test -p push_core`. The 2026-10-06 LLVM run (58 tests, 98.1% lines) stays a local measurement until a coverage gate is chosen.  
-* \[ \] Name the evidence sink in `TEST_PLAN.md`, or leave one explicit TBD.  
-* \[ \] Drop the unused `serde` dependency on `push_core`, or use it (`TECH_DEBT.md`).
+* \[x\] Name the evidence sink in `TEST_PLAN.md`, or leave one explicit TBD.  
+* \[ \] Drop the unused `serde` dependency on `push_core`, or use it (`TECH_DEBT.md`).  
+Hit this before Epic 1.4 closes. It is not the next story while 1.4.2 is waiting.
 
 **1.2.4.3: Test gaps**
 
-* \[ \] Write a test that `deal_initial_hands` runs out of draw-pile cards. The panic is the same line as a successful pop, so `player.rs` at 100% line coverage does not cover a short deck.  
-* \[ \] Do not add a `should_panic` test for `get_penalty_value` on a Two or a joker. **1.2.5** scores those 20. Hand total is **1.2.6**. Face cards score 10 and an ace scores 15.  
-* \[ \] Add a property test that the same card ids survive shuffle, draw, and a three-or-more reshuffle. Fixed scenarios already check this.  
-* \[ \] Doc-tests are 0. Add them only when a public function's rustdoc example is the lock.  
-* \[ \] `push_wasm` and `push_sim` have no tests. Tier 2 (viewer, iOS, multiplayer) stays in `TEST_PLAN.md` for later phases. This item does not start those.
+* \[x\] Write test test\_deal\_initial\_hand\_short\_draw\_pile. A draw pile of three cards deals those three, then panics.  
+* \[x\] Do not add a `should_panic` test for `get_penalty_value` on a Two or a joker. **1.2.5** scores those 20.  
+* \[x\] Fixed chain tests already keep the same card ids through shuffle, draw, and a three-or-more reshuffle. A property test waits on **1.2.4.2**.  
+* \[x\] Doc-tests stay 0 until a rustdoc example is the lock.  
+* \[x\] `push_wasm` and `push_sim` stay untested here.
 
 ### **User Story 1.2.5: Wild Card Scoring**
 

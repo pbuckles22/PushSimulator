@@ -1906,3 +1906,40 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_leaves_discard_push_top_val
     assert_eq!(players[1].hand.len(), 12);
     assert_eq!(deck.cards.len(), draw_len - 2);
 }
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal runs out of draw-pile cards.
+/// The three cards that remain are dealt. The next card panics. The discard pile stays empty.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_short_draw_pile() {
+    let mut deck = shuffled_deck();
+    let pile = deck.cards.split_off(deck.cards.len() - 3);
+    let before = ids_of(&pile);
+    deck.cards = pile.clone();
+    let mut players = vec![Player::new(1, 0), Player::new(2, 1)];
+
+    let panicked = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        deal_initial_hands(&mut players, &mut deck);
+    }));
+
+    let message = panicked.expect_err("a short draw pile cannot finish a 10-card deal");
+    let text = message
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| message.downcast_ref::<&str>().copied())
+        .unwrap_or("");
+    assert!(
+        text.contains("initial deal takes a card from the draw pile"),
+        "{text}"
+    );
+    assert_eq!(players[0].hand, vec![pile[2], pile[0]]);
+    assert_eq!(players[1].hand, vec![pile[1]]);
+    assert!(deck.cards.is_empty());
+    assert!(deck.discard.is_empty());
+    let mut dealt = ids_of(&players[0].hand);
+    dealt.extend(ids_of(&players[1].hand));
+    same_ids(&dealt, &before);
+    assert_eq!(players[0].points, 0);
+    assert_eq!(players[1].points, 0);
+    assert_eq!(players[0].total_score, 0);
+    assert_eq!(players[1].total_score, 0);
+}

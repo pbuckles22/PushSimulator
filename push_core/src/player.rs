@@ -143,6 +143,37 @@ mod tests {
         assert!(!players[0].is_on_board);
     }
 
+    #[test]
+    fn test_deal_initial_hand_short_draw_pile() {
+        let mut deck = Deck::new();
+        let pile: Vec<Card> = deck.cards.split_off(deck.cards.len() - 3);
+        deck.cards = pile.clone();
+        let mut players = [Player::new(1, 0), Player::new(2, 1)];
+
+        let panicked = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            deal_initial_hands(&mut players, &mut deck);
+        }));
+
+        let message = panicked.expect_err("a short draw pile cannot finish a 10-card deal");
+        let text = message
+            .downcast_ref::<String>()
+            .map(String::as_str)
+            .or_else(|| message.downcast_ref::<&str>().copied())
+            .unwrap_or("");
+        assert!(
+            text.contains("initial deal takes a card from the draw pile"),
+            "{text}"
+        );
+        assert_eq!(players[0].hand, vec![pile[2], pile[0]]);
+        assert_eq!(players[1].hand, vec![pile[1]]);
+        assert!(deck.cards.is_empty());
+        assert!(deck.discard.is_empty());
+        assert_eq!(players[0].points, 0);
+        assert_eq!(players[1].points, 0);
+        assert_eq!(players[0].total_score, 0);
+        assert_eq!(players[1].total_score, 0);
+    }
+
     fn penalty_hand() -> Vec<Card> {
         vec![
             Card {
