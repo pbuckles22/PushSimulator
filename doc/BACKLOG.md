@@ -249,10 +249,10 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 *As the game engine, I want to end the round immediately when a hand is empty.*
 
-* \[ \] Write test test\_round\_victory\_on\_hit asserting round ends if hitting leaves 0 cards in hand (no discard needed).  
-* \[ \] Implement round end trigger in HitMeld and PlayMeld.  
-* \[ \] Write test test\_round\_victory\_on\_discard asserting round ends if discard leaves 0 cards.  
-* \[ \] Implement round end trigger in DiscardCard.
+* \[x\] Write test test\_round\_victory\_on\_hit asserting round ends if hitting leaves 0 cards in hand (no discard needed).  
+* \[x\] Implement round end trigger in HitMeld and PlayMeld.  
+* \[x\] Write test test\_round\_victory\_on\_discard asserting round ends if discard leaves 0 cards.  
+* \[x\] Implement round end trigger in DiscardCard.
 
 ### **Epic 1.8: System Integration (The Crucible)**
 

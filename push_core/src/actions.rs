@@ -120,7 +120,7 @@ impl GameState {
 ///
 /// The card has to be in that hand. Off the board, a card that could join a meld
 /// stays in the hand, unless it is the card `drawn_card_id` names. A locked card
-/// cannot be played, so it is safe to discard. The round does not end.
+/// cannot be played, so it is safe to discard. An empty hand ends the round.
 fn discard_card(state: &mut GameState, actor_index: usize, card: Card) -> bool {
     if !state.players[actor_index].hand.contains(&card) {
         return false;
@@ -142,7 +142,14 @@ fn discard_card(state: &mut GameState, actor_index: usize, card: Card) -> bool {
         state.drawn_card_id = None;
     }
     state.turn_phase = TurnPhase::Playing;
+    end_round_if_hand_empty(state, actor_index);
     true
+}
+
+fn end_round_if_hand_empty(state: &mut GameState, actor_index: usize) {
+    if state.players[actor_index].hand.is_empty() {
+        state.round_over = true;
+    }
 }
 
 /// Draws until a card that fits nothing can be discarded.
@@ -232,6 +239,7 @@ fn hit_meld(state: &mut GameState, actor_index: usize, hits: &[MeldHit]) -> bool
     };
     state.board = board;
     state.players[actor_index].hand = hand;
+    end_round_if_hand_empty(state, actor_index);
     true
 }
 
@@ -442,6 +450,7 @@ fn play_meld(state: &mut GameState, actor_index: usize, melds: &[Vec<Card>]) -> 
     let player = &mut state.players[actor_index];
     player.hand = hand;
     player.is_on_board = true;
+    end_round_if_hand_empty(state, actor_index);
     true
 }
 
@@ -644,6 +653,7 @@ mod tests {
         assert_eq!(after.deck, before.deck);
         assert_eq!(after.turn_counter, before.turn_counter);
         assert_eq!(after.drawn_card_id, before.drawn_card_id);
+        assert_eq!(after.round_over, before.round_over);
     }
 
     fn refuse(state: &GameState, actor: usize, melds: Vec<Vec<Card>>) {
@@ -2702,6 +2712,7 @@ mod tests {
 
         assert!(state.apply(Action::DiscardCard(seven), 0));
         assert!(state.players[0].hand.is_empty());
+        assert!(state.round_over);
         assert_eq!(state.deck.discard, vec![queen, seven]);
         assert!(state.board.is_empty());
         assert_eq!(state.round_number, 1);
@@ -3128,5 +3139,107 @@ mod tests {
         assert_eq!(state.deck.discard, vec![queen, safe, drawn]);
         assert_eq!(state.round_number, 1);
         assert!(!state.players[0].is_on_board);
+    }
+
+    #[test]
+    fn test_round_victory_on_hit() {
+        let eight_spades = card(1, Suit::Spades, Rank::Eight);
+        let eight_clubs = card(2, Suit::Clubs, Rank::Eight);
+        let joker = card(3, Suit::None, Rank::Joker);
+        let eight_hearts = card(4, Suit::Hearts, Rank::Eight);
+        let eight_diamonds = card(5, Suit::Diamonds, Rank::Eight);
+        let meld = vec![eight_spades, eight_clubs, joker];
+        let mut state = board_with(vec![eight_hearts, eight_diamonds], meld, true);
+        let other = state.players[1].clone();
+        assert!(!state.round_over);
+
+        assert!(state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![eight_hearts],
+            }]),
+            0,
+        ));
+        assert_eq!(state.players[0].hand, vec![eight_diamonds]);
+        assert!(!state.round_over);
+        assert_eq!(state.round_number, 1);
+
+        assert!(state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![eight_diamonds],
+            }]),
+            0,
+        ));
+        assert!(state.players[0].hand.is_empty());
+        assert!(state.round_over);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+        assert_eq!(state.players[1], other);
+        assert!(state.players[0].is_on_board);
+    }
+
+    #[test]
+    fn test_round_victory_on_play_meld() {
+        let fours = vec![
+            card(1, Suit::Hearts, Rank::Four),
+            card(2, Suit::Spades, Rank::Four),
+            card(3, Suit::Clubs, Rank::Four),
+        ];
+        let fives = vec![
+            card(4, Suit::Hearts, Rank::Five),
+            card(5, Suit::Spades, Rank::Five),
+            card(6, Suit::Clubs, Rank::Five),
+        ];
+        let mut state = table(
+            fours.iter().chain(fives.iter()).copied().collect(),
+            vec![card(7, Suit::Clubs, Rank::Ace)],
+            vec![card(8, Suit::Diamonds, Rank::King)],
+        );
+        let other = state.players[1].clone();
+        assert!(!state.round_over);
+
+        assert!(state.apply(Action::PlayMeld(vec![fours, fives]), 0));
+
+        assert!(state.players[0].hand.is_empty());
+        assert!(state.round_over);
+        assert!(state.players[0].is_on_board);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+        assert_eq!(state.players[1], other);
+        assert!(!state.players[1].is_on_board);
+    }
+
+    #[test]
+    fn test_round_victory_on_discard() {
+        let seven = card(4, Suit::Hearts, Rank::Seven);
+        let king = card(5, Suit::Spades, Rank::King);
+        let mut state = heart_gap(vec![seven, king], true);
+        let queen = state.deck.discard[0];
+        let board = state.board.clone();
+        let other = state.players[1].clone();
+        assert!(!state.round_over);
+
+        assert!(state.apply(Action::DiscardCard(king), 0));
+        assert_eq!(state.players[0].hand, vec![seven]);
+        assert!(!state.round_over);
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+
+        assert!(state.apply(Action::DiscardCard(seven), 0));
+        assert!(state.players[0].hand.is_empty());
+        assert!(state.round_over);
+        assert_eq!(state.deck.discard, vec![queen, king, seven]);
+        assert_eq!(state.board, board);
+        assert_eq!(state.round_number, 1);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+        assert_eq!(state.players[1], other);
+        assert!(state.players[0].is_on_board);
     }
 }

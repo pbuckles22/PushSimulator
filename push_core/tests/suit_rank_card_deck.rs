@@ -3487,3 +3487,78 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_push_play_meld_hit_steal_wi
     same_ids(&ids_of(&cards_on_table(&state)), &original);
     assert_eq!(cards_on_table(&state).len(), deck_size());
 }
+
+/// Chain: Deck::new → is_wild → shuffle → deal → push → play meld → hit → round victory.
+/// Two sets leave one four in the hand, so the round stays open.
+/// Hitting that four empties the hand and ends the round.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_push_play_meld_hit_round_victory() {
+    let original = ids_of(&Deck::new().cards);
+    let mut deck = shuffled_deck();
+    let penalty = take_rank(&mut deck.cards, Rank::Three);
+    let actor_draw = take_rank(&mut deck.cards, Rank::King);
+    let under: Vec<Card> = deck.cards.drain(0..1).collect();
+    let top = take_rank(&mut deck.cards, Rank::Ace);
+    let mut discard = under.clone();
+    discard.push(top);
+    deck.discard = discard;
+    let players = deal_table(&mut deck, 2);
+    deck.cards.push(actor_draw);
+    deck.cards.push(penalty);
+    let mut state = GameState::new(players, deck);
+
+    assert!(state.apply(Action::PushDiscard, 0));
+    assert!(!state.round_over);
+
+    let four_spades = take_from_state(&mut state, Suit::Spades, Rank::Four);
+    let four_clubs = take_from_state(&mut state, Suit::Clubs, Rank::Four);
+    let four_diamonds = take_from_state(&mut state, Suit::Diamonds, Rank::Four);
+    let four_hearts = take_from_state(&mut state, Suit::Hearts, Rank::Four);
+    let five_hearts = take_from_state(&mut state, Suit::Hearts, Rank::Five);
+    let five_spades = take_from_state(&mut state, Suit::Spades, Rank::Five);
+    let five_clubs = take_from_state(&mut state, Suit::Clubs, Rank::Five);
+    let leftover_actor = std::mem::take(&mut state.players[0].hand);
+    let leftover_next = std::mem::take(&mut state.players[1].hand);
+    state.deck.cards.extend(leftover_actor);
+    state.deck.cards.extend(leftover_next);
+    let fours = vec![four_spades, four_clubs, four_diamonds];
+    let fives = vec![five_hearts, five_spades, five_clubs];
+    state.players[0].hand = vec![
+        four_spades,
+        four_clubs,
+        four_diamonds,
+        five_hearts,
+        five_spades,
+        five_clubs,
+        four_hearts,
+    ];
+
+    assert!(state.apply(Action::PlayMeld(vec![fours.clone(), fives.clone()]), 0));
+    assert_eq!(state.players[0].hand, vec![four_hearts]);
+    assert!(!state.round_over);
+    assert!(state.players[0].is_on_board);
+    assert_eq!(state.board, vec![fours.clone(), fives]);
+
+    assert!(state.apply(
+        Action::HitMeld(vec![MeldHit {
+            meld_index: 0,
+            cards: vec![four_hearts],
+        }]),
+        0,
+    ));
+    assert!(state.players[0].hand.is_empty());
+    assert!(state.round_over);
+    assert_eq!(
+        state.board[0],
+        vec![four_spades, four_clubs, four_diamonds, four_hearts]
+    );
+    assert_eq!(state.round_number, 1);
+    assert_eq!(state.turn_counter, 0);
+    assert_eq!(state.players[0].points, 0);
+    assert_eq!(state.players[0].total_score, 0);
+    assert_eq!(state.players[1].points, 0);
+    assert_eq!(state.players[1].total_score, 0);
+    assert!(!state.players[1].is_on_board);
+    same_ids(&ids_of(&cards_on_table(&state)), &original);
+    assert_eq!(cards_on_table(&state).len(), deck_size());
+}
