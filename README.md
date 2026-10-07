@@ -1,6 +1,6 @@
 # PushSimulator
 
-Rust-centric engine and simulator for the card game **Push**. Agentic Cursor foundation from AgenticTemplate. Epics 1.1 through 1.5 are complete: a deck, a deal, scoring, take and push, checks for a set and a run, and getting on the board. A player can then add cards from their hand onto melds already there. Next is 1.6.2, stealing a wild.
+Rust-centric engine and simulator for the card game **Push**. Agentic Cursor foundation from AgenticTemplate. Epics 1.1 through 1.5 are complete: a deck, a deal, scoring, take and push, checks for a set and a run, and getting on the board. A player on the board can add cards onto melds already there, and can swap a natural card for a wild. That wild moves into the hand with `locked_until_turn` set to the turn counter plus one. Next is 1.6.3, refusing to play that wild until the counter advances.
 
 **Repository:** https://github.com/pbuckles22/PushSimulator
 

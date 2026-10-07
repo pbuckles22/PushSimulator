@@ -209,10 +209,10 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 *As the game engine, I want players to swap natural cards for wild cards on the board.*
 
-* \[ \] Write test test\_wild\_steal\_success asserting a 5D replaces a Joker, and the Joker moves to hand.  
-* \[ \] Implement Action::StealWild handler.  
-* \[ \] Write test test\_wild\_steal\_applies\_lock asserting the stolen Joker receives locked\_until\_turn \= global\_turn\_counter \+ 1\.  
-* \[ \] Update StealWild to calculate and apply the lock duration.
+* \[x\] Write test test\_wild\_steal\_success asserting a 5D replaces a Joker, and the Joker moves to hand.  
+* \[x\] Implement Action::StealWild handler.  
+* \[x\] Write test test\_wild\_steal\_applies\_lock asserting the stolen Joker receives locked\_until\_turn \= global\_turn\_counter \+ 1\.  
+* \[x\] Update StealWild to calculate and apply the lock duration.
 
 **User Story 1.6.3: Wild Card Lock Enforcement**
 

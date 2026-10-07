@@ -4,7 +4,7 @@
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 
-use push_core::actions::{Action, MeldHit};
+use push_core::actions::{Action, MeldHit, WildSteal};
 use push_core::card::{Card, Rank, Suit};
 use push_core::deck::{Deck, TurnDraw};
 use push_core::game_state::GameState;
@@ -2815,6 +2815,138 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_push_play_meld_hit() {
     assert_eq!(state.players[1].points, 0);
     assert_eq!(state.players[1].total_score, 0);
     assert_eq!(state.round_number, 1);
+    same_ids(&ids_of(&cards_on_table(&state)), &original);
+    assert_eq!(cards_on_table(&state).len(), deck_size());
+}
+
+/// Chain: Deck::new → is_wild → shuffle → deal → push → play meld → hit → steal a wild.
+/// Seat 0 lays eights with a joker, hits that set, then swaps the 8♦ for the joker.
+/// The joker locks until the turn counter plus one. Seat 1 is off the board, so that
+/// steal is refused. A nine does not replace the joker. The round does not end.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_push_play_meld_hit_steal_wild() {
+    let original = ids_of(&Deck::new().cards);
+    let mut deck = shuffled_deck();
+    let penalty = take_rank(&mut deck.cards, Rank::Three);
+    let actor_draw = take_rank(&mut deck.cards, Rank::King);
+    let under: Vec<Card> = deck.cards.drain(0..1).collect();
+    let top = take_rank(&mut deck.cards, Rank::Ace);
+    let mut discard = under.clone();
+    discard.push(top);
+    deck.discard = discard;
+    let players = deal_table(&mut deck, 2);
+    deck.cards.push(actor_draw);
+    deck.cards.push(penalty);
+    let mut state = GameState::new(players, deck);
+
+    assert!(state.apply(Action::PushDiscard, 0));
+
+    let eight_hearts = take_from_state(&mut state, Suit::Hearts, Rank::Eight);
+    let eight_spades = take_from_state(&mut state, Suit::Spades, Rank::Eight);
+    let joker = take_from_state(&mut state, Suit::None, Rank::Joker);
+    let eight_clubs = take_from_state(&mut state, Suit::Clubs, Rank::Eight);
+    let eight_diamonds = take_from_state(&mut state, Suit::Diamonds, Rank::Eight);
+    let nine = take_from_state(&mut state, Suit::Diamonds, Rank::Nine);
+    let other_eight = take_from_state(&mut state, Suit::Hearts, Rank::Eight);
+    let five_hearts = take_from_state(&mut state, Suit::Hearts, Rank::Five);
+    let five_spades = take_from_state(&mut state, Suit::Spades, Rank::Five);
+    let five_clubs = take_from_state(&mut state, Suit::Clubs, Rank::Five);
+    let keeper = take_from_state(&mut state, Suit::Diamonds, Rank::Six);
+    let leftover_actor = std::mem::take(&mut state.players[0].hand);
+    let leftover_next = std::mem::take(&mut state.players[1].hand);
+    state.deck.cards.extend(leftover_actor);
+    state.deck.cards.extend(leftover_next);
+    state.players[0].hand = vec![
+        eight_hearts,
+        eight_spades,
+        joker,
+        eight_clubs,
+        eight_diamonds,
+        nine,
+        five_hearts,
+        five_spades,
+        five_clubs,
+        keeper,
+    ];
+    state.players[1].hand = vec![other_eight];
+    let eights = vec![eight_hearts, eight_spades, joker];
+    let fives = vec![five_hearts, five_spades, five_clubs];
+
+    assert!(state.apply(Action::PlayMeld(vec![eights.clone(), fives.clone()]), 0));
+    assert_eq!(state.board, vec![eights, fives.clone()]);
+    assert!(state.players[0].is_on_board);
+
+    assert!(state.apply(
+        Action::HitMeld(vec![MeldHit {
+            meld_index: 0,
+            cards: vec![eight_clubs],
+        }]),
+        0,
+    ));
+    assert_eq!(
+        state.board[0],
+        vec![eight_hearts, eight_spades, joker, eight_clubs]
+    );
+
+    let before_seat = state.clone();
+    assert!(!state.apply(
+        Action::StealWild(WildSteal {
+            meld_index: 0,
+            wild: joker,
+            natural: other_eight,
+        }),
+        1,
+    ));
+    assert_eq!(state.players, before_seat.players);
+    assert_eq!(state.board, before_seat.board);
+    assert_eq!(state.deck, before_seat.deck);
+    assert_eq!(state.round_number, before_seat.round_number);
+    assert_eq!(state.turn_counter, before_seat.turn_counter);
+
+    let before_nine = state.clone();
+    assert!(!state.apply(
+        Action::StealWild(WildSteal {
+            meld_index: 0,
+            wild: joker,
+            natural: nine,
+        }),
+        0,
+    ));
+    assert_eq!(state.players, before_nine.players);
+    assert_eq!(state.board, before_nine.board);
+    assert_eq!(state.deck, before_nine.deck);
+    assert_eq!(state.turn_counter, before_nine.turn_counter);
+
+    state.turn_counter = 4;
+    assert!(state.apply(
+        Action::StealWild(WildSteal {
+            meld_index: 0,
+            wild: joker,
+            natural: eight_diamonds,
+        }),
+        0,
+    ));
+
+    assert_eq!(
+        state.board[0],
+        vec![eight_hearts, eight_spades, eight_diamonds, eight_clubs]
+    );
+    assert_eq!(state.board[1], fives);
+    assert_eq!(state.players[0].hand[0], nine);
+    assert_eq!(state.players[0].hand[1], keeper);
+    assert_eq!(state.players[0].hand[2].id, joker.id);
+    assert_eq!(state.players[0].hand[2].rank, Rank::Joker);
+    assert_eq!(state.players[0].hand[2].locked_until_turn, 5);
+    assert_eq!(state.players[1].hand, vec![other_eight]);
+    assert!(state.players[0].is_on_board);
+    assert!(!state.players[1].is_on_board);
+    assert_eq!(state.players[0].points, 0);
+    assert_eq!(state.players[0].total_score, 0);
+    assert_eq!(state.players[1].points, 0);
+    assert_eq!(state.players[1].total_score, 0);
+    assert_eq!(state.round_number, 1);
+    assert_eq!(state.turn_counter, 4);
+    assert_eq!(joker.get_penalty_value(), 20);
     same_ids(&ids_of(&cards_on_table(&state)), &original);
     assert_eq!(cards_on_table(&state).len(), deck_size());
 }
