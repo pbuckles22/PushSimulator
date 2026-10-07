@@ -25,7 +25,8 @@ Operating model: `.cursor/rules/` ship commands (UCPH, CMPH, SWAT), human check,
 - **Epic 1.4:** complete — 2026-10-06. A set is three or more cards of one rank. A run is four or more cards of one suit in order. Twos and jokers fill gaps. An ace is low or high. King, ace, a two, and a three is not a run. This close is on `main`. Content is `2341904`. `feature/1.4-swat` stays.
 - **1.5.1:** on `main` at `e86e8d7`. `check_round_requirements` enforces the five round minimums. A meld counts when it is a set or a run. One meld fills one requirement. Sizes may exceed the minimum. An extra meld fails. A card used twice fails. Six fours may be two sets of three. `feature/1.5.1-round-requirements` is kept.
 - **1.5.1 tests:** on `main` at `5628cf8`. The checker already enforced these. Tests lock one meld of six fours, a pair, an empty meld, a repeated id, four wilds as one requirement, ace-low and ace-high runs, and those checks on cards from the dealt shoe. `feature/1.5.1-requirement-holes` is kept.
-- **Next:** 1.5.2 waits until asked. Epic 1.5 stays open.
+- **1.5.2:** on `main` at `572863a`. `Action::PlayMeld` moves verified melds from that player's hand onto `GameState.board` and sets `is_on_board`. The round on the table is the one that is checked. A refused play leaves the hand, the board, the piles, and both scores unchanged. `feature/1.5.2-board-entry` is kept.
+- **Next:** 1.6.1 waits until asked. Epic 1.5 stays open.
 - **Full backlog:** [doc/BACKLOG.md](doc/BACKLOG.md)
 - **Commentary / deltas:** [doc/PLAN_COMMENTARY.md](doc/PLAN_COMMENTARY.md) (integration-chain Epic 1.9 suggested; Google export quirks)
 
