@@ -42,7 +42,7 @@ If you exceed the budget, remove execution details first.
 
 ## Chat and file (both required on UCPH and CMPH)
 
-1. **First line of chat (verbatim):** `You are the receiving agent.`
+1. **First line of chat (verbatim):** `You are the agent to execute the below hand off.`
 2. Paste the **Receiver brief** as the closing message — same first line repeated at top of brief. Second person throughout (**You** …). Headings: [`.cursor/handoff/_template.md`](../../handoff/_template.md).
 3. Write that **same body** to `doc/handoff/NNNN-HANDOFF-YYYY-MM-DD_HHmm.md` and copy it to `.cursor/handoff/NNNN-handoff-YYYY-MM-DD_HHmm.md`.
 4. Last line of chat and note: `**Filename:** \`doc/handoff/NNNN-HANDOFF-YYYY-MM-DD_HHmm.md\``

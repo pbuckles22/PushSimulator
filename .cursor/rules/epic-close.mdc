@@ -9,9 +9,9 @@ alwaysApply: true
 **Do not run SWAT** (review swarm, epic status close, GitHub Release) until **both:**
 
 1. **SWAT work is the job this turn.** List: [wrap-on-command.mdc](wrap-on-command.mdc).
-2. **Permission this conversation** — they typed **SWAT**, **or** this **CMPH** is the epic’s last in-scope story (that CMPH includes SWAT).
+2. **Permission this conversation** — they typed **SWAT**, **or** this **CMPH** / **“check in and merge”** is the epic’s last in-scope story (that land includes SWAT).
 
-A mid-epic CMPH is not SWAT permission. Do not start the swarm because the epic looks done.
+A mid-epic CMPH is not SWAT permission. Do not start the swarm because the epic looks done. **“Check in and merge”** on the last story checks in the story and the epic together. Do not stop after the story land.
 
 ## Quality gates (SWAT)
 

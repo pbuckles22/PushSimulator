@@ -24,6 +24,7 @@ Document toolchain in AGENT_HANDOFF.md and TEST_PLAN.md. **Do not recopy hard ru
 | Docs or handoff prose before they can run the change | `wrap-on-command.mdc` |
 | Next story while current is uncommitted / waiting on a human | `one-story-one-ship.mdc` |
 | Merge to `main` without CMPH permission | `no-auto-merge-main.mdc` |
+| “Check in and merge” on the last story lands the story and leaves the epic open | `wrap-on-command.mdc` |
 | Human ask with no install step, or commit before PASS | `human-check.mdc` |
 | Public version guessed, or a number that goes backwards | `pm-versioning.mdc` |
 | Cursor commit/PR attribution | `no-cursor-commit-attribution.mdc` |

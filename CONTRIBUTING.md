@@ -21,8 +21,8 @@ Ship commands: **UCPH**, **CMPH**, **CMPHD**, **SWAT** — [.cursor/rules/wrap-o
 | `doc/PROJECT_STATUS.md` | **Yes** | Current state |
 | `AGENT_HANDOFF.md` → Current state | **Yes** | Agent snapshot |
 | `PM_PLAN.md` | **Yes** | Phases |
-| `.cursor/handoff/*-handoff-*.md` | **No** | Local diary |
-| `doc/handoff/*-HANDOFF-*.md` | **No** (default) | Same |
+| `.cursor/handoff/*` except `README.md` and `_template.md` | **No** | Local diary. The directory stays. |
+| `doc/handoff/*` except `README.md` | **No** | Same |
 
 ## Development setup
 

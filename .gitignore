@@ -25,6 +25,7 @@ out/
 coverage/
 *.tsbuildinfo
 .cache/
+node_modules/
 
 # Rust
 target/
@@ -49,10 +50,10 @@ doc/gemini/dropzone/*
 # Local compile counter. Never commit.
 build_number.txt
 
-# Local handoff notes (keep template _template.md and README in repo)
-.cursor/handoff/handoff-*.md
-.cursor/handoff/*-handoff-*.md
+# Handoff session notes. Ignore the files. Keep the directory by tracking README and the template.
+.cursor/handoff/*
+!.cursor/handoff/README.md
+!.cursor/handoff/_template.md
 
-# Optional second location for session handoff narratives (see AGENT_HANDOFF.md).
-doc/handoff/HANDOFF-*.md
-doc/handoff/*-HANDOFF-*.md
+doc/handoff/*
+!doc/handoff/README.md

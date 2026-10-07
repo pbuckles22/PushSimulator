@@ -28,7 +28,7 @@ Use this skill when doing sprint planning, scope tradeoffs, quality gates, risk 
 - User asks for sprint planning, scope review, or "what's MVP."
 - Deciding whether a feature belongs in current vs next sprint.
 - Before marking a build or feature "done."
-- **When they typed SWAT**, or this CMPH is the epic’s last in-scope story — run [Epic close](#epic-close-swat). A mid-epic land is not SWAT.
+- **When they typed SWAT**, or this CMPH / “check in and merge” is the epic’s last in-scope story — run [Epic close](#epic-close-swat). That last-story command checks in the story and the epic. A mid-epic land is not SWAT.
 
 ## Output
 
@@ -41,7 +41,7 @@ Use this skill when doing sprint planning, scope tradeoffs, quality gates, risk 
 
 ## Epic close (SWAT)
 
-**Policy:** When the last in-scope story of an epic is done **and** SWAT permission is granted (they typed **SWAT**, or that story’s **CMPH**), run this procedure in the same session. See [wrap-on-command.mdc](../../rules/wrap-on-command.mdc). A mid-epic CMPH is not SWAT.
+**Policy:** When the last in-scope story of an epic is done **and** SWAT permission is granted (they typed **SWAT**, or that story’s **CMPH** / **“check in and merge”**), run this procedure in the same session. See [wrap-on-command.mdc](../../rules/wrap-on-command.mdc). A mid-epic CMPH is not SWAT.
 
 ### Done means
 

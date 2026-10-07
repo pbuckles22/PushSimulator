@@ -10,7 +10,7 @@ alwaysApply: true
 **Do not merge to `main` until both:**
 
 1. **CMPH work is done** (or executing this turn). Full list: [wrap-on-command.mdc](wrap-on-command.mdc).
-2. **Permission this conversation** — **CMPH**, **CMPHD**, WRAP, “land it”, “merge to main”, or “ship to main”.
+2. **Permission this conversation** — **CMPH**, **CMPHD**, WRAP, “land it”, “merge to main”, “ship to main”, or “check in and merge”.
 
 After they grant (2), do not ask “merge to main?” again. Still finish (1) before the merge.
 
@@ -20,12 +20,12 @@ Agents **may** commit and **may** `git push -u origin <feature-branch>` after th
 
 Any of these in this conversation, for the **current** ship:
 
-- **CMPH** / **CMPHD** / WRAP / “land it” / “merge to main” / “ship to main”
+- **CMPH** / **CMPHD** / WRAP / “land it” / “merge to main” / “ship to main” / “check in and merge”
 - **CMPHD** = the same land as **CMPH**, then delete local and remote. **CMPH** (no **D**) never deletes.
 
 **UCPH** is not merge permission. It is the feature branch only.
 
-That permission authorizes the short land. It does **not** authorize SWAT unless this is the epic’s last in-scope story.
+That permission authorizes the short land. It does **not** authorize SWAT unless this is the epic’s last in-scope story. **“Check in and merge”** on that last story checks in the story and closes the epic in the same turn ([epic-close.mdc](epic-close.mdc)).
 
 Docs-only and rules-only slices have no human runtime check. Do not invent one. Ships that change what the user runs still need a human **PASS** (or an explicit waive) before that merge ([human-check.mdc](human-check.mdc)).
 

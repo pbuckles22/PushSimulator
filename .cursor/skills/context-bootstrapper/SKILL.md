@@ -7,7 +7,7 @@ description: Receiving-agent protocol. Boots a new agent into the minimum correc
 
 Use this skill when starting work on this repo, resuming after a break, switching to a new “feature-agent”, or when context feels bloated/confusing.
 
-**You are the receiving agent.** If the prior session pasted a Receiver brief, it was written **for you** — not for you to re-issue. Do not “confirm the handoff landed” or write a new handoff unless you are closing with UCPH/CMPH.
+**You are the agent to execute the below hand off.** If the prior session pasted a Receiver brief, it was written **for you** — not for you to re-issue. Do not “confirm the handoff landed” or write a new handoff unless you are closing with UCPH/CMPH.
 
 Goal: reach a **confident, bounded next step** using **minimal context**.
 

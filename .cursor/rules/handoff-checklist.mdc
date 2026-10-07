@@ -12,7 +12,7 @@ Cadence: [wrap-on-command.mdc](wrap-on-command.mdc). **UCPH** and **CMPH** do no
 
 - **UCPH:** parked on the feature branch. Receiver brief. **On** is not `main`. No Gates section.
 - **CMPH:** this ship is on `main`. Receiver brief. No Gates section.
-- **SWAT / epic close:** last in-scope story, or they typed **SWAT**. Gates below, then [epic-close.mdc](epic-close.mdc).
+- **SWAT / epic close:** last in-scope story, they typed **SWAT**, or they said **“check in and merge”** on that last story. Gates below, then [epic-close.mdc](epic-close.mdc).
 - **Mid-flight:** label WIP, blocked, or needs decision. Do not write “ship complete.”
 
 **Git truth:** story, version, `origin/main @ sha` or not-merged, **Do not**, **Next**. The next agent trusts it ([context-bootstrapper](../skills/context-bootstrapper/SKILL.md)).
@@ -33,7 +33,7 @@ Then status docs, and a GitHub Release when RELEASE.md says so ([epic-close.mdc]
 
 **Receiver brief in chat** — [`.cursor/handoff/_template.md`](../handoff/_template.md).
 
-**Receiver framing (mandatory):** First chat line: **`You are the receiving agent.`** Body uses second person (**You** start Epic …; **You** do not re-merge …). Never instruct the receiver to “write a handoff” or “UCPH” — that describes the *leaving* agent’s job. Every brief includes this line verbatim, between **Next steps** and **Measured**: `write thorough tests. red, integration, find missing ones of both kinds.`
+**Receiver framing (mandatory):** First chat line: **`You are the agent to execute the below hand off.`** Body uses second person (**You** start Epic …; **You** do not re-merge …). Never instruct the receiver to “write a handoff” or “UCPH” — that describes the *leaving* agent’s job. Every brief includes this line verbatim, between **Next steps** and **Measured**: `write thorough tests. red, integration, find missing ones of both kinds.`
 
 **Filename:** `doc/handoff/NNNN-HANDOFF-YYYY-MM-DD_HHmm.md` (never reuse `NNNN`).
 

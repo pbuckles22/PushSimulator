@@ -20,11 +20,13 @@ Close-out words name the **work**. Green tests are not permission.
 
 Every UCPH and CMPH Receiver brief includes this line verbatim, between **Next steps** and **Measured**: `write thorough tests. red, integration, find missing ones of both kinds.`
 
-**WRAP** / “land it” / “merge to main” / “ship to main” = **CMPH** (keep the branch). **CMPHD** = the same land, then delete. After they say it, do not ask “merge?” again.
+**WRAP** / “land it” / “merge to main” / “ship to main” / **“check in and merge”** = **CMPH** (keep the branch). **CMPHD** = the same land, then delete. After they say it, do not ask “merge?” again.
+
+**Check in and merge** on the epic’s **last in-scope story** checks in **the story and the epic** in that same turn. Commit the story, merge it to `main`, push, and run the epic close in [epic-close.mdc](epic-close.mdc). Do not land the story and leave the epic open. Do not ask whether the epic should close. A mid-epic “check in and merge” is the story only.
 
 **Do not merge** until both are true: the CMPH work above is done or running this turn, **and** they granted CMPH permission this conversation. See [no-auto-merge-main.mdc](no-auto-merge-main.mdc).
 
-**Do not run SWAT** until both are true: that work is the job this turn, **and** they typed **SWAT**, or this CMPH is the epic’s last in-scope story (that CMPH includes SWAT). A mid-epic CMPH or UCPH is not SWAT permission.
+**Do not run SWAT** until both are true: that work is the job this turn, **and** they typed **SWAT**, or this CMPH / “check in and merge” is the epic’s last in-scope story (that land includes SWAT). A mid-epic CMPH or UCPH is not SWAT permission.
 
 ## Fast loop (default)
 
@@ -34,7 +36,7 @@ Every UCPH and CMPH Receiver brief includes this line verbatim, between **Next s
 4. Run the documented install or run step.
 5. Ask with the shape in [human-check.mdc](human-check.mdc).
 
-Nothing else. No plan essay, no reviewer skills, no handoff note, until they say **UCPH**, **CMPH**, or **SWAT**.
+Nothing else. No plan essay, no reviewer skills, no handoff note, until they say **UCPH**, **CMPH**, **“check in and merge”**, or **SWAT**.
 
 ## Still mandatory inside the fast loop
 
@@ -46,6 +48,6 @@ Nothing else. No plan essay, no reviewer skills, no handoff note, until they say
 ## Forbidden
 
 - Reviewer, dead-code, or tech-debt skills on a mid-epic **UCPH** or **CMPH**.
-- Handoff or status prose in the same turn as a fix, unless they said **UCPH**, **CMPH**, or **SWAT**.
+- Handoff or status prose in the same turn as a fix, unless they said **UCPH**, **CMPH**, **“check in and merge”**, or **SWAT**.
 - Treating **UCPH** as permission to merge `main`.
 - Using “the docs are not updated yet” to delay a build they can run.

@@ -4,7 +4,7 @@
 
 **Every UCPH or CMPH close** must:
 
-1. Open chat with: **`You are the receiving agent.`** (first line, verbatim).
+1. Open chat with: **`You are the agent to execute the below hand off.`** (first line, verbatim).
 2. Paste this brief **in chat** (second person: “You …”, not “The next agent should …”).
 3. Write the **same body** to the handoff note.
 4. Include this line in the brief, verbatim, on its own line between **Next steps** and **Measured**: `write thorough tests. red, integration, find missing ones of both kinds.`
@@ -31,7 +31,7 @@ Do **not** run code-reviewer, dead-code, or tech-debt on mid-epic **UCPH** / **C
 
 ## Worked example (docs-only close) — copy this density
 
-You are the receiving agent.
+You are the agent to execute the below hand off.
 
 Receiver brief (0.2 closed)
 
@@ -65,7 +65,7 @@ write thorough tests. red, integration, find missing ones of both kinds.
 
 ## Blank (fill every heading)
 
-You are the receiving agent.
+You are the agent to execute the below hand off.
 
 Receiver brief (N.M open | closed | WIP)
 

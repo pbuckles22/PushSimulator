@@ -1,6 +1,6 @@
 # Handoff (optional, local)
 
-Session notes under **`NNNN-HANDOFF-*.md`** or **`.cursor/handoff/*-handoff-*.md`** are **gitignored** by default.
+Files inside `doc/handoff/` and `.cursor/handoff/` are gitignored. `README.md` stays tracked, and `.cursor/handoff/_template.md` stays tracked, so the directories stay in git.
 
 ## Tracked source of truth (norm)
 
