@@ -8,6 +8,7 @@ use push_core::actions::{Action, MeldHit, WildSteal};
 use push_core::card::{Card, Rank, Suit};
 use push_core::deck::{Deck, TurnDraw};
 use push_core::game_state::{GameState, TurnPhase};
+use push_core::legal_moves::generate_legal_moves;
 use push_core::player::{deal_initial_hands, Player};
 use push_core::validation::{check_round_requirements, validate_run, validate_set};
 
@@ -3606,6 +3607,137 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_push_play_meld_hit_steal_wi
     assert_eq!(state.players[1].total_score, 0);
     assert_eq!(state.round_number, 2);
     assert_eq!(state.turn_counter, 1);
+    same_ids(&ids_of(&cards_on_table(&state)), &original);
+    assert_eq!(cards_on_table(&state).len(), deck_size());
+}
+
+/// Chain: Deck::new → is_wild → shuffle → deal → push → play meld → hit → steal → lock →
+/// discard → penalty draw → trapped by a draw → generate legal moves.
+/// The off-board seat is in the penalty. Its joker and 7♥ fit, so they are not discards.
+/// The draw is listed for that seat only. The stolen joker, lock caught up, can hit the
+/// set or the run, and it can be discarded. Listing the moves leaves the table as it was.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_push_play_meld_hit_steal_wild_lock_discard_penalty_draw_trapped_by_a_draw_generate_legal_moves(
+) {
+    let original = ids_of(&Deck::new().cards);
+    let mut deck = shuffled_deck();
+    let penalty = take_rank(&mut deck.cards, Rank::Three);
+    let actor_draw = take_rank(&mut deck.cards, Rank::King);
+    let under: Vec<Card> = deck.cards.drain(0..1).collect();
+    let top = take_rank(&mut deck.cards, Rank::Ace);
+    let mut discard = under.clone();
+    discard.push(top);
+    deck.discard = discard;
+    let players = deal_table(&mut deck, 2);
+    deck.cards.push(actor_draw);
+    deck.cards.push(penalty);
+    let mut state = GameState::new(players, deck);
+
+    assert!(state.apply(Action::PushDiscard, 0));
+    let four_spades = take_from_state(&mut state, Suit::Spades, Rank::Four);
+    let four_clubs = take_from_state(&mut state, Suit::Clubs, Rank::Four);
+    let four_diamonds = take_from_state(&mut state, Suit::Diamonds, Rank::Four);
+    let four_hearts = take_from_state(&mut state, Suit::Hearts, Rank::Four);
+    let joker_set = take_from_state(&mut state, Suit::None, Rank::Joker);
+    let five_hearts = take_from_state(&mut state, Suit::Hearts, Rank::Five);
+    let six_hearts = take_from_state(&mut state, Suit::Hearts, Rank::Six);
+    let joker_run = take_from_state(&mut state, Suit::None, Rank::Joker);
+    let eight_hearts = take_from_state(&mut state, Suit::Hearts, Rank::Eight);
+    let seven_held = take_from_state(&mut state, Suit::Hearts, Rank::Seven);
+    let drawn_joker = take_from_state(&mut state, Suit::None, Rank::Joker);
+    let king_safe = take_from_state(&mut state, Suit::Clubs, Rank::King);
+    let leftover_actor = std::mem::take(&mut state.players[0].hand);
+    let leftover_next = std::mem::take(&mut state.players[1].hand);
+    state.deck.cards.extend(leftover_actor);
+    state.deck.cards.extend(leftover_next);
+    let set = vec![four_spades, four_clubs, joker_set];
+    let run = vec![five_hearts, six_hearts, joker_run, eight_hearts];
+    state.players[0].hand = vec![
+        four_spades,
+        four_clubs,
+        joker_set,
+        five_hearts,
+        six_hearts,
+        joker_run,
+        eight_hearts,
+        four_diamonds,
+        four_hearts,
+    ];
+    state.players[1].hand = vec![seven_held];
+    state.round_number = 2;
+
+    assert!(state.apply(Action::PlayMeld(vec![set, run.clone()]), 0));
+    assert!(state.apply(
+        Action::HitMeld(vec![MeldHit {
+            meld_index: 0,
+            cards: vec![four_diamonds],
+        }]),
+        0,
+    ));
+    assert!(state.apply(
+        Action::StealWild(WildSteal {
+            meld_index: 0,
+            wild: joker_set,
+            natural: four_hearts,
+        }),
+        0,
+    ));
+    state.advance_turn();
+    let mut stolen = joker_set;
+    stolen.locked_until_turn = 1;
+
+    assert!(!state.apply(Action::DiscardCard(seven_held), 1));
+    let parked = std::mem::take(&mut state.deck.cards);
+    state.deck.cards = vec![king_safe, drawn_joker];
+    assert!(state.apply(Action::DrawFromDeck, 1));
+    state.deck.cards.extend(parked);
+    assert!(!state.apply(Action::DiscardCard(drawn_joker), 1));
+
+    let before = state.clone();
+    let trapped = generate_legal_moves(&state, 1);
+    let on_board = generate_legal_moves(&state, 0);
+    assert_eq!(state.players, before.players);
+    assert_eq!(state.board, before.board);
+    assert_eq!(state.deck, before.deck);
+    assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+    assert_eq!(state.penalty_seat, Some(1));
+    assert_eq!(state.turn_counter, 1);
+    assert!(!state.round_over);
+
+    assert!(trapped.contains(&Action::DrawFromDeck));
+    assert!(!trapped.contains(&Action::DiscardCard(drawn_joker)));
+    assert!(!trapped.contains(&Action::DiscardCard(seven_held)));
+    assert!(!trapped
+        .iter()
+        .any(|action| matches!(action, Action::HitMeld(_))));
+    assert!(!on_board.contains(&Action::DrawFromDeck));
+    assert!(on_board.contains(&Action::DiscardCard(stolen)));
+    assert!(on_board.iter().any(|action| {
+        matches!(action, Action::HitMeld(hits)
+            if hits.len() == 1
+                && hits[0].meld_index == 0
+                && hits[0].cards == vec![stolen])
+    }));
+    assert!(on_board.iter().any(|action| {
+        matches!(action, Action::HitMeld(hits)
+            if hits.len() == 1
+                && hits[0].meld_index == 1
+                && hits[0].cards == vec![stolen])
+    }));
+    for (actor, moves) in [(1usize, &trapped), (0, &on_board)] {
+        for action in moves {
+            let mut trial = state.clone();
+            assert!(trial.apply(action.clone(), actor), "{action:?}");
+            assert_eq!(trial.players[0].points, 0);
+            assert_eq!(trial.players[1].points, 0);
+            assert_eq!(trial.players[0].total_score, 0);
+            assert_eq!(trial.players[1].total_score, 0);
+        }
+    }
+    assert_eq!(state.players[0].points, 0);
+    assert_eq!(state.players[0].total_score, 0);
+    assert_eq!(state.players[1].points, 0);
+    assert_eq!(state.players[1].total_score, 0);
     same_ids(&ids_of(&cards_on_table(&state)), &original);
     assert_eq!(cards_on_table(&state).len(), deck_size());
 }

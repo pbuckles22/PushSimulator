@@ -301,8 +301,8 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 *As the simulator, I need to know every valid action so my AI can choose one.*
 
-* \[ \] Write test test\_generate\_legal\_moves checking a given hand against board state.  
-* \[ \] Implement generate\_legal\_moves(game\_state) \-\> Vec\<Action\>.
+* \[x\] Write test test\_generate\_legal\_moves checking a given hand against board state.  
+* \[x\] Implement generate\_legal\_moves(game\_state) \-\> Vec\<Action\>.
 
 **User Story 2.2: Random Bot & Simulation Loop**
 
