@@ -3889,4 +3889,452 @@ mod tests {
         assert_eq!(state.players[1], other);
         assert!(state.players[0].is_on_board);
     }
+
+    /// One turn lays two sets, hits that set, hits an opponent run, and steals the joker
+    /// from the set beside it. The 8♦ fits that set, so it cannot be discarded beforehand.
+    /// After the lay-down it can. The counter stays. The joker's 20 stays in the hand.
+    /// points and total_score stay as they were.
+    #[test]
+    fn test_multi_action_omniturn() {
+        let eight_spades = card(1, Suit::Spades, Rank::Eight);
+        let eight_clubs = card(2, Suit::Clubs, Rank::Eight);
+        let joker = card(3, Suit::None, Rank::Joker);
+        let five_spades = card(4, Suit::Spades, Rank::Five);
+        let six_spades = card(5, Suit::Spades, Rank::Six);
+        let seven_spades = card(6, Suit::Spades, Rank::Seven);
+        let run_eight = card(7, Suit::Spades, Rank::Eight);
+        let four_hearts = card(10, Suit::Hearts, Rank::Four);
+        let four_spades = card(11, Suit::Spades, Rank::Four);
+        let four_clubs = card(12, Suit::Clubs, Rank::Four);
+        let nine_hearts = card(13, Suit::Hearts, Rank::Nine);
+        let nine_spades = card(14, Suit::Spades, Rank::Nine);
+        let nine_clubs = card(15, Suit::Clubs, Rank::Nine);
+        let four_diamonds = card(16, Suit::Diamonds, Rank::Four);
+        let run_four = card(17, Suit::Spades, Rank::Four);
+        let eight_hearts = card(19, Suit::Hearts, Rank::Eight);
+        let eight_diamonds = card(20, Suit::Diamonds, Rank::Eight);
+        let other = card(60, Suit::Clubs, Rank::King);
+        let eights = vec![eight_spades, eight_clubs, joker];
+        let spades = vec![five_spades, six_spades, seven_spades, run_eight];
+        let fours = vec![four_hearts, four_spades, four_clubs];
+        let nines = vec![nine_hearts, nine_spades, nine_clubs];
+        let mut state = table(
+            vec![
+                four_hearts,
+                four_spades,
+                four_clubs,
+                nine_hearts,
+                nine_spades,
+                nine_clubs,
+                four_diamonds,
+                run_four,
+                eight_hearts,
+                eight_diamonds,
+            ],
+            vec![other],
+            vec![card(51, Suit::Clubs, Rank::Jack)],
+        );
+        state.board = vec![eights.clone(), spades.clone()];
+        state.players[1].is_on_board = true;
+        let queen = state.deck.discard[0];
+        let draw = state.deck.cards.clone();
+        let seat = state.players[1].clone();
+        assert!(!state.players[0].is_on_board);
+        assert!(!state.round_over);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.penalty_seat, None);
+
+        let mut too_soon = state.clone();
+        assert!(!too_soon.apply(Action::DiscardCard(eight_diamonds), 0));
+        assert_eq!(too_soon.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(too_soon.penalty_seat, Some(0));
+        assert_eq!(too_soon.players[0].hand, state.players[0].hand);
+        assert_eq!(too_soon.board, state.board);
+        assert!(!too_soon.round_over);
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+
+        let before_hit = state.clone();
+        assert!(!state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![eight_hearts],
+            }]),
+            0,
+        ));
+        assert_still(&before_hit, &state);
+        assert!(!state.players[0].is_on_board);
+
+        assert!(state.apply(Action::PlayMeld(vec![fours.clone(), nines.clone()]), 0));
+        assert!(state.players[0].is_on_board);
+        assert_eq!(
+            state.players[0].hand,
+            vec![four_diamonds, run_four, eight_hearts, eight_diamonds]
+        );
+        assert_eq!(
+            state.board,
+            vec![eights, spades, fours.clone(), nines.clone()]
+        );
+        assert!(!state.round_over);
+        assert_eq!(state.turn_counter, 0);
+
+        assert!(state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 2,
+                cards: vec![four_diamonds],
+            }]),
+            0,
+        ));
+        assert_eq!(
+            state.board[2],
+            vec![four_hearts, four_spades, four_clubs, four_diamonds]
+        );
+        assert_eq!(
+            state.players[0].hand,
+            vec![run_four, eight_hearts, eight_diamonds]
+        );
+
+        let before_run = state.clone();
+        assert!(!state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 1,
+                cards: vec![eight_diamonds],
+            }]),
+            0,
+        ));
+        assert_still(&before_run, &state);
+
+        assert!(state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 1,
+                cards: vec![run_four],
+            }]),
+            0,
+        ));
+        assert_eq!(
+            state.board[1],
+            vec![five_spades, six_spades, seven_spades, run_eight, run_four]
+        );
+        assert_eq!(state.players[0].hand, vec![eight_hearts, eight_diamonds]);
+        assert_eq!(state.turn_counter, 0);
+
+        let before_steal = state.clone();
+        assert!(!state.apply(
+            Action::StealWild(WildSteal {
+                meld_index: 0,
+                wild: joker,
+                natural: nine_hearts,
+            }),
+            0,
+        ));
+        assert_still(&before_steal, &state);
+
+        assert!(state.apply(
+            Action::StealWild(WildSteal {
+                meld_index: 0,
+                wild: joker,
+                natural: eight_hearts,
+            }),
+            0,
+        ));
+        let stolen = state.players[0].hand[1];
+        assert_eq!(stolen.id, joker.id);
+        assert_eq!(stolen.locked_until_turn, 1);
+        assert_eq!(state.players[0].hand, vec![eight_diamonds, stolen]);
+        assert_eq!(
+            state.board[0],
+            vec![eight_spades, eight_clubs, eight_hearts]
+        );
+        assert_eq!(state.turn_counter, 0);
+        assert!(!state.round_over);
+
+        let before_locked = state.clone();
+        assert!(!state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![stolen],
+            }]),
+            0,
+        ));
+        assert_still(&before_locked, &state);
+
+        assert!(state.apply(Action::DiscardCard(eight_diamonds), 0));
+        assert_eq!(state.players[0].hand, vec![stolen]);
+        assert_eq!(state.players[0].hand[0].locked_until_turn, 1);
+        assert_eq!(state.players[0].calculate_hand_penalty(), 20);
+        assert_eq!(state.deck.discard, vec![queen, eight_diamonds]);
+        assert_eq!(state.deck.cards, draw);
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.penalty_seat, None);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.round_number, 1);
+        assert!(!state.round_over);
+        assert!(state.players[0].is_on_board);
+        assert_eq!(state.players[1], seat);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+        assert_eq!(state.players[1].points, 4);
+        assert_eq!(state.players[1].total_score, 9);
+        assert_eq!(joker.get_penalty_value(), 20);
+        assert_eq!(state.board[3], nines);
+
+        state.advance_turn();
+        assert_eq!(state.turn_counter, 1);
+        assert!(state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![stolen],
+            }]),
+            0,
+        ));
+        assert!(state.players[0].hand.is_empty());
+        assert!(state.round_over);
+        assert_eq!(
+            state.board[0],
+            vec![eight_spades, eight_clubs, eight_hearts, stolen]
+        );
+        assert_eq!(state.board[0][3].locked_until_turn, 1);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+        assert_eq!(state.players[1], seat);
+        assert_eq!(state.round_number, 1);
+    }
+
+    /// The 3♠ does not fit 5♠–8♠ until the 4♠ is on that run. That miss leaves the
+    /// lay-down and the first hit as they were. The steal and the discard still finish
+    /// the turn. The joker's 20 stays in the hand.
+    #[test]
+    fn test_multi_action_omniturn_second_hit_needs_the_first() {
+        let five_spades = card(4, Suit::Spades, Rank::Five);
+        let six_spades = card(5, Suit::Spades, Rank::Six);
+        let seven_spades = card(6, Suit::Spades, Rank::Seven);
+        let run_eight = card(7, Suit::Spades, Rank::Eight);
+        let five_hearts = card(21, Suit::Hearts, Rank::Five);
+        let five_diamonds = card(22, Suit::Diamonds, Rank::Five);
+        let joker = card(23, Suit::None, Rank::Joker);
+        let six_hearts = card(30, Suit::Hearts, Rank::Six);
+        let six_spades_set = card(31, Suit::Spades, Rank::Six);
+        let six_clubs = card(32, Suit::Clubs, Rank::Six);
+        let nine_hearts = card(13, Suit::Hearts, Rank::Nine);
+        let nine_diamonds = card(34, Suit::Diamonds, Rank::Nine);
+        let nine_clubs = card(15, Suit::Clubs, Rank::Nine);
+        let run_four = card(17, Suit::Spades, Rank::Four);
+        let three_spades = card(18, Suit::Spades, Rank::Three);
+        let five_clubs = card(19, Suit::Clubs, Rank::Five);
+        let king = card(20, Suit::Diamonds, Rank::King);
+        let spades = vec![five_spades, six_spades, seven_spades, run_eight];
+        let fives = vec![five_hearts, five_diamonds, joker];
+        let sixes = vec![six_hearts, six_spades_set, six_clubs];
+        let nines = vec![nine_hearts, nine_diamonds, nine_clubs];
+        let mut state = table(
+            vec![
+                six_hearts,
+                six_spades_set,
+                six_clubs,
+                nine_hearts,
+                nine_diamonds,
+                nine_clubs,
+                run_four,
+                three_spades,
+                five_clubs,
+                king,
+            ],
+            vec![card(60, Suit::Clubs, Rank::Queen)],
+            vec![card(51, Suit::Clubs, Rank::Jack)],
+        );
+        state.board = vec![spades.clone(), fives.clone()];
+        state.players[1].is_on_board = true;
+        let queen = state.deck.discard[0];
+        let other = state.players[1].clone();
+
+        assert!(state.apply(Action::PlayMeld(vec![sixes, nines.clone()]), 0));
+        assert_eq!(
+            state.players[0].hand,
+            vec![run_four, three_spades, five_clubs, king]
+        );
+
+        let before_three = state.clone();
+        assert!(!state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![three_spades],
+            }]),
+            0,
+        ));
+        assert_still(&before_three, &state);
+
+        assert!(state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![run_four],
+            }]),
+            0,
+        ));
+        assert_eq!(
+            state.board[0],
+            vec![five_spades, six_spades, seven_spades, run_eight, run_four]
+        );
+
+        let before_king = state.clone();
+        assert!(!state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![king],
+            }]),
+            0,
+        ));
+        assert_still(&before_king, &state);
+        assert_eq!(state.board[0].len(), 5);
+
+        assert!(state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 0,
+                cards: vec![three_spades],
+            }]),
+            0,
+        ));
+        assert_eq!(state.board[0].len(), 6);
+        assert_eq!(state.players[0].hand, vec![five_clubs, king]);
+
+        assert!(state.apply(
+            Action::StealWild(WildSteal {
+                meld_index: 1,
+                wild: joker,
+                natural: five_clubs,
+            }),
+            0,
+        ));
+        let stolen = state.players[0].hand[1];
+        assert_eq!(stolen.id, joker.id);
+        assert_eq!(stolen.locked_until_turn, 1);
+        assert_eq!(state.board[1], vec![five_hearts, five_diamonds, five_clubs]);
+        assert_eq!(state.turn_counter, 0);
+
+        assert!(state.apply(Action::DiscardCard(king), 0));
+        assert_eq!(state.players[0].hand, vec![stolen]);
+        assert_eq!(state.players[0].calculate_hand_penalty(), 20);
+        assert_eq!(state.deck.discard, vec![queen, king]);
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.penalty_seat, None);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.round_number, 1);
+        assert!(!state.round_over);
+        assert_eq!(state.board[3], nines);
+        assert_eq!(state.players[1], other);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+        assert_eq!(state.players[1].points, 4);
+        assert_eq!(state.players[1].total_score, 9);
+        assert_eq!(joker.get_penalty_value(), 20);
+    }
+
+    /// Seat 1 is already trapped. Seat 0 still lays down, hits twice, steals, and
+    /// discards. That discard does not clear the penalty, and seat 0 cannot draw.
+    /// Seat 1 still draws. The joker's 20 stays in seat 0's hand.
+    #[test]
+    fn test_multi_action_omniturn_leaves_the_pushed_penalty() {
+        let eight_spades = card(1, Suit::Spades, Rank::Eight);
+        let eight_clubs = card(2, Suit::Clubs, Rank::Eight);
+        let joker = card(3, Suit::None, Rank::Joker);
+        let five_spades = card(4, Suit::Spades, Rank::Five);
+        let six_spades = card(5, Suit::Spades, Rank::Six);
+        let seven_spades = card(6, Suit::Spades, Rank::Seven);
+        let run_eight = card(7, Suit::Spades, Rank::Eight);
+        let four_hearts = card(10, Suit::Hearts, Rank::Four);
+        let four_spades = card(11, Suit::Spades, Rank::Four);
+        let four_clubs = card(12, Suit::Clubs, Rank::Four);
+        let nine_hearts = card(13, Suit::Hearts, Rank::Nine);
+        let nine_spades = card(14, Suit::Spades, Rank::Nine);
+        let nine_clubs = card(15, Suit::Clubs, Rank::Nine);
+        let four_diamonds = card(16, Suit::Diamonds, Rank::Four);
+        let run_four = card(17, Suit::Spades, Rank::Four);
+        let eight_hearts = card(19, Suit::Hearts, Rank::Eight);
+        let eight_diamonds = card(20, Suit::Diamonds, Rank::Eight);
+        let trapped = card(40, Suit::Hearts, Rank::Eight);
+        let safe = card(41, Suit::Clubs, Rank::King);
+        let eights = vec![eight_spades, eight_clubs, joker];
+        let spades = vec![five_spades, six_spades, seven_spades, run_eight];
+        let fours = vec![four_hearts, four_spades, four_clubs];
+        let nines = vec![nine_hearts, nine_spades, nine_clubs];
+        let mut state = table(
+            vec![
+                four_hearts,
+                four_spades,
+                four_clubs,
+                nine_hearts,
+                nine_spades,
+                nine_clubs,
+                four_diamonds,
+                run_four,
+                eight_hearts,
+                eight_diamonds,
+            ],
+            vec![trapped],
+            vec![safe],
+        );
+        state.board = vec![eights, spades];
+        state.turn_phase = TurnPhase::PenaltyDrawing;
+        state.penalty_seat = Some(1);
+        let queen = state.deck.discard[0];
+        assert!(!state.players[1].is_on_board);
+        assert_eq!(state.players[1].calculate_hand_penalty(), 5);
+
+        assert!(state.apply(Action::PlayMeld(vec![fours, nines]), 0));
+        assert!(state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 2,
+                cards: vec![four_diamonds],
+            }]),
+            0,
+        ));
+        assert!(state.apply(
+            Action::HitMeld(vec![MeldHit {
+                meld_index: 1,
+                cards: vec![run_four],
+            }]),
+            0,
+        ));
+        assert!(state.apply(
+            Action::StealWild(WildSteal {
+                meld_index: 0,
+                wild: joker,
+                natural: eight_hearts,
+            }),
+            0,
+        ));
+        let stolen = state.players[0].hand[1];
+        assert_eq!(stolen.id, joker.id);
+        assert_eq!(stolen.locked_until_turn, 1);
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(state.penalty_seat, Some(1));
+
+        assert!(state.apply(Action::DiscardCard(eight_diamonds), 0));
+        assert_eq!(state.players[0].hand, vec![stolen]);
+        assert_eq!(state.players[0].calculate_hand_penalty(), 20);
+        assert_eq!(state.deck.discard, vec![queen, eight_diamonds]);
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(state.penalty_seat, Some(1));
+        assert_eq!(state.players[1].hand, vec![trapped]);
+        assert!(!state.apply(Action::DrawFromDeck, 0));
+        assert_eq!(state.deck.cards, vec![safe]);
+        assert_eq!(state.players[0].hand, vec![stolen]);
+
+        assert!(state.apply(Action::DrawFromDeck, 1));
+        assert_eq!(state.players[1].hand, vec![trapped]);
+        assert_eq!(state.deck.discard, vec![queen, eight_diamonds, safe]);
+        assert!(state.deck.cards.is_empty());
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.penalty_seat, None);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.round_number, 1);
+        assert!(!state.round_over);
+        assert!(state.players[0].is_on_board);
+        assert!(!state.players[1].is_on_board);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+        assert_eq!(state.players[1].points, 4);
+        assert_eq!(state.players[1].total_score, 9);
+        assert_eq!(joker.get_penalty_value(), 20);
+        assert_eq!(safe.get_penalty_value(), 10);
+    }
 }

@@ -276,8 +276,8 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 *As the game engine, I want to ensure a player can do everything in one turn.*
 
-* \[ \] Write test test\_multi\_action\_omniturn (Get on board \-\> Hit 2x \-\> Steal Wild \-\> Discard).  
-* \[ \] Execute test and debug.
+* \[x\] Write test test\_multi\_action\_omniturn (Get on board \-\> Hit 2x \-\> Steal Wild \-\> Discard).  
+* \[x\] Execute test and debug.
 
 **User Story 1.8.4: Round Transition & Wipe**
 
