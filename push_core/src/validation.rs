@@ -1,7 +1,5 @@
 //! Set/run validation, round requirements, and the steal lock (Epics 1.4–1.6).
 
-use std::collections::HashSet;
-
 use crate::card::{Card, Rank};
 
 /// A card can be played when `locked_until_turn` is not still ahead of `turn_counter`.
@@ -45,7 +43,8 @@ pub fn validate_run(cards: &[Card]) -> bool {
     }
 
     let mut suit = None;
-    let mut naturals = Vec::new();
+    let mut naturals = [Rank::Joker; 13];
+    let mut count = 0usize;
     for card in cards {
         if card.is_wild() {
             continue;
@@ -55,17 +54,19 @@ pub fn validate_run(cards: &[Card]) -> bool {
             Some(expected) if card.suit == expected => {}
             Some(_) => return false,
         }
-        if naturals.contains(&card.rank) {
+        if naturals[..count].contains(&card.rank) {
             return false;
         }
-        naturals.push(card.rank);
+        naturals[count] = card.rank;
+        count += 1;
     }
 
-    if naturals.is_empty() {
+    if count == 0 {
         return true;
     }
 
-    fits(&naturals, cards.len(), true) || fits(&naturals, cards.len(), false)
+    let naturals = &naturals[..count];
+    fits(naturals, cards.len(), true) || fits(naturals, cards.len(), false)
 }
 
 /// Ace-high uses 2..=14. Ace-low uses 1..=13. A window that needs both ends is a wrap.
@@ -115,8 +116,12 @@ pub fn check_round_requirements<M: AsRef<[Card]>>(round_number: u8, melds: &[M])
         return false;
     }
 
-    let mut used = vec![false; melds.len()];
-    for need in &needs {
+    let need_slots: usize = needs.iter().map(|need| need.count).sum();
+    if melds.len() != need_slots {
+        return false;
+    }
+    let mut used = [false; 3];
+    for need in needs {
         let mut filled = 0;
         for exclusive in [true, false] {
             for (index, meld) in melds.iter().enumerate() {
@@ -127,7 +132,7 @@ pub fn check_round_requirements<M: AsRef<[Card]>>(round_number: u8, melds: &[M])
                 if !is_requirement(cards, need) {
                     continue;
                 }
-                if exclusive && fills_other(cards, &needs, need.kind) {
+                if exclusive && fills_other(cards, needs, need.kind) {
                     continue;
                 }
                 used[index] = true;
@@ -138,15 +143,25 @@ pub fn check_round_requirements<M: AsRef<[Card]>>(round_number: u8, melds: &[M])
             return false;
         }
     }
-    used.iter().all(|was_used| *was_used)
+    used[..melds.len()].iter().all(|was_used| *was_used)
 }
 
 fn each_card_once<M: AsRef<[Card]>>(melds: &[M]) -> bool {
-    let mut seen = HashSet::new();
-    melds
-        .iter()
-        .flat_map(|meld| meld.as_ref())
-        .all(|card| seen.insert(card.id))
+    let mut index = 0usize;
+    for card in melds.iter().flat_map(|meld| meld.as_ref()) {
+        let mut earlier = 0usize;
+        for previous in melds.iter().flat_map(|meld| meld.as_ref()) {
+            if earlier == index {
+                break;
+            }
+            if previous.id == card.id {
+                return false;
+            }
+            earlier += 1;
+        }
+        index += 1;
+    }
+    true
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -161,47 +176,53 @@ struct Requirement {
     count: usize,
 }
 
-fn round_requirements(round_number: u8) -> Option<Vec<Requirement>> {
+const ROUND_1: [Requirement; 1] = [Requirement {
+    kind: MeldKind::Set,
+    min_len: 3,
+    count: 2,
+}];
+const ROUND_2: [Requirement; 2] = [
+    Requirement {
+        kind: MeldKind::Set,
+        min_len: 3,
+        count: 1,
+    },
+    Requirement {
+        kind: MeldKind::Run,
+        min_len: 4,
+        count: 1,
+    },
+];
+const ROUND_3: [Requirement; 1] = [Requirement {
+    kind: MeldKind::Run,
+    min_len: 4,
+    count: 2,
+}];
+const ROUND_4: [Requirement; 1] = [Requirement {
+    kind: MeldKind::Set,
+    min_len: 3,
+    count: 3,
+}];
+const ROUND_5: [Requirement; 2] = [
+    Requirement {
+        kind: MeldKind::Set,
+        min_len: 3,
+        count: 1,
+    },
+    Requirement {
+        kind: MeldKind::Run,
+        min_len: 7,
+        count: 1,
+    },
+];
+
+fn round_requirements(round_number: u8) -> Option<&'static [Requirement]> {
     match round_number {
-        1 => Some(vec![Requirement {
-            kind: MeldKind::Set,
-            min_len: 3,
-            count: 2,
-        }]),
-        2 => Some(vec![
-            Requirement {
-                kind: MeldKind::Set,
-                min_len: 3,
-                count: 1,
-            },
-            Requirement {
-                kind: MeldKind::Run,
-                min_len: 4,
-                count: 1,
-            },
-        ]),
-        3 => Some(vec![Requirement {
-            kind: MeldKind::Run,
-            min_len: 4,
-            count: 2,
-        }]),
-        4 => Some(vec![Requirement {
-            kind: MeldKind::Set,
-            min_len: 3,
-            count: 3,
-        }]),
-        5 => Some(vec![
-            Requirement {
-                kind: MeldKind::Set,
-                min_len: 3,
-                count: 1,
-            },
-            Requirement {
-                kind: MeldKind::Run,
-                min_len: 7,
-                count: 1,
-            },
-        ]),
+        1 => Some(&ROUND_1),
+        2 => Some(&ROUND_2),
+        3 => Some(&ROUND_3),
+        4 => Some(&ROUND_4),
+        5 => Some(&ROUND_5),
         _ => None,
     }
 }

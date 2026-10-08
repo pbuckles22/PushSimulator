@@ -3,7 +3,7 @@
 use std::collections::HashSet;
 
 use crate::actions::{validate_action, Action, MeldHit, WildSteal};
-use crate::card::{Card, Suit};
+use crate::card::{Card, Rank, Suit};
 use crate::deck::{one_card_draw_count, Deck};
 use crate::game_state::{GameState, TurnPhase};
 use crate::resolution::ActionResolution;
@@ -104,20 +104,60 @@ pub(crate) fn push_is_legal(deck: &Deck) -> bool {
 
 /// Two natural ranks and two natural suits cannot become a set or a run.
 fn group_is_dead(cards: &[Card]) -> bool {
-    let mut ranks = Vec::new();
-    let mut suits = Vec::new();
+    ranks_and_suits_conflict(cards.iter().copied())
+}
+
+fn addition_fits(meld: &[Card], extra: &[Card]) -> bool {
+    let n = meld.len() + extra.len();
+    if n > 32 {
+        let mut with = Vec::with_capacity(n);
+        with.extend(meld.iter().copied());
+        with.extend(extra.iter().copied());
+        return validate_set(&with) || validate_run(&with);
+    }
+    let blank = Card {
+        id: 0,
+        suit: Suit::None,
+        rank: Rank::Joker,
+        locked_until_turn: 0,
+    };
+    let mut with = [blank; 32];
+    with[..meld.len()].copy_from_slice(meld);
+    with[meld.len()..n].copy_from_slice(extra);
+    validate_set(&with[..n]) || validate_run(&with[..n])
+}
+
+fn group_is_dead_with(meld: &[Card], extra: &[Card]) -> bool {
+    ranks_and_suits_conflict(meld.iter().copied().chain(extra.iter().copied()))
+}
+
+/// Heap-free. A second natural rank together with a second natural suit is a dead group.
+fn ranks_and_suits_conflict(cards: impl Iterator<Item = Card>) -> bool {
+    let mut first_rank = None;
+    let mut second_rank = false;
+    let mut first_suit = None;
+    let mut second_suit = false;
     for card in cards {
         if card.is_wild() {
             continue;
         }
-        if !ranks.contains(&card.rank) {
-            ranks.push(card.rank);
+        match first_rank {
+            None => first_rank = Some(card.rank),
+            Some(rank) if card.rank != rank => second_rank = true,
+            Some(_) => {}
         }
-        if card.suit != Suit::None && !suits.contains(&card.suit) {
-            suits.push(card.suit);
+        if card.suit != Suit::None {
+            match first_suit {
+                None => first_suit = Some(card.suit),
+                Some(suit) if card.suit != suit => second_suit = true,
+                Some(_) => {}
+            }
+        }
+        if second_rank && second_suit {
+            return true;
         }
     }
-    ranks.len() >= 2 && suits.len() >= 2
+    false
 }
 
 fn playable_hand(state: &GameState, actor_index: usize) -> Vec<Card> {
@@ -215,9 +255,7 @@ fn collect_additions(
         if extra.is_empty() {
             return;
         }
-        let mut with = meld.to_vec();
-        with.extend(extra.iter().copied());
-        if validate_set(&with) || validate_run(&with) {
+        if addition_fits(meld, extra) {
             found.push(extra.clone());
         }
         return;
@@ -228,13 +266,6 @@ fn collect_additions(
         collect_additions(meld, hand, index + 1, extra, found);
     }
     extra.pop();
-}
-
-fn group_is_dead_with(meld: &[Card], extra: &[Card]) -> bool {
-    let mut joined = Vec::with_capacity(meld.len() + extra.len());
-    joined.extend(meld.iter().copied());
-    joined.extend(extra.iter().copied());
-    group_is_dead(&joined)
 }
 
 fn combine_hits(
