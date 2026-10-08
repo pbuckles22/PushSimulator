@@ -269,8 +269,8 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 *As the game engine, I want to ensure pushed penalties cascade correctly into discard penalties.*
 
-* \[ \] Write test test\_pushed\_penalty\_trap matching PM plan scenario.  
-* \[ \] Execute test and debug.
+* \[x\] Write test test\_pushed\_penalty\_trap matching PM plan scenario.  
+* \[x\] Execute test and debug.
 
 **User Story 1.8.3: Omniturn Execution**
 

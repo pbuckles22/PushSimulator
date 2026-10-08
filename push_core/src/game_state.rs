@@ -24,7 +24,9 @@ pub enum TurnPhase {
 /// starts that counter at 0. `drawn_card_id` is the card this turn's take or
 /// push just put into the actor's hand. That card may be discarded even when
 /// it fits a meld. `advance_turn` clears it and returns the phase to playing.
-/// A new table starts in [`TurnPhase::Playing`]. `round_over` starts false.
+/// A new table starts in [`TurnPhase::Playing`]. `penalty_seat` is the off-board
+/// player whose discard of a playable card opened that phase. Another seat's
+/// discard does not close it, and only that seat may draw. `round_over` starts false.
 /// A play, a hit, or a discard that leaves the actor's hand empty sets it.
 #[derive(Clone, Debug)]
 pub struct GameState {
@@ -35,6 +37,8 @@ pub struct GameState {
     pub turn_counter: u32,
     pub drawn_card_id: Option<u32>,
     pub turn_phase: TurnPhase,
+    /// The seat that must draw until it can discard. `None` while the phase is playing.
+    pub penalty_seat: Option<usize>,
     pub round_over: bool,
 }
 
@@ -48,6 +52,7 @@ impl GameState {
             turn_counter: 0,
             drawn_card_id: None,
             turn_phase: TurnPhase::Playing,
+            penalty_seat: None,
             round_over: false,
         }
     }
@@ -62,5 +67,6 @@ impl GameState {
         self.turn_counter = self.turn_counter.saturating_add(1);
         self.drawn_card_id = None;
         self.turn_phase = TurnPhase::Playing;
+        self.penalty_seat = None;
     }
 }
