@@ -290,8 +290,8 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 *As the game engine, I want to ensure drawing a wild card during a penalty loop doesn't break the game.*
 
-* \[ \] Write test test\_trapped\_by\_a\_draw (Draw Joker \-\> Draw King \-\> Discard King \-\> Stuck with Joker).  
-* \[ \] Execute test and debug.
+* \[x\] Write test test\_trapped\_by\_a\_draw (Draw Joker \-\> Draw King \-\> Discard King \-\> Stuck with Joker).  
+* \[x\] Execute test and debug.
 
 ## **Phase 2: Monte Carlo Simulator**
 
