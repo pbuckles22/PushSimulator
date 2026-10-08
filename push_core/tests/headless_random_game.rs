@@ -4,7 +4,7 @@ use rand::rngs::StdRng;
 use rand::SeedableRng;
 
 use push_core::card::{Card, Rank, Suit};
-use push_core::deck::Deck;
+use push_core::deck::{Deck, TurnDraw};
 use push_core::game_state::{GameState, TurnPhase};
 use push_core::player::Player;
 use push_core::random_bot::{new_two_seat_table, play_random_game, play_random_turn};
@@ -227,4 +227,148 @@ fn test_random_turn_draws_when_every_card_fits() {
     assert_eq!(state.players[0].points, 0);
     assert_eq!(state.players[0].total_score, 0);
     assert_eq!(state.players[1].hand, vec![other]);
+}
+
+/// A push that must reshuffle uses the bot seed for both draws.
+/// The next seat receives the discard top and the first seeded draw.
+#[test]
+fn test_random_turn_push_reshuffle_follows_the_bot_seed() {
+    let ready = bot_push_reshuffle_table();
+    let (seed_a, seed_b) = seeds_whose_bot_draws_differ(&ready.deck, 2);
+    let mut left = ready.clone();
+    let mut again = ready.clone();
+    let mut right = ready.clone();
+
+    play_random_turn(&mut left, 0, &mut StdRng::seed_from_u64(seed_a));
+    assert_eq!(left.players[1].hand, push_next_hand(&ready, seed_a));
+
+    play_random_turn(&mut again, 0, &mut StdRng::seed_from_u64(seed_a));
+    assert_eq!(left.players, again.players);
+    assert_eq!(left.deck, again.deck);
+    assert_eq!(left.board, again.board);
+    assert_eq!(left.turn_phase, again.turn_phase);
+
+    play_random_turn(&mut right, 0, &mut StdRng::seed_from_u64(seed_b));
+    assert_eq!(right.players[1].hand, push_next_hand(&ready, seed_b));
+    assert_ne!(left.players[1].hand, right.players[1].hand);
+    assert_eq!(left.players[0].points, 0);
+    assert_eq!(left.players[1].points, 0);
+    assert_eq!(left.players[0].total_score, 0);
+    assert_eq!(left.players[1].total_score, 0);
+    assert!(!left.round_over);
+}
+
+/// Penalty drawing at the start of the turn uses the bot seed.
+/// Cards that fit stay in the hand, in that order. The king is discarded.
+#[test]
+fn test_random_turn_penalty_reshuffle_follows_the_bot_seed() {
+    let held = card(4, Suit::Hearts, Rank::Seven);
+    let four = card(6, Suit::Hearts, Rank::Four);
+    let eight = card(7, Suit::Hearts, Rank::Eight);
+    let another = card(8, Suit::Hearts, Rank::Seven);
+    let king = card(9, Suit::Clubs, Rank::King);
+    let bystander = card(10, Suit::Diamonds, Rank::Nine);
+    let mut players = vec![Player::new(0, 0), Player::new(1, 1)];
+    players[0].hand = vec![held];
+    players[1].hand = vec![bystander];
+    let mut state = GameState::new(
+        players,
+        Deck {
+            cards: Vec::new(),
+            discard: vec![four, eight, another, king],
+        },
+    );
+    state.board = vec![vec![
+        card(1, Suit::Hearts, Rank::Five),
+        card(2, Suit::Hearts, Rank::Six),
+        card(3, Suit::None, Rank::Joker),
+    ]];
+    state.turn_phase = TurnPhase::PenaltyDrawing;
+    state.penalty_seat = Some(0);
+    let ready = state;
+    let (seed_a, seed_b) = seeds_whose_bot_draws_differ(&ready.deck, 3);
+    let mut left = ready.clone();
+    let mut again = ready.clone();
+    let mut right = ready.clone();
+
+    play_random_turn(&mut left, 0, &mut StdRng::seed_from_u64(seed_a));
+    let drawn = bot_draw_n(&ready.deck, seed_a, 4);
+    assert_eq!(
+        left.players[0].hand,
+        vec![held, drawn[0], drawn[1], drawn[2]]
+    );
+    assert_eq!(left.deck.discard, vec![drawn[3]]);
+    assert_eq!(drawn[3], king);
+    assert!(left.deck.cards.is_empty());
+    assert_eq!(left.turn_phase, TurnPhase::Playing);
+    assert_eq!(left.penalty_seat, None);
+    assert_eq!(left.players[1].hand, vec![bystander]);
+
+    play_random_turn(&mut again, 0, &mut StdRng::seed_from_u64(seed_a));
+    assert_eq!(left.players, again.players);
+    assert_eq!(left.deck, again.deck);
+
+    play_random_turn(&mut right, 0, &mut StdRng::seed_from_u64(seed_b));
+    assert_ne!(left.players[0].hand, right.players[0].hand);
+    assert_eq!(left.players[0].points, 0);
+    assert_eq!(left.players[1].points, 0);
+    assert!(!left.round_over);
+    assert_eq!(left.board, ready.board);
+}
+
+fn bot_push_reshuffle_table() -> GameState {
+    let mut players = vec![Player::new(0, 0), Player::new(1, 1)];
+    players[0].hand = vec![card(20, Suit::Spades, Rank::King)];
+    players[1].hand = vec![card(21, Suit::Diamonds, Rank::Nine)];
+    GameState::new(
+        players,
+        Deck {
+            cards: Vec::new(),
+            discard: vec![
+                card(1, Suit::Hearts, Rank::Three),
+                card(2, Suit::Clubs, Rank::Four),
+                card(3, Suit::Diamonds, Rank::Five),
+                card(4, Suit::Spades, Rank::Six),
+            ],
+        },
+    )
+}
+
+fn push_next_hand(before: &GameState, seed: u64) -> Vec<Card> {
+    let mut deck = before.deck.clone();
+    let mut rng = StdRng::seed_from_u64(seed);
+    let discarded = deck.discard.pop().expect("push needs a top card");
+    let penalty = bot_one(&mut deck, &mut rng);
+    let _start = bot_one(&mut deck, &mut rng);
+    let mut hand = before.players[1].hand.clone();
+    hand.push(discarded);
+    hand.push(penalty);
+    hand
+}
+
+fn bot_one(deck: &mut Deck, rng: &mut StdRng) -> Card {
+    match deck.draw_with(rng) {
+        TurnDraw::One(card) | TurnDraw::LastCard(card) => card,
+        other => panic!("expected one card, got {other:?}"),
+    }
+}
+
+fn bot_draw_n(deck: &Deck, seed: u64, count: usize) -> Vec<Card> {
+    let mut deck = deck.clone();
+    let mut rng = StdRng::seed_from_u64(seed);
+    let mut drawn = Vec::new();
+    for _ in 0..count {
+        drawn.push(bot_one(&mut deck, &mut rng));
+    }
+    drawn
+}
+
+fn seeds_whose_bot_draws_differ(deck: &Deck, count: usize) -> (u64, u64) {
+    let first = bot_draw_n(deck, 0, count);
+    for seed in 1..64 {
+        if bot_draw_n(deck, seed, count) != first {
+            return (0, seed);
+        }
+    }
+    panic!("expected two seeds to draw in a different order");
 }

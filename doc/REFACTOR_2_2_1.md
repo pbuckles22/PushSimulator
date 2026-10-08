@@ -40,9 +40,9 @@ Execute the following using strict Red/Green/Refactor TDD.
 
 ### Phase 0: RNG Plumbing & Legacy Oracle Isolation
 
-* [ ] **Introduce `apply_with_rng`:** Mechanically introduce `apply_with_rng` to the current state machine.
-* [ ] **Route Simulations:** Route all seeded simulations and tests through this new deterministic path.
-* [ ] **Isolate the Deep Oracle:** Rename the introduced path to `legacy_apply_with_rng` and preserve the deep legacy paths (`GameState::apply`, `accepts`, `assign_plays`, `hit_moves`, `additions`) into a new `legacy_oracle` module under `#[cfg(test)]`. *Do not copy random-bot grouping functions unless evaluating bot behavior.*
+* [x] **Introduce `apply_with_rng`:** Mechanically introduce `apply_with_rng` to the current state machine.
+* [x] **Route Simulations:** Route all seeded simulations and tests through this new deterministic path.
+* [x] **Isolate the Deep Oracle:** Rename the introduced path to `legacy_apply_with_rng` and preserve the deep legacy paths (`GameState::apply`, `accepts`, `assign_plays`, `hit_moves`, `additions`) into a new `legacy_oracle` module under `#[cfg(test)]`. *Do not copy random-bot grouping functions unless evaluating bot behavior.*
 
 ### Phase 1: Safe Validation Architecture
 

@@ -1,5 +1,7 @@
 //! Action handlers: take, push, meld, hit, steal, discard (Epics 1.3–1.7).
 
+use rand::Rng;
+
 use crate::card::{Card, Rank, Suit};
 use crate::deck::{Deck, TurnDraw};
 use crate::game_state::{GameState, TurnPhase};
@@ -66,7 +68,7 @@ impl Action {
                 let card = deck.discard.pop().expect("take discard needs a top card");
                 players[actor_index].hand.push(card);
             }
-            Self::PushDiscard => push_discard(players, actor_index, deck),
+            Self::PushDiscard => push_discard(players, actor_index, deck, &mut rand::thread_rng()),
             Self::PlayMeld(_) => panic!("PlayMeld applies on GameState"),
             Self::HitMeld(_) => panic!("HitMeld applies on GameState"),
             Self::StealWild(_) => panic!("StealWild applies on GameState"),
@@ -96,7 +98,23 @@ impl GameState {
     /// be added to a meld. The card just taken or drawn on a push may still be
     /// discarded. A successful discard of that card clears `drawn_card_id`.
     /// Once `round_over` is set, every action is refused and the table stays.
+    /// A push and a penalty draw shuffle with the thread rng.
+    /// [`Self::apply_with_rng`] uses the caller's rng for those draws.
     pub fn apply(&mut self, action: Action, actor_index: usize) -> bool {
+        self.apply_with_rng(action, actor_index, &mut rand::thread_rng())
+    }
+
+    /// Runs `action` for the player at `actor_index`, using `rng` when a pile is shuffled.
+    ///
+    /// Same results as [`Self::apply`]. Take, meld, hit, steal, and discard do not draw.
+    /// A push draws the penalty card and the turn card through `rng`. A penalty draw does too.
+    /// The same seed repeats those draws.
+    pub fn apply_with_rng(
+        &mut self,
+        action: Action,
+        actor_index: usize,
+        rng: &mut impl Rng,
+    ) -> bool {
         if self.round_over {
             return false;
         }
@@ -107,7 +125,7 @@ impl GameState {
                 true
             }
             Action::PushDiscard => {
-                Action::PushDiscard.apply(&mut self.players, actor_index, &mut self.deck);
+                push_discard(&mut self.players, actor_index, &mut self.deck, rng);
                 self.drawn_card_id = self.players[actor_index].hand.last().map(|card| card.id);
                 true
             }
@@ -115,7 +133,7 @@ impl GameState {
             Action::HitMeld(hits) => hit_meld(self, actor_index, &hits),
             Action::StealWild(steal) => steal_wild(self, actor_index, &steal),
             Action::DiscardCard(card) => discard_card(self, actor_index, card),
-            Action::DrawFromDeck => draw_from_deck(self, actor_index),
+            Action::DrawFromDeck => draw_from_deck(self, actor_index, rng),
         }
     }
 }
@@ -166,16 +184,17 @@ fn end_round_if_hand_empty(state: &mut GameState, actor_index: usize) {
 
 /// Draws until a card that fits nothing can be discarded.
 ///
+/// `rng` shuffles when the draw pile is empty and the discard is recycled or split.
 /// Only the seat already in [`TurnPhase::PenaltyDrawing`] may draw. Playable cards
 /// stay in the hand. The first safe card goes onto the discard pile and the
 /// phase returns to playing. An empty pile leaves the phase as it was.
-fn draw_from_deck(state: &mut GameState, actor_index: usize) -> bool {
+fn draw_from_deck(state: &mut GameState, actor_index: usize, rng: &mut impl Rng) -> bool {
     if state.turn_phase != TurnPhase::PenaltyDrawing || state.penalty_seat != Some(actor_index) {
         return false;
     }
     let mut drew = false;
     loop {
-        let card = match state.deck.draw() {
+        let card = match state.deck.draw_with(rng) {
             TurnDraw::One(card) | TurnDraw::LastCard(card) => card,
             TurnDraw::LastTwo { current, next } => {
                 let next_index = (actor_index + 1) % state.players.len();
@@ -480,19 +499,19 @@ fn hand_without(hand: &[Card], melds: &[Vec<Card>]) -> Option<Vec<Card>> {
 }
 
 /// The next seat takes the discard and one draw-pile card. The actor draws after that.
-fn push_discard(players: &mut [Player], actor_index: usize, deck: &mut Deck) {
+fn push_discard(players: &mut [Player], actor_index: usize, deck: &mut Deck, rng: &mut impl Rng) {
     assert!(players.len() >= 2, "Push is played with 2 or more players");
     let next_index = (actor_index + 1) % players.len();
     let discarded = deck.discard.pop().expect("push discard needs a top card");
-    let penalty = draw_one(deck, "push penalty");
-    let start = draw_one(deck, "push turn");
+    let penalty = draw_one(deck, rng, "push penalty");
+    let start = draw_one(deck, rng, "push turn");
     players[next_index].hand.push(discarded);
     players[next_index].hand.push(penalty);
     players[actor_index].hand.push(start);
 }
 
-fn draw_one(deck: &mut Deck, why: &str) -> Card {
-    match deck.draw() {
+fn draw_one(deck: &mut Deck, rng: &mut impl Rng, why: &str) -> Card {
+    match deck.draw_with(rng) {
         TurnDraw::One(card) | TurnDraw::LastCard(card) => card,
         other => panic!("{why} expected one card, got {other:?}"),
     }
@@ -500,9 +519,12 @@ fn draw_one(deck: &mut Deck, why: &str) -> Card {
 
 #[cfg(test)]
 mod tests {
+    use rand::rngs::StdRng;
+    use rand::{RngCore, SeedableRng};
+
     use crate::actions::{Action, MeldHit, WildSteal};
     use crate::card::{Card, Rank, Suit};
-    use crate::deck::Deck;
+    use crate::deck::{Deck, TurnDraw};
     use crate::player::Player;
 
     #[test]
@@ -4509,5 +4531,313 @@ mod tests {
         assert_eq!(state.players[1].total_score, 9);
         assert_eq!(joker.get_penalty_value(), 20);
         assert_eq!(safe.get_penalty_value(), 10);
+    }
+
+    /// A push that only pops a stocked draw pile does not shuffle, so the rng stays idle.
+    #[test]
+    fn test_apply_with_rng_push_from_a_stocked_pile_leaves_the_rng_idle() {
+        let under = card(1, Suit::Hearts, Rank::Four);
+        let top = card(2, Suit::Spades, Rank::Ace);
+        let start = card(3, Suit::Diamonds, Rank::Six);
+        let penalty = card(4, Suit::Clubs, Rank::Five);
+        let mut state = GameState::new(
+            vec![Player::new(1, 0), Player::new(2, 1)],
+            Deck {
+                cards: vec![start, penalty],
+                discard: vec![under, top],
+            },
+        );
+        let mut rng = CountingRng::new(StdRng::seed_from_u64(1));
+
+        assert!(state.apply_with_rng(Action::PushDiscard, 0, &mut rng));
+
+        assert_eq!(rng.calls, 0);
+        assert_eq!(state.players[1].hand, vec![top, penalty]);
+        assert_eq!(state.players[0].hand, vec![start]);
+        assert_eq!(state.deck.discard, vec![under]);
+        assert!(state.deck.cards.is_empty());
+        assert_eq!(state.drawn_card_id, Some(start.id));
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.turn_counter, 0);
+        assert!(!state.round_over);
+    }
+
+    /// Take does not draw. Refusing a penalty draw outside that phase does not draw either.
+    #[test]
+    fn test_apply_with_rng_take_and_a_refused_draw_leave_the_rng_idle() {
+        let mut state = heart_gap(vec![card(4, Suit::Hearts, Rank::Seven)], false);
+        let queen = state.deck.discard[0];
+        let mut rng = CountingRng::new(StdRng::seed_from_u64(1));
+
+        assert!(state.apply_with_rng(Action::TakeDiscard, 0, &mut rng));
+
+        assert_eq!(rng.calls, 0);
+        assert_eq!(state.drawn_card_id, Some(queen.id));
+        assert_eq!(
+            state.players[0].hand,
+            vec![card(4, Suit::Hearts, Rank::Seven), queen]
+        );
+        assert!(state.deck.discard.is_empty());
+
+        let parked = state.clone();
+        assert!(!state.apply_with_rng(Action::DrawFromDeck, 0, &mut rng));
+        assert_eq!(rng.calls, 0);
+        assert_eq!(state.players, parked.players);
+        assert_eq!(state.deck, parked.deck);
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.penalty_seat, None);
+        assert_eq!(state.drawn_card_id, Some(queen.id));
+    }
+
+    /// An empty draw pile and four discard cards shuffle on the penalty draw, then on the actor's draw.
+    /// The same seed repeats that order. Another seed that shuffles differently does not.
+    #[test]
+    fn test_apply_with_rng_push_reshuffle_follows_the_seed() {
+        let ready = push_reshuffle_table();
+        let (seed_a, seed_b) = seeds_whose_draws_differ(&ready.deck, 2);
+        let mut left = ready.clone();
+        let mut again = ready.clone();
+        let mut right = ready.clone();
+        let mut rng = CountingRng::new(StdRng::seed_from_u64(seed_a));
+
+        assert!(left.apply_with_rng(Action::PushDiscard, 0, &mut rng));
+        assert!(again.apply_with_rng(Action::PushDiscard, 0, &mut StdRng::seed_from_u64(seed_a),));
+        assert!(right.apply_with_rng(Action::PushDiscard, 0, &mut StdRng::seed_from_u64(seed_b),));
+
+        assert!(rng.calls > 0);
+        assert_eq!(left.players, again.players);
+        assert_eq!(left.deck, again.deck);
+        assert_eq!(left.drawn_card_id, again.drawn_card_id);
+        assert_push_matches_draw_with(&ready, &left, seed_a);
+        assert_push_matches_draw_with(&ready, &right, seed_b);
+        assert!(
+            left.players[0].hand != right.players[0].hand
+                || left.players[1].hand != right.players[1].hand
+        );
+        assert_eq!(left.turn_counter, 0);
+        assert!(!left.round_over);
+        assert_eq!(left.round_number, 1);
+    }
+
+    /// Penalty drawing keeps every recycled card that fits and discards the safe top.
+    /// Hand order is the seeded draw order.
+    #[test]
+    fn test_apply_with_rng_penalty_reshuffle_follows_the_seed() {
+        let held = card(4, Suit::Hearts, Rank::Seven);
+        let four = card(6, Suit::Hearts, Rank::Four);
+        let eight = card(7, Suit::Hearts, Rank::Eight);
+        let another = card(8, Suit::Hearts, Rank::Seven);
+        let king = card(9, Suit::Clubs, Rank::King);
+        let mut state = heart_gap(vec![held], false);
+        state.deck.cards.clear();
+        state.deck.discard = vec![four, eight, another, king];
+        assert!(!state.apply(Action::DiscardCard(held), 0));
+        let ready = state.clone();
+        let (seed_a, seed_b) = seeds_whose_draws_differ(&ready.deck, 3);
+
+        let mut left = ready.clone();
+        let mut again = ready.clone();
+        let mut right = ready.clone();
+        let mut rng = CountingRng::new(StdRng::seed_from_u64(seed_a));
+        assert!(left.apply_with_rng(Action::DrawFromDeck, 0, &mut rng));
+        assert!(again.apply_with_rng(Action::DrawFromDeck, 0, &mut StdRng::seed_from_u64(seed_a),));
+        assert!(right.apply_with_rng(Action::DrawFromDeck, 0, &mut StdRng::seed_from_u64(seed_b),));
+
+        assert!(rng.calls > 0);
+        assert_eq!(left.players, again.players);
+        assert_eq!(left.deck, again.deck);
+        assert_eq!(left.turn_phase, TurnPhase::Playing);
+        assert_eq!(left.penalty_seat, None);
+        assert_penalty_keeps_drawn_prefix(&ready, &left, held, seed_a, king);
+        assert_penalty_keeps_drawn_prefix(&ready, &right, held, seed_b, king);
+        assert_ne!(left.players[0].hand, right.players[0].hand);
+        assert_eq!(left.players[1], ready.players[1]);
+        assert_eq!(left.board, ready.board);
+        assert_eq!(left.turn_counter, 0);
+        assert_eq!(left.round_number, 1);
+    }
+
+    /// The last two discard cards are shuffled. The safe card is discarded. The other goes to the next seat.
+    #[test]
+    fn test_apply_with_rng_penalty_last_two_follows_the_seed() {
+        let held = card(4, Suit::Hearts, Rank::Seven);
+        let king = card(9, Suit::Spades, Rank::King);
+        let queen = card(10, Suit::Clubs, Rank::Queen);
+        let bystander = card(70, Suit::Diamonds, Rank::Nine);
+        let mut state = heart_gap(vec![held], false);
+        state.players.push(Player::new(3, 2));
+        state.players[2].hand = vec![bystander];
+        state.deck.cards.clear();
+        state.deck.discard = vec![king, queen];
+        assert!(!state.apply(Action::DiscardCard(held), 0));
+        let ready = state.clone();
+        let (seed_a, seed_b) = seeds_whose_last_two_differ(&ready.deck);
+
+        let mut left = ready.clone();
+        let mut again = ready.clone();
+        let mut right = ready.clone();
+        let mut rng = CountingRng::new(StdRng::seed_from_u64(seed_a));
+        assert!(left.apply_with_rng(Action::DrawFromDeck, 0, &mut rng));
+        assert!(again.apply_with_rng(Action::DrawFromDeck, 0, &mut StdRng::seed_from_u64(seed_a),));
+        assert!(right.apply_with_rng(Action::DrawFromDeck, 0, &mut StdRng::seed_from_u64(seed_b),));
+
+        assert!(rng.calls > 0);
+        assert_eq!(left.players, again.players);
+        assert_eq!(left.deck, again.deck);
+        assert_last_two_split(&ready, &left, held, bystander, seed_a);
+        assert_last_two_split(&ready, &right, held, bystander, seed_b);
+        assert!(
+            left.deck.discard != right.deck.discard
+                || left.players[1].hand != right.players[1].hand
+        );
+        assert_eq!(left.turn_phase, TurnPhase::Playing);
+        assert_eq!(left.penalty_seat, None);
+        assert_eq!(left.players[2].hand, vec![bystander]);
+        assert_eq!(left.turn_counter, 0);
+        assert_eq!(left.round_number, 1);
+    }
+
+    fn push_reshuffle_table() -> GameState {
+        GameState::new(
+            vec![Player::new(1, 0), Player::new(2, 1)],
+            Deck {
+                cards: Vec::new(),
+                discard: vec![
+                    card(1, Suit::Hearts, Rank::Three),
+                    card(2, Suit::Clubs, Rank::Four),
+                    card(3, Suit::Diamonds, Rank::Five),
+                    card(4, Suit::Spades, Rank::Six),
+                ],
+            },
+        )
+    }
+
+    fn assert_push_matches_draw_with(before: &GameState, after: &GameState, seed: u64) {
+        let mut deck = before.deck.clone();
+        let mut rng = StdRng::seed_from_u64(seed);
+        let discarded = deck.discard.pop().expect("push needs a top card");
+        let penalty = one_from_draw_with(&mut deck, &mut rng);
+        let start = one_from_draw_with(&mut deck, &mut rng);
+        let mut next_hand = before.players[1].hand.clone();
+        next_hand.push(discarded);
+        next_hand.push(penalty);
+        let mut actor_hand = before.players[0].hand.clone();
+        actor_hand.push(start);
+        assert_eq!(after.players[1].hand, next_hand);
+        assert_eq!(after.players[0].hand, actor_hand);
+        assert_eq!(after.deck, deck);
+        assert_eq!(after.drawn_card_id, Some(start.id));
+    }
+
+    fn assert_penalty_keeps_drawn_prefix(
+        before: &GameState,
+        after: &GameState,
+        held: Card,
+        seed: u64,
+        safe: Card,
+    ) {
+        let drawn = draw_n(&before.deck, seed, 4);
+        assert_eq!(
+            after.players[0].hand,
+            vec![held, drawn[0], drawn[1], drawn[2]]
+        );
+        assert_eq!(after.deck.discard, vec![drawn[3]]);
+        assert_eq!(drawn[3], safe);
+        assert!(after.deck.cards.is_empty());
+    }
+
+    fn assert_last_two_split(
+        before: &GameState,
+        after: &GameState,
+        held: Card,
+        bystander: Card,
+        seed: u64,
+    ) {
+        let (current, next) = last_two(&before.deck, seed);
+        let mut next_hand = before.players[1].hand.clone();
+        next_hand.push(next);
+        assert_eq!(after.players[0].hand, vec![held]);
+        assert_eq!(after.players[1].hand, next_hand);
+        assert_eq!(after.players[2].hand, vec![bystander]);
+        assert_eq!(after.deck.discard, vec![current]);
+        assert!(after.deck.cards.is_empty());
+    }
+
+    fn one_from_draw_with(deck: &mut Deck, rng: &mut StdRng) -> Card {
+        match deck.draw_with(rng) {
+            TurnDraw::One(card) | TurnDraw::LastCard(card) => card,
+            other => panic!("expected one card, got {other:?}"),
+        }
+    }
+
+    fn draw_n(deck: &Deck, seed: u64, count: usize) -> Vec<Card> {
+        let mut deck = deck.clone();
+        let mut rng = StdRng::seed_from_u64(seed);
+        let mut drawn = Vec::new();
+        for _ in 0..count {
+            drawn.push(one_from_draw_with(&mut deck, &mut rng));
+        }
+        drawn
+    }
+
+    fn last_two(deck: &Deck, seed: u64) -> (Card, Card) {
+        let mut deck = deck.clone();
+        match deck.draw_with(&mut StdRng::seed_from_u64(seed)) {
+            TurnDraw::LastTwo { current, next } => (current, next),
+            other => panic!("expected the last two cards, got {other:?}"),
+        }
+    }
+
+    fn seeds_whose_draws_differ(deck: &Deck, count: usize) -> (u64, u64) {
+        let first = draw_n(deck, 0, count);
+        for seed in 1..64 {
+            if draw_n(deck, seed, count) != first {
+                return (0, seed);
+            }
+        }
+        panic!("expected two seeds to draw in a different order");
+    }
+
+    fn seeds_whose_last_two_differ(deck: &Deck) -> (u64, u64) {
+        let first = last_two(deck, 0);
+        for seed in 1..64 {
+            if last_two(deck, seed) != first {
+                return (0, seed);
+            }
+        }
+        panic!("expected two seeds to order the last two cards differently");
+    }
+
+    struct CountingRng<R> {
+        inner: R,
+        calls: usize,
+    }
+
+    impl<R> CountingRng<R> {
+        fn new(inner: R) -> Self {
+            Self { inner, calls: 0 }
+        }
+    }
+
+    impl<R: RngCore> RngCore for CountingRng<R> {
+        fn next_u32(&mut self) -> u32 {
+            self.calls += 1;
+            self.inner.next_u32()
+        }
+
+        fn next_u64(&mut self) -> u64 {
+            self.calls += 1;
+            self.inner.next_u64()
+        }
+
+        fn fill_bytes(&mut self, dest: &mut [u8]) {
+            self.calls += 1;
+            self.inner.fill_bytes(dest);
+        }
+
+        fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
+            self.calls += 1;
+            self.inner.try_fill_bytes(dest)
+        }
     }
 }

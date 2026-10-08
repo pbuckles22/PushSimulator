@@ -315,7 +315,7 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 *As the simulator, I need clone-free validation and bounded move-search costs so large Monte Carlo batches are practical without changing legal behavior.*
 
-* \[ \] Execute the deterministic validation, differential-oracle, lazy-generation, and benchmark plan in [REFACTOR_2_2_1.md](REFACTOR_2_2_1.md).
+* \[ \] Execute the deterministic validation, differential-oracle, lazy-generation, and benchmark plan in [REFACTOR_2_2_1.md](REFACTOR_2_2_1.md). Phase 0 (seeded `apply_with_rng` and the test-only legacy oracle) is parked on `feature/2.2.1-performance-plan`.
 * \[ \] Remove the large-hand fallback only after the profiled throughput gate passes.
 
 **User Story 2.3: Parallelization & Metric Logging**

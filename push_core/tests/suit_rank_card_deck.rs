@@ -10,6 +10,7 @@ use push_core::deck::{Deck, TurnDraw};
 use push_core::game_state::{GameState, TurnPhase};
 use push_core::legal_moves::generate_legal_moves;
 use push_core::player::{deal_initial_hands, Player};
+use push_core::random_bot::play_random_turn;
 use push_core::validation::{check_round_requirements, validate_run, validate_set};
 
 const DECKS: usize = 2;
@@ -4717,4 +4718,322 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_play_meld_hit_steal_wild_di
     assert_eq!(state.players[0].total_score, 9);
     assert_eq!(state.players[1].total_score, 34);
     same_ids(&ids_of(&cards_on_table(&state)), &original);
+}
+
+/// Chain: Deck::new → is_wild → seeded shuffle → deal → push through `apply_with_rng`
+/// when the draw pile is empty and the discard must reshuffle.
+/// The same seed repeats the hands and the piles. A seed that shuffles differently does not.
+/// Every card id stays on the table.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_seeded_shuffle_deal_apply_with_rng_push() {
+    let original = ids_of(&Deck::new().cards);
+    let mut deck = shuffled_deck();
+    let players = deal_table(&mut deck, 2);
+    let mut state = GameState::new(players, deck);
+    state.deck.discard.append(&mut state.deck.cards);
+    assert!(state.deck.discard.len() >= 4);
+    assert!(state.deck.cards.is_empty());
+    let ready = state.clone();
+    let (seed_a, seed_b) = seeds_whose_chain_draws_differ(&ready.deck, 2);
+
+    assert!(state.apply_with_rng(Action::PushDiscard, 0, &mut StdRng::seed_from_u64(seed_a),));
+    let mut again = ready.clone();
+    assert!(again.apply_with_rng(Action::PushDiscard, 0, &mut StdRng::seed_from_u64(seed_a),));
+    let mut other = ready.clone();
+    assert!(other.apply_with_rng(Action::PushDiscard, 0, &mut StdRng::seed_from_u64(seed_b),));
+
+    assert_eq!(state.players, again.players);
+    assert_eq!(state.deck, again.deck);
+    assert_eq!(state.drawn_card_id, again.drawn_card_id);
+    assert_chain_push(&ready, &state, seed_a);
+    assert_chain_push(&ready, &other, seed_b);
+    assert!(
+        state.players[0].hand != other.players[0].hand
+            || state.players[1].hand != other.players[1].hand
+    );
+    assert_eq!(state.turn_phase, TurnPhase::Playing);
+    assert_eq!(state.penalty_seat, None);
+    assert_eq!(state.turn_counter, 0);
+    assert_eq!(state.round_number, 1);
+    assert!(!state.round_over);
+    assert!(!state.players[0].is_on_board);
+    assert!(!state.players[1].is_on_board);
+    assert_eq!(state.players[0].points, 0);
+    assert_eq!(state.players[1].points, 0);
+    assert_eq!(state.players[0].total_score, 0);
+    assert_eq!(state.players[1].total_score, 0);
+    same_ids(&ids_of(&cards_on_table(&state)), &original);
+    assert_wilds(&cards_on_table(&state));
+}
+
+/// Chain: Deck::new → is_wild → seeded shuffle → deal → penalty draw through `apply_with_rng`.
+/// A reshuffle keeps the cards that fit the heart run, in seed order, and discards the king.
+/// The last two safe cards are split by the seed. Every card id stays on the table.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_seeded_shuffle_deal_apply_with_rng_penalty_draw() {
+    let original = ids_of(&Deck::new().cards);
+    let mut deck = shuffled_deck();
+    let players = deal_table(&mut deck, 2);
+    let mut state = GameState::new(players, deck);
+    let mut shoe = cards_on_table(&state);
+    let five = take_suited(&mut shoe, Suit::Hearts, Rank::Five);
+    let six = take_suited(&mut shoe, Suit::Hearts, Rank::Six);
+    let joker = take_suited(&mut shoe, Suit::None, Rank::Joker);
+    let held = take_suited(&mut shoe, Suit::Hearts, Rank::Seven);
+    let four = take_suited(&mut shoe, Suit::Hearts, Rank::Four);
+    let eight = take_suited(&mut shoe, Suit::Hearts, Rank::Eight);
+    let another = take_suited(&mut shoe, Suit::Hearts, Rank::Seven);
+    let king = take_suited(&mut shoe, Suit::Spades, Rank::King);
+    let queen = take_suited(&mut shoe, Suit::Clubs, Rank::Queen);
+    let other_king = take_suited(&mut shoe, Suit::Diamonds, Rank::King);
+
+    state.players[0].hand = vec![held];
+    state.players[1].hand = shoe;
+    state.players[1].hand.push(queen);
+    state.players[1].hand.push(other_king);
+    state.board = vec![vec![five, six, joker]];
+    state.deck.cards.clear();
+    state.deck.discard = vec![four, eight, another, king];
+    assert!(!state.apply(Action::DiscardCard(held), 0));
+    let ready = state;
+    let (seed_a, seed_b) = seeds_whose_chain_draws_differ(&ready.deck, 3);
+
+    let mut left = ready.clone();
+    let mut again = ready.clone();
+    let mut right = ready.clone();
+    assert!(left.apply_with_rng(Action::DrawFromDeck, 0, &mut StdRng::seed_from_u64(seed_a),));
+    assert!(again.apply_with_rng(Action::DrawFromDeck, 0, &mut StdRng::seed_from_u64(seed_a),));
+    assert!(right.apply_with_rng(Action::DrawFromDeck, 0, &mut StdRng::seed_from_u64(seed_b),));
+
+    assert_eq!(left.players, again.players);
+    assert_eq!(left.deck, again.deck);
+    let drawn = chain_draw_n(&ready.deck, seed_a, 4);
+    assert_eq!(
+        left.players[0].hand,
+        vec![held, drawn[0], drawn[1], drawn[2]]
+    );
+    assert_eq!(left.deck.discard, vec![drawn[3]]);
+    assert_eq!(drawn[3], king);
+    assert_ne!(left.players[0].hand, right.players[0].hand);
+    assert_eq!(left.turn_phase, TurnPhase::Playing);
+    assert_eq!(left.penalty_seat, None);
+    assert_eq!(left.board, ready.board);
+    assert_eq!(left.turn_counter, 0);
+    assert_eq!(left.round_number, 1);
+    assert!(!left.round_over);
+    assert!(!left.players[0].is_on_board);
+    assert_eq!(left.players[0].points, 0);
+    assert_eq!(left.players[1].points, 0);
+    assert_eq!(left.players[0].total_score, 0);
+    assert_eq!(left.players[1].total_score, 0);
+    same_ids(&ids_of(&cards_on_table(&left)), &original);
+    assert_wilds(&cards_on_table(&left));
+
+    let mut split = ready.clone();
+    split.players[1].hand.extend(split.deck.discard.drain(..));
+    split.players[1]
+        .hand
+        .retain(|card| *card != queen && *card != other_king);
+    split.deck.discard = vec![queen, other_king];
+    let split_ready = split.clone();
+    let (split_a, split_b) = seeds_whose_chain_last_two_differ(&split_ready.deck);
+    assert!(split.apply_with_rng(Action::DrawFromDeck, 0, &mut StdRng::seed_from_u64(split_a),));
+    let mut split_other = split_ready.clone();
+    assert!(split_other.apply_with_rng(
+        Action::DrawFromDeck,
+        0,
+        &mut StdRng::seed_from_u64(split_b),
+    ));
+    let (current, next) = chain_last_two(&split_ready.deck, split_a);
+    let mut next_hand = split_ready.players[1].hand.clone();
+    next_hand.push(next);
+    assert_eq!(split.players[0].hand, vec![held]);
+    assert_eq!(split.players[1].hand, next_hand);
+    assert_eq!(split.deck.discard, vec![current]);
+    assert!(split.deck.cards.is_empty());
+    assert!(
+        split.deck.discard != split_other.deck.discard
+            || split.players[1].hand != split_other.players[1].hand
+    );
+    assert_eq!(split.turn_phase, TurnPhase::Playing);
+    assert_eq!(split.board, split_ready.board);
+    same_ids(&ids_of(&cards_on_table(&split)), &original);
+    assert_wilds(&cards_on_table(&split));
+}
+
+fn assert_chain_push(before: &GameState, after: &GameState, seed: u64) {
+    let mut deck = before.deck.clone();
+    let mut rng = StdRng::seed_from_u64(seed);
+    let discarded = deck.discard.pop().expect("push needs a top card");
+    let penalty = chain_one(&mut deck, &mut rng);
+    let start = chain_one(&mut deck, &mut rng);
+    let mut next_hand = before.players[1].hand.clone();
+    next_hand.push(discarded);
+    next_hand.push(penalty);
+    let mut actor_hand = before.players[0].hand.clone();
+    actor_hand.push(start);
+    assert_eq!(after.players[1].hand, next_hand);
+    assert_eq!(after.players[0].hand, actor_hand);
+    assert_eq!(after.deck, deck);
+    assert_eq!(after.drawn_card_id, Some(start.id));
+}
+
+fn chain_one(deck: &mut Deck, rng: &mut StdRng) -> Card {
+    match deck.draw_with(rng) {
+        TurnDraw::One(card) | TurnDraw::LastCard(card) => card,
+        other => panic!("expected one card, got {other:?}"),
+    }
+}
+
+fn chain_draw_n(deck: &Deck, seed: u64, count: usize) -> Vec<Card> {
+    let mut deck = deck.clone();
+    let mut rng = StdRng::seed_from_u64(seed);
+    let mut drawn = Vec::new();
+    for _ in 0..count {
+        drawn.push(chain_one(&mut deck, &mut rng));
+    }
+    drawn
+}
+
+fn chain_last_two(deck: &Deck, seed: u64) -> (Card, Card) {
+    let mut deck = deck.clone();
+    match deck.draw_with(&mut StdRng::seed_from_u64(seed)) {
+        TurnDraw::LastTwo { current, next } => (current, next),
+        other => panic!("expected the last two cards, got {other:?}"),
+    }
+}
+
+fn seeds_whose_chain_draws_differ(deck: &Deck, count: usize) -> (u64, u64) {
+    let first = chain_draw_n(deck, 0, count);
+    for seed in 1..64 {
+        if chain_draw_n(deck, seed, count) != first {
+            return (0, seed);
+        }
+    }
+    panic!("expected two seeds to draw in a different order");
+}
+
+fn seeds_whose_chain_last_two_differ(deck: &Deck) -> (u64, u64) {
+    let first = chain_last_two(deck, 0);
+    for seed in 1..64 {
+        if chain_last_two(deck, seed) != first {
+            return (0, seed);
+        }
+    }
+    panic!("expected two seeds to order the last two cards differently");
+}
+
+/// Chain: Deck::new → is_wild → seeded shuffle → deal → one random turn whose push must reshuffle.
+/// The next seat's new cards follow the bot seed. The same seed repeats the table.
+/// Every card id stays on the table.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_seeded_shuffle_deal_random_turn_push_follows_the_seed() {
+    let original = ids_of(&Deck::new().cards);
+    let mut deck = shuffled_deck();
+    let players = deal_table(&mut deck, 2);
+    let mut state = GameState::new(players, deck);
+    let kept = state.players[0]
+        .hand
+        .pop()
+        .expect("the dealt hand has a card");
+    state.deck.discard.append(&mut state.players[0].hand);
+    state.players[0].hand = vec![kept];
+    state.deck.discard.append(&mut state.deck.cards);
+    assert!(state.deck.discard.len() >= 4);
+    let ready = state;
+    let (seed_a, seed_b) = seeds_whose_chain_draws_differ(&ready.deck, 2);
+
+    let mut left = ready.clone();
+    play_random_turn(&mut left, 0, &mut StdRng::seed_from_u64(seed_a));
+    assert_eq!(left.players[1].hand, chain_push_next_hand(&ready, seed_a));
+
+    let mut again = ready.clone();
+    play_random_turn(&mut again, 0, &mut StdRng::seed_from_u64(seed_a));
+    assert_eq!(left.players, again.players);
+    assert_eq!(left.deck, again.deck);
+    assert_eq!(left.board, again.board);
+
+    let mut right = ready.clone();
+    play_random_turn(&mut right, 0, &mut StdRng::seed_from_u64(seed_b));
+    assert_eq!(right.players[1].hand, chain_push_next_hand(&ready, seed_b));
+    assert_ne!(left.players[1].hand, right.players[1].hand);
+    assert_eq!(left.players[0].points, 0);
+    assert_eq!(left.players[1].points, 0);
+    assert_eq!(left.players[0].total_score, 0);
+    assert_eq!(left.players[1].total_score, 0);
+    assert!(!left.round_over);
+    assert_eq!(left.round_number, 1);
+    same_ids(&ids_of(&cards_on_table(&left)), &original);
+    assert_wilds(&cards_on_table(&left));
+}
+
+/// Chain: Deck::new → is_wild → seeded shuffle → deal → a random turn that starts in penalty drawing.
+/// The kept cards follow the bot seed. Every card id stays on the table.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_seeded_shuffle_deal_random_turn_penalty_follows_the_seed() {
+    let original = ids_of(&Deck::new().cards);
+    let mut deck = shuffled_deck();
+    let players = deal_table(&mut deck, 2);
+    let mut state = GameState::new(players, deck);
+    let mut shoe = cards_on_table(&state);
+    let five = take_suited(&mut shoe, Suit::Hearts, Rank::Five);
+    let six = take_suited(&mut shoe, Suit::Hearts, Rank::Six);
+    let joker = take_suited(&mut shoe, Suit::None, Rank::Joker);
+    let held = take_suited(&mut shoe, Suit::Hearts, Rank::Seven);
+    let four = take_suited(&mut shoe, Suit::Hearts, Rank::Four);
+    let eight = take_suited(&mut shoe, Suit::Hearts, Rank::Eight);
+    let another = take_suited(&mut shoe, Suit::Hearts, Rank::Seven);
+    let king = take_suited(&mut shoe, Suit::Spades, Rank::King);
+
+    state.players[0].hand = vec![held];
+    state.players[1].hand = shoe;
+    state.board = vec![vec![five, six, joker]];
+    state.deck.cards.clear();
+    state.deck.discard = vec![four, eight, another, king];
+    state.turn_phase = TurnPhase::PenaltyDrawing;
+    state.penalty_seat = Some(0);
+    let ready = state;
+    let (seed_a, seed_b) = seeds_whose_chain_draws_differ(&ready.deck, 3);
+
+    let mut left = ready.clone();
+    play_random_turn(&mut left, 0, &mut StdRng::seed_from_u64(seed_a));
+    let drawn = chain_draw_n(&ready.deck, seed_a, 4);
+    assert_eq!(
+        left.players[0].hand,
+        vec![held, drawn[0], drawn[1], drawn[2]]
+    );
+    assert_eq!(left.deck.discard, vec![drawn[3]]);
+    assert_eq!(drawn[3], king);
+
+    let mut again = ready.clone();
+    play_random_turn(&mut again, 0, &mut StdRng::seed_from_u64(seed_a));
+    assert_eq!(left.players, again.players);
+    assert_eq!(left.deck, again.deck);
+
+    let mut right = ready.clone();
+    play_random_turn(&mut right, 0, &mut StdRng::seed_from_u64(seed_b));
+    assert_ne!(left.players[0].hand, right.players[0].hand);
+    assert_eq!(left.turn_phase, TurnPhase::Playing);
+    assert_eq!(left.penalty_seat, None);
+    assert_eq!(left.board, ready.board);
+    assert_eq!(left.players[0].points, 0);
+    assert_eq!(left.players[1].points, 0);
+    assert_eq!(left.players[0].total_score, 0);
+    assert_eq!(left.players[1].total_score, 0);
+    assert!(!left.round_over);
+    assert_eq!(left.round_number, 1);
+    same_ids(&ids_of(&cards_on_table(&left)), &original);
+    assert_wilds(&cards_on_table(&left));
+}
+
+fn chain_push_next_hand(before: &GameState, seed: u64) -> Vec<Card> {
+    let mut deck = before.deck.clone();
+    let mut rng = StdRng::seed_from_u64(seed);
+    let discarded = deck.discard.pop().expect("push needs a top card");
+    let penalty = chain_one(&mut deck, &mut rng);
+    let _start = chain_one(&mut deck, &mut rng);
+    let mut hand = before.players[1].hand.clone();
+    hand.push(discarded);
+    hand.push(penalty);
+    hand
 }

@@ -18,7 +18,8 @@ const TURN_LIMIT: u32 = 8_000;
 
 /// Two seats play five rounds.
 ///
-/// `seed` shuffles the shoe and chooses each action. The table is dealt, one
+/// `seed` shuffles the shoe, chooses each action, and shuffles a push or a penalty
+/// draw that recycles the discard. The table is dealt, one
 /// discard is flipped, and the seats take turns. A turn takes or pushes, lays
 /// down when the round allows it, may hit, may steal, then discards. A fitting
 /// card that cannot be discarded draws until a safe card leaves. When a round
@@ -71,14 +72,15 @@ pub fn new_two_seat_table(rng: &mut impl Rng) -> GameState {
 /// The seat pushes when the deck can give the next seat a card and this seat a
 /// card. Otherwise the seat takes the discard. It lays down when the round allows it,
 /// hits until nothing else fits, and sometimes steals. The turn ends with a
-/// discard, or with a draw until a safe card. A hand above 11 cards is played
+/// discard, or with a draw until a safe card. That draw, and a push that recycles
+/// the discard, use `rng`. A hand above 11 cards is played
 /// one card at a time.
 pub fn play_random_turn(state: &mut GameState, actor: usize, rng: &mut impl Rng) {
     if state.round_over || actor >= state.players.len() {
         return;
     }
     if state.turn_phase == TurnPhase::PenaltyDrawing && state.penalty_seat == Some(actor) {
-        let _ = state.apply(Action::DrawFromDeck, actor);
+        let _ = state.apply_with_rng(Action::DrawFromDeck, actor, rng);
         return;
     }
     if state.players[actor].hand.len() > 11 {
@@ -87,13 +89,13 @@ pub fn play_random_turn(state: &mut GameState, actor: usize, rng: &mut impl Rng)
     }
     if state.drawn_card_id.is_none() {
         if let Some(action) = choose_opening(state) {
-            apply_listed(state, actor, action);
+            apply_listed(state, actor, action, rng);
         }
     }
     if state.round_over {
         return;
     }
-    lay_down(state, actor);
+    lay_down(state, actor, rng);
     if state.round_over {
         return;
     }
@@ -132,12 +134,12 @@ pub fn play_random_turn(state: &mut GameState, actor: usize, rng: &mut impl Rng)
 /// [`check_round_requirements`]. Each hit is one card the engine accepts.
 fn play_one_card_at_a_time(state: &mut GameState, actor: usize, rng: &mut impl Rng) {
     if state.drawn_card_id.is_none() && !state.deck.discard.is_empty() {
-        apply_listed(state, actor, Action::TakeDiscard);
+        apply_listed(state, actor, Action::TakeDiscard, rng);
     }
     if state.round_over {
         return;
     }
-    lay_down(state, actor);
+    lay_down(state, actor, rng);
     let mut guard = state.players[actor].hand.len();
     while guard > 0 {
         guard -= 1;
@@ -147,7 +149,7 @@ fn play_one_card_at_a_time(state: &mut GameState, actor: usize, rng: &mut impl R
         let Some(action) = one_card_hit(state, actor, rng) else {
             break;
         };
-        apply_listed(state, actor, action);
+        apply_listed(state, actor, action, rng);
     }
     if state.round_over || apply_one_discard(state, actor, rng) {
         return;
@@ -191,7 +193,7 @@ fn apply_one_discard(state: &mut GameState, actor: usize, rng: &mut impl Rng) ->
         return false;
     }
     let action = discards[rng.gen_range(0..discards.len())].clone();
-    apply_listed(state, actor, action);
+    apply_listed(state, actor, action, rng);
     true
 }
 
@@ -220,7 +222,7 @@ fn apply_widest_hit(state: &mut GameState, actor: usize, rng: &mut impl Rng) -> 
         .filter(|action| hit_width(action) == widest)
         .collect();
     let action = choices[rng.gen_range(0..choices.len())].clone();
-    apply_listed(state, actor, action);
+    apply_listed(state, actor, action, rng);
     true
 }
 
@@ -240,7 +242,7 @@ fn apply_one(
     let Some(action) = choose_listed(state, actor, rng, pred) else {
         return false;
     };
-    apply_listed(state, actor, action);
+    apply_listed(state, actor, action, rng);
     true
 }
 
@@ -260,10 +262,10 @@ fn choose_listed(
     Some(choices[rng.gen_range(0..choices.len())].clone())
 }
 
-fn apply_listed(state: &mut GameState, actor: usize, action: Action) {
+fn apply_listed(state: &mut GameState, actor: usize, action: Action, rng: &mut impl Rng) {
     let refused = action.clone();
     assert!(
-        state.apply(action, actor),
+        state.apply_with_rng(action, actor, rng),
         "a listed action was refused: {refused:?}"
     );
 }
@@ -275,15 +277,15 @@ fn draw_until_a_safe_card(state: &mut GameState, actor: usize, rng: &mut impl Rn
         return;
     }
     let card = hand[rng.gen_range(0..hand.len())];
-    if state.apply(Action::DiscardCard(card), actor) {
+    if state.apply_with_rng(Action::DiscardCard(card), actor, rng) {
         return;
     }
     if state.turn_phase == TurnPhase::PenaltyDrawing && state.penalty_seat == Some(actor) {
-        let _ = state.apply(Action::DrawFromDeck, actor);
+        let _ = state.apply_with_rng(Action::DrawFromDeck, actor, rng);
     }
 }
 
-fn lay_down(state: &mut GameState, actor: usize) {
+fn lay_down(state: &mut GameState, actor: usize, rng: &mut impl Rng) {
     if state.players[actor].is_on_board || state.round_over {
         return;
     }
@@ -299,7 +301,7 @@ fn lay_down(state: &mut GameState, actor: usize) {
     let action = Action::PlayMeld(melds);
     let mut trial = state.clone();
     if trial.apply(action.clone(), actor) {
-        apply_listed(state, actor, action);
+        apply_listed(state, actor, action, rng);
     }
 }
 

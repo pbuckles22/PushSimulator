@@ -13,6 +13,9 @@ pub mod player;
 pub mod random_bot;
 pub mod validation;
 
+#[cfg(test)]
+mod legacy_oracle;
+
 /// Crate is alive; replace with real API as Epic 1.1 ships.
 pub fn engine_name() -> &'static str {
     "push_core"
