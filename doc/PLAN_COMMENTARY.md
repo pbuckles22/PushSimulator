@@ -62,4 +62,4 @@ Phase 1b (WASM viewer) can start once Epic 1.2+ is playable headless; full bot-v
 
 ## Next concrete step
 
-Epic 1.8 is complete — 2026-10-07. Content is `b2303b9`. 2.1 is on `main` at `e0e6b42`. `generate_legal_moves` lists every action `apply` would accept for one seat. Next is 2.2, a random bot, when asked.
+Epic 1.8 is complete — 2026-10-07. Content is `b2303b9`. 2.2 is on `main` at `d815423`. Two random seats finish five rounds. Seed 1 leaves round 6 dealt and unplayed. Totals are 340 and 1025. Next is 2.3, parallel games and CSV metrics, when asked.
