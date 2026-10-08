@@ -62,4 +62,4 @@ Phase 1b (WASM viewer) can start once Epic 1.2+ is playable headless; full bot-v
 
 ## Next concrete step
 
-Start **Sprint 1 / Epic 1.1** in `push_core`: failing tests for Suit, Rank, Card, then green. See [sprints/SPRINT_1.md](sprints/SPRINT_1.md).
+Epic 1.8 is complete — 2026-10-07. Content is `b2303b9`. Next is Phase 2 story 2.1, legal move generation, when asked.

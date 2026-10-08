@@ -258,6 +258,8 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 ### **Epic 1.8: System Integration (The Crucible)**
 
+**Status:** complete — 2026-10-07. A drawn joker stays in the hand when the king is discarded. Content is `b2303b9`. `feature/1.8.5-trapped-by-a-draw` stays.
+
 **User Story 1.8.1: Steal, Hold, and Win**
 
 *As the game engine, I want to ensure complex turn chains resolve perfectly.*

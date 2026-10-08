@@ -14,7 +14,7 @@ Operating model: `.cursor/rules/` ship commands (UCPH, CMPH, SWAT), human check,
 
 ## Current
 
-- **Phase 1 / Sprint 1:** Epic 1.1 through Epic 1.7 are complete — [doc/sprints/SPRINT_1.md](doc/sprints/SPRINT_1.md)
+- **Phase 1 / Sprint 1:** Epic 1.1 through Epic 1.8 are complete — [doc/sprints/SPRINT_1.md](doc/sprints/SPRINT_1.md)
 - **Epic 1.1:** complete — 2026-10-06. Empty-deck rule: [doc/requirements/GAME_RULES.md](doc/requirements/GAME_RULES.md).
 - **Epic 1.2:** complete — 2026-10-06. A player starts empty. Two or more players are dealt 10 cards, one at a time. Ranks 3–9 score 5, a 10 through King scores 10, an ace scores 15, and a two or a joker scores 20. A hand of 4, Jack, Ace, and Joker totals 50 and that penalty adds onto `total_score`. `points` stays 0. **1.2.4.3** is closed. **1.2.4.2** seeds shuffle and draw, keeps card ids through a reshuffle, and closes the epic.
 - **1.3.1:** on `main` at `6a00eff`. `Action::TakeDiscard` moves the discard pile's top card into the player's hand. Cards under that top stay. The draw pile stays. `points` and `total_score` stay 0. `feature/1.3.1-take-discard` is kept.
@@ -40,7 +40,9 @@ Operating model: `.cursor/rules/` ship commands (UCPH, CMPH, SWAT), human check,
 - **1.8.2:** on `main` at `a73a3bd`. A push of a playable card sets `TurnPhase::PenaltyDrawing` and `penalty_seat` on that off-board seat. The pusher can still discard. That discard does not clear the penalty, and the pusher cannot `DrawFromDeck`. The trapped seat draws until a safe card. The joker's 20 stays in the hand. `points` and `total_score` stay as they were. `advance_turn` clears the penalty. `feature/1.8.2-pushed-penalty-trap` is kept.
 - **1.8.3:** on `main` at `f80c752`. It locks one turn that lays two sets, hits the set just laid, hits a run, steals a joker, and discards a card that fits. The 8♦ is refused before that lay-down and allowed after. A 3♠ fits 5♠–8♠ only after a 4♠. The stolen joker's 20 stays in the hand. `points` and `total_score` stay as they were. If the other seat is already in penalty drawing, this turn leaves that penalty, and only that seat can draw. `feature/1.8.3-omniturn` is kept.
 - **1.8.4:** on `main` at `411f227`. It scores each remaining hand onto `total_score` and deals the next round. The empty hand adds 0. A hand of 4, Jack, Ace, and a locked joker adds 50. `points` stay as they were. The two on the board and the king on the discard are not scored. Locks are cleared. The board is empty. Nobody is on the board. The counter is 0. The phase is playing. Round 1 becomes round 2. Round 5 deals round 6. A call while the round is still open leaves the table. `feature/1.8.4-round-transition` is kept.
-- **Next:** 1.8.5.
+- **1.8.5:** on `main` at `b2303b9`. A penalty draw keeps a joker and discards the king. The joker stays in the hand, with `locked_until_turn` still 0. Hitting it is refused. Discarding it returns that seat to penalty drawing. The other seat cannot draw. A later king is discarded and the joker remains. Its 20 stays in the hand. The card just taken stays the only quick discard. `points` and `total_score` stay as they were. The round does not end. `feature/1.8.5-trapped-by-a-draw` is kept.
+- **Epic 1.8:** complete — 2026-10-07. A stolen joker can wait and win. A push can trap a seat into the penalty draw. One turn can lay down, hit, steal, and discard. The round scores the hands that remain and deals again. A joker drawn in that penalty stays in the hand. The close is on `main`. Content is `b2303b9`. `feature/1.8.5-trapped-by-a-draw` stays.
+- **Next:** 2.1.
 - **Full backlog:** [doc/BACKLOG.md](doc/BACKLOG.md)
 - **Commentary / deltas:** [doc/PLAN_COMMENTARY.md](doc/PLAN_COMMENTARY.md) (integration-chain Epic 1.9 suggested; Google export quirks)
 
