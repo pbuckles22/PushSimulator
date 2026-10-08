@@ -311,6 +311,13 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 * \[x\] Write test test\_headless\_random\_game asserting two random bots can finish 5 rounds.  
 * \[x\] Implement Random Bot AI logic.
 
+**User Story 2.2.1: Move Generation Performance & Combinatorics**
+
+*As the simulator, I need clone-free validation and bounded move-search costs so large Monte Carlo batches are practical without changing legal behavior.*
+
+* \[ \] Execute the deterministic validation, differential-oracle, lazy-generation, and benchmark plan in [REFACTOR_2_2_1.md](REFACTOR_2_2_1.md).
+* \[ \] Remove the large-hand fallback only after the profiled throughput gate passes.
+
 **User Story 2.3: Parallelization & Metric Logging**
 
 *As the simulator, I want to run millions of games fast so I get valid data.*

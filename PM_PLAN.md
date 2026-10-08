@@ -44,7 +44,8 @@ Operating model: `.cursor/rules/` ship commands (UCPH, CMPH, SWAT), human check,
 - **Epic 1.8:** complete — 2026-10-07. A stolen joker can wait and win. A push can trap a seat into the penalty draw. One turn can lay down, hit, steal, and discard. The round scores the hands that remain and deals again. A joker drawn in that penalty stays in the hand. The close is on `main`. Content is `b2303b9`. `feature/1.8.5-trapped-by-a-draw` stays.
 - **2.1:** on `main` at `e0e6b42`. `generate_legal_moves` lists every action `apply` would accept for one seat. The table stays as it was. The 8♦ hits the eights. The 9♥ hits the heart run. The joker hits either. The 4♦ and the king are discards only. The 3♠ joins 5♠–8♠ only with the 4♠. Off the board, two sets of three can be laid down. The 8♦ that fits cannot be discarded. Six fours are two sets of three. A locked card can be discarded and cannot be hit. The 5♦ steals the joker. The card just taken can be discarded. `DrawFromDeck` is listed only for the penalty seat. A closed round lists nothing. `points` and `total_score` stay as they were. `feature/2.1-legal-moves` is kept.
 - **2.2:** on `main` at `d815423`. Two random seats finish five rounds. Seed 1 leaves round 6 dealt and unplayed. `points` stay 0. Totals are 340 and 1025. Every card id stays on the table. `feature/2.2-random-bot` is kept.
-- **Next:** 2.3.
+- **2.2.1:** planned before parallelization. Refactor move validation and generation without changing legal behavior; preserve a deterministic legacy oracle, add targeted bot searches, and establish measured throughput gates. Execution plan: [doc/REFACTOR_2_2_1.md](doc/REFACTOR_2_2_1.md).
+- **Next:** 2.2.1.
 - **Full backlog:** [doc/BACKLOG.md](doc/BACKLOG.md)
 - **Commentary / deltas:** [doc/PLAN_COMMENTARY.md](doc/PLAN_COMMENTARY.md) (integration-chain Epic 1.9 suggested; Google export quirks)
 
