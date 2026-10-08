@@ -283,8 +283,8 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 *As the game engine, I want to calculate scores and wipe the board for the next round.*
 
-* \[ \] Write test test\_round\_transition\_and\_wipe checking point tallies and exact deck/board reset.  
-* \[ \] Implement advance\_to\_next\_round() logic.
+* \[x\] Write test test\_round\_transition\_and\_wipe checking point tallies and exact deck/board reset.  
+* \[x\] Implement advance\_to\_next\_round() logic.
 
 **User Story 1.8.5: Trapped by a Draw**
 

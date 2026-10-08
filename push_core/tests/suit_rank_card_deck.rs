@@ -4164,3 +4164,303 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_push_play_meld_hit_hit_stea
     same_ids(&ids_of(&cards_on_table(&state)), &original);
     assert_eq!(cards_on_table(&state).len(), deck_size());
 }
+
+/// Hands in seat order, then each meld, then the draw pile, then the discard pile.
+/// Locks are cleared before the shuffle that deals the next round.
+fn next_round_deal(state: &GameState, seed: u64) -> (Vec<Vec<Card>>, Vec<Card>, Card) {
+    let mut shoe = Vec::new();
+    for player in &state.players {
+        shoe.extend(player.hand.iter().copied());
+    }
+    for meld in &state.board {
+        shoe.extend(meld.iter().copied());
+    }
+    shoe.extend(state.deck.cards.iter().copied());
+    shoe.extend(state.deck.discard.iter().copied());
+    for card in &mut shoe {
+        card.locked_until_turn = 0;
+    }
+    let mut deck = Deck {
+        cards: shoe,
+        discard: Vec::new(),
+    };
+    deck.shuffle_with(&mut StdRng::seed_from_u64(seed));
+    let mut players: Vec<Player> = (0..state.players.len())
+        .map(|seat| Player::new(seat as u32, seat as u32))
+        .collect();
+    deal_initial_hands(&mut players, &mut deck);
+    let starter = deck
+        .cards
+        .pop()
+        .expect("the next round starts a discard pile");
+    let hands = players.into_iter().map(|player| player.hand).collect();
+    (hands, deck.cards, starter)
+}
+
+fn take_id(state: &mut GameState, id: u32) -> Card {
+    for player in &mut state.players {
+        if let Some(index) = player.hand.iter().position(|card| card.id == id) {
+            return player.hand.remove(index);
+        }
+    }
+    if let Some(index) = state.deck.cards.iter().position(|card| card.id == id) {
+        return state.deck.cards.remove(index);
+    }
+    let index = state
+        .deck
+        .discard
+        .iter()
+        .position(|card| card.id == id)
+        .expect("the shoe contains this id");
+    state.deck.discard.remove(index)
+}
+
+/// Chain: Deck::new → is_wild → shuffle → deal → play meld → steal a wild → hit → discard → round over → next round.
+/// Seat 1 lays nines and eights, including a two that stays on the board. Seat 0 lays sevens with a joker
+/// and a set of sixes, then seat 1 steals that joker. The joker locks and cannot be hit. Seat 0 hits the
+/// last seven and discards the king, so the round ends. The two's 20 is not in the hand. The joker's 20 is.
+/// Advancing before that discard leaves the table. After the discard, the next round deals the same shoe,
+/// adds 25 onto seat 1, and leaves seat 0's total. Round 2 refuses two sets. A set that uses the cleared
+/// joker, beside a run, gets seat 0 on the board.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_play_meld_hit_steal_wild_discard_round_over_advance_to_next_round(
+) {
+    let original = ids_of(&Deck::new().cards);
+    let mut deck = shuffled_deck();
+    let players = deal_table(&mut deck, 2);
+    let mut state = GameState::new(players, deck);
+
+    let seven_hearts = take_from_state(&mut state, Suit::Hearts, Rank::Seven);
+    let seven_clubs = take_from_state(&mut state, Suit::Clubs, Rank::Seven);
+    let seven_spades = take_from_state(&mut state, Suit::Spades, Rank::Seven);
+    let seven_diamonds = take_from_state(&mut state, Suit::Diamonds, Rank::Seven);
+    let joker = take_from_state(&mut state, Suit::None, Rank::Joker);
+    let six_hearts = take_from_state(&mut state, Suit::Hearts, Rank::Six);
+    let six_spades = take_from_state(&mut state, Suit::Spades, Rank::Six);
+    let six_clubs = take_from_state(&mut state, Suit::Clubs, Rank::Six);
+    let nine_hearts = take_from_state(&mut state, Suit::Hearts, Rank::Nine);
+    let nine_spades = take_from_state(&mut state, Suit::Spades, Rank::Nine);
+    let nine_clubs = take_from_state(&mut state, Suit::Clubs, Rank::Nine);
+    let eight_hearts = take_from_state(&mut state, Suit::Hearts, Rank::Eight);
+    let eight_spades = take_from_state(&mut state, Suit::Spades, Rank::Eight);
+    let eight_clubs = take_from_state(&mut state, Suit::Clubs, Rank::Eight);
+    let two_hearts = take_from_state(&mut state, Suit::Hearts, Rank::Two);
+    let four_hearts = take_from_state(&mut state, Suit::Hearts, Rank::Four);
+    let king = take_from_state(&mut state, Suit::Clubs, Rank::King);
+    let leftover_actor = std::mem::take(&mut state.players[0].hand);
+    let leftover_next = std::mem::take(&mut state.players[1].hand);
+    state.deck.cards.extend(leftover_actor);
+    state.deck.cards.extend(leftover_next);
+
+    let nines = vec![nine_hearts, nine_spades, nine_clubs];
+    let eights = vec![eight_hearts, eight_spades, eight_clubs, two_hearts];
+    let sevens = vec![seven_hearts, joker, seven_clubs];
+    let sixes = vec![six_hearts, six_spades, six_clubs];
+    state.players[0].hand = vec![
+        seven_hearts,
+        joker,
+        seven_clubs,
+        six_hearts,
+        six_spades,
+        six_clubs,
+        seven_spades,
+        king,
+    ];
+    state.players[1].hand = vec![
+        nine_hearts,
+        nine_spades,
+        nine_clubs,
+        eight_hearts,
+        eight_spades,
+        eight_clubs,
+        two_hearts,
+        seven_diamonds,
+        four_hearts,
+    ];
+    state.players[0].points = 4;
+    state.players[1].points = 4;
+    state.players[0].total_score = 9;
+    state.players[1].total_score = 9;
+    same_ids(&ids_of(&cards_on_table(&state)), &original);
+
+    assert!(state.apply(Action::PlayMeld(vec![nines.clone(), eights.clone()]), 1));
+    assert_eq!(state.players[1].hand, vec![seven_diamonds, four_hearts]);
+    assert!(state.players[1].is_on_board);
+    assert!(!state.players[0].is_on_board);
+    assert!(!state.round_over);
+
+    assert!(state.apply(Action::PlayMeld(vec![sevens.clone(), sixes.clone()]), 0));
+    assert_eq!(state.players[0].hand, vec![seven_spades, king]);
+    assert!(state.players[0].is_on_board);
+    assert_eq!(state.board[1], eights);
+
+    assert!(state.apply(
+        Action::StealWild(WildSteal {
+            meld_index: 2,
+            wild: joker,
+            natural: seven_diamonds,
+        }),
+        1,
+    ));
+    let stolen = state.players[1].hand[1];
+    assert_eq!(stolen.id, joker.id);
+    assert_eq!(stolen.locked_until_turn, 1);
+    assert_eq!(state.players[1].hand, vec![four_hearts, stolen]);
+    assert_eq!(state.players[1].calculate_hand_penalty(), 25);
+    assert_eq!(two_hearts.get_penalty_value(), 20);
+    assert!(state.board[1].contains(&two_hearts));
+    assert!(!state.round_over);
+
+    let before_locked = state.clone();
+    assert!(!state.apply(
+        Action::HitMeld(vec![MeldHit {
+            meld_index: 2,
+            cards: vec![stolen],
+        }]),
+        1,
+    ));
+    assert_eq!(state.players, before_locked.players);
+    assert_eq!(state.board, before_locked.board);
+    assert_eq!(state.deck, before_locked.deck);
+    assert_eq!(state.players[0].total_score, 9);
+    assert_eq!(state.players[1].total_score, 9);
+
+    assert!(state.apply(
+        Action::HitMeld(vec![MeldHit {
+            meld_index: 2,
+            cards: vec![seven_spades],
+        }]),
+        0,
+    ));
+    assert_eq!(state.players[0].hand, vec![king]);
+    assert!(!state.round_over);
+    assert_eq!(state.round_number, 1);
+
+    let mut still_open = state.clone();
+    assert!(!still_open.advance_to_next_round_with(&mut StdRng::seed_from_u64(11)));
+    assert_eq!(still_open.players, state.players);
+    assert_eq!(still_open.board, state.board);
+    assert_eq!(still_open.deck, state.deck);
+    assert!(!still_open.round_over);
+    assert_eq!(still_open.players[0].total_score, 9);
+    assert_eq!(still_open.players[1].total_score, 9);
+
+    assert!(state.apply(Action::DiscardCard(king), 0));
+    assert!(state.players[0].hand.is_empty());
+    assert!(state.round_over);
+    assert_eq!(state.players[1].hand, vec![four_hearts, stolen]);
+    assert_eq!(state.players[1].calculate_hand_penalty(), 25);
+    assert_eq!(state.players[0].points, 4);
+    assert_eq!(state.players[1].points, 4);
+    assert_eq!(state.players[0].total_score, 9);
+    assert_eq!(state.players[1].total_score, 9);
+    assert_eq!(joker.get_penalty_value(), 20);
+
+    let before = state.clone();
+    let (hands, draw, starter) = next_round_deal(&before, 11);
+    assert!(state.advance_to_next_round_with(&mut StdRng::seed_from_u64(11)));
+
+    assert_eq!(state.players[0].hand, hands[0]);
+    assert_eq!(state.players[1].hand, hands[1]);
+    assert_eq!(state.deck.cards, draw);
+    assert_eq!(state.deck.discard, vec![starter]);
+    assert!(state.board.is_empty());
+    assert!(!state.players[0].is_on_board);
+    assert!(!state.players[1].is_on_board);
+    assert_eq!(state.players[0].points, 4);
+    assert_eq!(state.players[1].points, 4);
+    assert_eq!(state.players[0].total_score, 9);
+    assert_eq!(state.players[1].total_score, 34);
+    assert_eq!(state.round_number, 2);
+    assert!(!state.round_over);
+    assert_eq!(state.turn_counter, 0);
+    assert_eq!(state.turn_phase, TurnPhase::Playing);
+    assert_eq!(state.penalty_seat, None);
+    assert_eq!(state.drawn_card_id, None);
+    assert_eq!(state.players[0].id, 1);
+    assert_eq!(state.players[1].seat_index, 1);
+    assert!(cards_on_table(&state)
+        .iter()
+        .all(|card| card.locked_until_turn == 0));
+    same_ids(&ids_of(&cards_on_table(&state)), &original);
+    assert_eq!(cards_on_table(&state).len(), deck_size());
+
+    let dealt = state.clone();
+    assert!(!state.advance_to_next_round_with(&mut StdRng::seed_from_u64(99)));
+    assert_eq!(state.players, dealt.players);
+    assert_eq!(state.board, dealt.board);
+    assert_eq!(state.deck, dealt.deck);
+    assert_eq!(state.round_number, 2);
+
+    let joker_now = take_id(&mut state, joker.id);
+    assert_eq!(joker_now.locked_until_turn, 0);
+    let four_spades = take_from_state(&mut state, Suit::Spades, Rank::Four);
+    let three_hearts = take_from_state(&mut state, Suit::Hearts, Rank::Three);
+    let three_spades = take_from_state(&mut state, Suit::Spades, Rank::Three);
+    let three_diamonds = take_from_state(&mut state, Suit::Diamonds, Rank::Three);
+    let three_hearts_b = take_from_state(&mut state, Suit::Hearts, Rank::Three);
+    let three_spades_b = take_from_state(&mut state, Suit::Spades, Rank::Three);
+    let three_diamonds_b = take_from_state(&mut state, Suit::Diamonds, Rank::Three);
+    let ten_hearts = take_from_state(&mut state, Suit::Hearts, Rank::Ten);
+    let jack_hearts = take_from_state(&mut state, Suit::Hearts, Rank::Jack);
+    let queen_hearts = take_from_state(&mut state, Suit::Hearts, Rank::Queen);
+    let king_hearts = take_from_state(&mut state, Suit::Hearts, Rank::King);
+    let four_for_set = take_from_state(&mut state, Suit::Hearts, Rank::Four);
+    let leftover = std::mem::take(&mut state.players[0].hand);
+    state.deck.cards.extend(leftover);
+    let set_a = vec![three_hearts, three_spades, three_diamonds];
+    let set_b = vec![three_hearts_b, three_spades_b, three_diamonds_b];
+    let wild_set = vec![four_for_set, joker_now, four_spades];
+    let run = vec![ten_hearts, jack_hearts, queen_hearts, king_hearts];
+    state.players[0].hand = vec![
+        three_hearts,
+        three_spades,
+        three_diamonds,
+        three_hearts_b,
+        three_spades_b,
+        three_diamonds_b,
+        four_for_set,
+        joker_now,
+        four_spades,
+        ten_hearts,
+        jack_hearts,
+        queen_hearts,
+        king_hearts,
+    ];
+
+    let before_round_2 = state.clone();
+    assert!(!state.apply(Action::PlayMeld(vec![set_a.clone(), set_b.clone()]), 0));
+    assert_eq!(state.players, before_round_2.players);
+    assert_eq!(state.board, before_round_2.board);
+    assert_eq!(state.deck, before_round_2.deck);
+    assert!(!state.players[0].is_on_board);
+    assert_eq!(state.round_number, 2);
+    assert_eq!(state.players[0].total_score, 9);
+    assert_eq!(state.players[1].total_score, 34);
+
+    assert!(state.apply(Action::PlayMeld(vec![wild_set.clone(), run.clone()]), 0));
+    assert!(state.players[0].is_on_board);
+    assert_eq!(state.board[0], wild_set);
+    assert_eq!(state.board[0][1].id, joker.id);
+    assert_eq!(state.board[0][1].locked_until_turn, 0);
+    assert_eq!(state.board[1], run);
+    assert_eq!(
+        state.players[0].hand,
+        vec![
+            three_hearts,
+            three_spades,
+            three_diamonds,
+            three_hearts_b,
+            three_spades_b,
+            three_diamonds_b,
+        ]
+    );
+    assert!(!state.round_over);
+    assert_eq!(state.round_number, 2);
+    assert_eq!(state.turn_counter, 0);
+    assert_eq!(state.players[0].points, 4);
+    assert_eq!(state.players[1].points, 4);
+    assert_eq!(state.players[0].total_score, 9);
+    assert_eq!(state.players[1].total_score, 34);
+    same_ids(&ids_of(&cards_on_table(&state)), &original);
+}
