@@ -9,7 +9,7 @@ use crate::actions::{Action, MeldHit};
 use crate::card::{Card, Rank, Suit};
 use crate::deck::Deck;
 use crate::game_state::{GameState, TurnPhase};
-use crate::legal_moves::{generate_legal_moves, push_is_legal};
+use crate::legal_moves::{push_is_legal, visit_legal_kind, LegalKind};
 use crate::player::{deal_initial_hands, Player};
 use crate::validation::{card_can_be_played, check_round_requirements, validate_run, validate_set};
 
@@ -100,9 +100,7 @@ pub fn play_random_turn(state: &mut GameState, actor: usize, rng: &mut impl Rng)
         return;
     }
     if !state.players[actor].is_on_board {
-        apply_one(state, actor, rng, |action| {
-            matches!(action, Action::PlayMeld(_))
-        });
+        apply_kind(state, actor, rng, LegalKind::Play);
     }
     if state.round_over {
         return;
@@ -117,9 +115,7 @@ pub fn play_random_turn(state: &mut GameState, actor: usize, rng: &mut impl Rng)
             return;
         }
         if rng.gen_bool(0.25) {
-            apply_one(state, actor, rng, |action| {
-                matches!(action, Action::StealWild(_))
-            });
+            apply_kind(state, actor, rng, LegalKind::Steal);
         }
     }
     if state.round_over || apply_one_discard(state, actor, rng) {
@@ -182,13 +178,9 @@ fn one_card_hit(state: &GameState, actor: usize, rng: &mut impl Rng) -> Option<A
 
 fn apply_one_discard(state: &mut GameState, actor: usize, rng: &mut impl Rng) -> bool {
     let mut discards = Vec::new();
-    for card in &state.players[actor].hand {
-        let action = Action::DiscardCard(*card);
-        let mut trial = state.clone();
-        if trial.apply(action.clone(), actor) {
-            discards.push(action);
-        }
-    }
+    visit_legal_kind(state, actor, LegalKind::Discard, &mut |action| {
+        discards.push(action);
+    });
     if discards.is_empty() {
         return false;
     }
@@ -209,10 +201,10 @@ fn choose_opening(state: &GameState) -> Option<Action> {
 }
 
 fn apply_widest_hit(state: &mut GameState, actor: usize, rng: &mut impl Rng) -> bool {
-    let hits: Vec<Action> = generate_legal_moves(state, actor)
-        .into_iter()
-        .filter(|action| matches!(action, Action::HitMeld(_)))
-        .collect();
+    let mut hits = Vec::new();
+    visit_legal_kind(state, actor, LegalKind::Hit, &mut |action| {
+        hits.push(action)
+    });
     if hits.is_empty() {
         return false;
     }
@@ -233,29 +225,22 @@ fn hit_width(action: &Action) -> usize {
     }
 }
 
-fn apply_one(
-    state: &mut GameState,
-    actor: usize,
-    rng: &mut impl Rng,
-    pred: impl Fn(&Action) -> bool,
-) -> bool {
-    let Some(action) = choose_listed(state, actor, rng, pred) else {
+fn apply_kind(state: &mut GameState, actor: usize, rng: &mut impl Rng, kind: LegalKind) -> bool {
+    let Some(action) = choose_kind(state, actor, rng, kind) else {
         return false;
     };
     apply_listed(state, actor, action, rng);
     true
 }
 
-fn choose_listed(
+fn choose_kind(
     state: &GameState,
     actor: usize,
     rng: &mut impl Rng,
-    pred: impl Fn(&Action) -> bool,
+    kind: LegalKind,
 ) -> Option<Action> {
-    let choices: Vec<Action> = generate_legal_moves(state, actor)
-        .into_iter()
-        .filter(|action| pred(action))
-        .collect();
+    let mut choices = Vec::new();
+    visit_legal_kind(state, actor, kind, &mut |action| choices.push(action));
     if choices.is_empty() {
         return None;
     }

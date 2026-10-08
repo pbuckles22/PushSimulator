@@ -154,6 +154,25 @@ impl Deck {
         self.shuffle_with(rng);
         self.discard.push(top);
     }
+
+    /// Whether `count` sequential one-card draws are still available.
+    ///
+    /// A one-card draw is [`TurnDraw::One`] or [`TurnDraw::LastCard`].
+    /// An empty draw pile with exactly two discard cards is [`TurnDraw::LastTwo`],
+    /// so those two cards do not count. A discard of three or more recycles the
+    /// way [`Self::draw_with`] does, and every card in that pile counts.
+    /// Neither pile changes.
+    pub fn has_draw_capacity(&self, count: usize) -> bool {
+        one_card_draw_count(self.cards.len(), self.discard.len()) >= count
+    }
+}
+
+/// How many sequential one-card draws piles of these sizes can give.
+///
+/// Exactly two discard cards are a [`TurnDraw::LastTwo`] and add nothing.
+pub(crate) fn one_card_draw_count(draw_len: usize, discard_len: usize) -> usize {
+    let extra = if discard_len == 2 { 0 } else { discard_len };
+    draw_len + extra
 }
 
 #[cfg(test)]
@@ -508,6 +527,157 @@ mod tests {
 
         for seed in 0..24u64 {
             assert_eq!(trace(seed), trace(seed), "seed {seed} repeats");
+        }
+    }
+
+    /// Zero draws are available on every pile, including an empty deck.
+    #[test]
+    fn test_has_draw_capacity_zero_is_always_available() {
+        let shapes = [(0, 0), (4, 0), (0, 1), (0, 2), (0, 3), (2, 2)];
+        for (draw, discard) in shapes {
+            let deck = piles(draw, discard);
+            assert!(
+                deck.has_draw_capacity(0),
+                "draw {draw}, discard {discard} still has room for zero draws"
+            );
+        }
+    }
+
+    /// The draw pile counts. Cards past it do not. An empty discard adds nothing.
+    #[test]
+    fn test_has_draw_capacity_counts_the_draw_pile() {
+        let deck = piles(4, 0);
+        assert!(deck.has_draw_capacity(4));
+        assert!(!deck.has_draw_capacity(5));
+        assert_eq!(sequential_one_card_draws(&deck), 4);
+    }
+
+    /// One leftover discard card is one draw. The draw after that is empty.
+    #[test]
+    fn test_has_draw_capacity_last_card_is_one_draw() {
+        let deck = piles(0, 1);
+        assert!(deck.has_draw_capacity(1));
+        assert!(!deck.has_draw_capacity(2));
+        assert_eq!(sequential_one_card_draws(&deck), 1);
+    }
+
+    /// Two leftover discard cards are a LastTwo split, not two one-card draws.
+    #[test]
+    fn test_has_draw_capacity_rejects_last_two() {
+        let deck = piles(0, 2);
+        assert!(!deck.has_draw_capacity(1));
+        assert!(!deck.has_draw_capacity(2));
+        assert_eq!(sequential_one_card_draws(&deck), 0);
+    }
+
+    /// Three discard cards recycle. Four do too. Every one of them is a one-card draw.
+    #[test]
+    fn test_has_draw_capacity_counts_a_reshuffle_of_three_or_more() {
+        for discard in [3usize, 4, 6] {
+            let deck = piles(0, discard);
+            assert!(
+                deck.has_draw_capacity(discard),
+                "discard {discard} recycles into that many one-card draws"
+            );
+            assert!(!deck.has_draw_capacity(discard + 1));
+            assert_eq!(sequential_one_card_draws(&deck), discard);
+        }
+    }
+
+    /// Draw-pile cards come first. Two discard cards after that pile still block.
+    #[test]
+    fn test_has_draw_capacity_stops_before_last_two_after_the_draw_pile() {
+        let deck = piles(2, 2);
+        assert!(deck.has_draw_capacity(2));
+        assert!(!deck.has_draw_capacity(3));
+        assert_eq!(sequential_one_card_draws(&deck), 2);
+    }
+
+    /// One draw-pile card and one discard card are two draws: an ordinary card, then the last card.
+    #[test]
+    fn test_has_draw_capacity_one_draw_then_last_card() {
+        let deck = piles(1, 1);
+        assert!(deck.has_draw_capacity(2));
+        assert!(!deck.has_draw_capacity(3));
+        assert_eq!(sequential_one_card_draws(&deck), 2);
+    }
+
+    /// A draw pile plus a discard of three or more counts every card in both piles.
+    #[test]
+    fn test_has_draw_capacity_counts_draw_pile_then_reshuffle() {
+        let deck = piles(4, 3);
+        assert!(deck.has_draw_capacity(7));
+        assert!(!deck.has_draw_capacity(8));
+        assert_eq!(sequential_one_card_draws(&deck), 7);
+    }
+
+    /// The same pile shapes agree with real sequential draws. The piles stay put.
+    #[test]
+    fn test_has_draw_capacity_matches_sequential_draws_without_changing_piles() {
+        let shapes = [
+            (0, 0),
+            (1, 0),
+            (5, 0),
+            (0, 1),
+            (0, 2),
+            (0, 3),
+            (0, 4),
+            (0, 8),
+            (1, 1),
+            (1, 2),
+            (2, 2),
+            (3, 1),
+            (1, 3),
+            (4, 3),
+            (2, 5),
+        ];
+        for (draw, discard) in shapes {
+            let deck = piles(draw, discard);
+            let before = deck.clone();
+            let available = sequential_one_card_draws(&deck);
+            assert!(
+                deck.has_draw_capacity(available),
+                "draw {draw}, discard {discard} holds {available}"
+            );
+            assert!(
+                !deck.has_draw_capacity(available + 1),
+                "draw {draw}, discard {discard} does not hold {} draws",
+                available + 1
+            );
+            assert_eq!(deck, before, "draw {draw}, discard {discard} stays put");
+            assert!(
+                deck.has_draw_capacity(available),
+                "a second look still reports {available}"
+            );
+        }
+    }
+
+    fn piles(draw: usize, discard: usize) -> Deck {
+        let mut cards = Vec::new();
+        for id in 0..draw as u32 {
+            cards.push(sample(id, Suit::Hearts, Rank::Five));
+        }
+        let mut thrown = Vec::new();
+        for id in 0..discard as u32 {
+            thrown.push(sample(1_000 + id, Suit::Spades, Rank::King));
+        }
+        Deck {
+            cards,
+            discard: thrown,
+        }
+    }
+
+    /// How many [`TurnDraw::One`] or [`TurnDraw::LastCard`] draws happen before
+    /// [`TurnDraw::LastTwo`] or [`TurnDraw::Empty`].
+    fn sequential_one_card_draws(deck: &Deck) -> usize {
+        let mut trial = deck.clone();
+        let mut rng = rand::rngs::StdRng::seed_from_u64(1);
+        let mut count = 0;
+        loop {
+            match trial.draw_with(&mut rng) {
+                TurnDraw::One(_) | TurnDraw::LastCard(_) => count += 1,
+                TurnDraw::LastTwo { .. } | TurnDraw::Empty => return count,
+            }
         }
     }
 }

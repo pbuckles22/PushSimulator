@@ -11,6 +11,7 @@ pub mod game_state;
 pub mod legal_moves;
 pub mod player;
 pub mod random_bot;
+pub mod resolution;
 pub mod validation;
 
 #[cfg(test)]

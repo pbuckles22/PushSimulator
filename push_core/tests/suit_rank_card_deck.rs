@@ -4,13 +4,18 @@
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 
-use push_core::actions::{Action, MeldHit, WildSteal};
+use push_core::actions::{validate_action, Action, MeldHit, WildSteal};
 use push_core::card::{Card, Rank, Suit};
 use push_core::deck::{Deck, TurnDraw};
 use push_core::game_state::{GameState, TurnPhase};
-use push_core::legal_moves::generate_legal_moves;
+use push_core::legal_moves::{
+    generate_legal_moves, visit_legal_kind, visit_legal_moves, LegalKind,
+};
 use push_core::player::{deal_initial_hands, Player};
 use push_core::random_bot::play_random_turn;
+use push_core::resolution::{
+    invalid_resolution, ActionPlan, ActionResolution, GameError, RejectionPlan,
+};
 use push_core::validation::{check_round_requirements, validate_run, validate_set};
 
 const DECKS: usize = 2;
@@ -5024,6 +5029,462 @@ fn test_suit_rank_card_deck_new_is_wild_seeded_shuffle_deal_random_turn_penalty_
     assert_eq!(left.round_number, 1);
     same_ids(&ids_of(&cards_on_table(&left)), &original);
     assert_wilds(&cards_on_table(&left));
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → has_draw_capacity → draw.
+/// A full shoe can supply one card per card in the shoe. The query leaves both piles.
+/// Drawing that many cards empties the shoe. One more card is not there.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_has_draw_capacity_matches_sequential_draws() {
+    let deck = shuffled_deck();
+    let before = deck.clone();
+    let size = deck_size();
+
+    assert!(deck.has_draw_capacity(size));
+    assert!(!deck.has_draw_capacity(size + 1));
+    assert_eq!(deck, before);
+
+    let mut live = deck.clone();
+    let mut rng = StdRng::seed_from_u64(2);
+    for drawn in 0..size {
+        assert!(
+            live.has_draw_capacity(size - drawn),
+            "after {drawn} draws, {remaining} cards remain",
+            remaining = size - drawn
+        );
+        assert!(!live.has_draw_capacity(size - drawn + 1));
+        assert!(matches!(live.draw_with(&mut rng), TurnDraw::One(_)));
+    }
+    assert!(live.has_draw_capacity(0));
+    assert!(!live.has_draw_capacity(1));
+    assert_eq!(live.draw_with(&mut rng), TurnDraw::Empty);
+    assert!(live.cards.is_empty());
+    assert!(live.discard.is_empty());
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → two cards on the discard → has_draw_capacity → LastTwo.
+/// Those two cards are not one-card draws. The query leaves the piles. The next draw splits them.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_has_draw_capacity_rejects_last_two() {
+    let mut deck = shuffled_deck();
+    let mut held = Vec::new();
+    loop {
+        match deck.draw_with(&mut StdRng::seed_from_u64(1)) {
+            TurnDraw::One(card) => held.push(card),
+            TurnDraw::Empty => break,
+            other => panic!("an empty discard drains one card at a time, got {other:?}"),
+        }
+    }
+    assert_eq!(held.len(), deck_size());
+    let first = held[0];
+    let second = held[1];
+    deck.discard = vec![first, second];
+    assert!(deck.cards.is_empty());
+    let before = deck.clone();
+
+    assert!(deck.has_draw_capacity(0));
+    assert!(!deck.has_draw_capacity(1));
+    assert!(!deck.has_draw_capacity(2));
+    assert_eq!(deck, before);
+
+    let TurnDraw::LastTwo { current, next } = deck.draw_with(&mut StdRng::seed_from_u64(9)) else {
+        panic!("two leftover discard cards split");
+    };
+    let mut got = [current.id, next.id];
+    got.sort_unstable();
+    let mut expect = [first.id, second.id];
+    expect.sort_unstable();
+    assert_eq!(got, expect);
+    assert!(deck.cards.is_empty());
+    assert!(deck.discard.is_empty());
+    assert!(!deck.has_draw_capacity(1));
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → draw pile, then two discards → has_draw_capacity → LastTwo.
+/// Only the draw pile counts. After those cards, the leftover pair splits.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_has_draw_capacity_stops_at_last_two() {
+    let mut deck = shuffled_deck();
+    let top = deck.cards.pop().expect("a shuffled shoe has a top card");
+    let under = deck.cards.pop().expect("a shuffled shoe has a second card");
+    deck.discard = vec![under, top];
+    let draw_len = deck.cards.len();
+    assert_eq!(draw_len, deck_size() - 2);
+    let before = deck.clone();
+
+    assert!(deck.has_draw_capacity(draw_len));
+    assert!(!deck.has_draw_capacity(draw_len + 1));
+    assert!(!deck.has_draw_capacity(draw_len + 2));
+    assert_eq!(deck, before);
+
+    let mut rng = StdRng::seed_from_u64(3);
+    for _ in 0..draw_len {
+        assert!(matches!(deck.draw_with(&mut rng), TurnDraw::One(_)));
+    }
+    assert!(matches!(deck.draw_with(&mut rng), TurnDraw::LastTwo { .. }));
+    assert!(deck.cards.is_empty());
+    assert!(deck.discard.is_empty());
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → three or more on the discard → has_draw_capacity → reshuffle draws.
+/// Every discarded card is a one-card draw. The query leaves the piles. No draw is a LastTwo split.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_has_draw_capacity_counts_reshuffle() {
+    let mut deck = shuffled_deck();
+    let mut held = Vec::new();
+    loop {
+        match deck.draw_with(&mut StdRng::seed_from_u64(1)) {
+            TurnDraw::One(card) => held.push(card),
+            TurnDraw::Empty => break,
+            other => panic!("an empty discard drains one card at a time, got {other:?}"),
+        }
+    }
+    deck.discard = held;
+    assert!(deck.discard.len() >= 3);
+    assert!(deck.cards.is_empty());
+    let count = deck.discard.len();
+    let before = deck.clone();
+
+    assert!(deck.has_draw_capacity(count));
+    assert!(!deck.has_draw_capacity(count + 1));
+    assert_eq!(deck, before);
+
+    let mut rng = StdRng::seed_from_u64(4);
+    let mut drawn = 0;
+    loop {
+        match deck.draw_with(&mut rng) {
+            TurnDraw::One(_) | TurnDraw::LastCard(_) => drawn += 1,
+            TurnDraw::Empty => break,
+            TurnDraw::LastTwo { .. } => {
+                panic!("a discard of three or more never splits as LastTwo")
+            }
+        }
+    }
+    assert_eq!(drawn, count);
+    assert!(!deck.has_draw_capacity(1));
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → one draw-pile card and one discard → has_draw_capacity → LastCard.
+/// Two cards split across the piles are two one-card draws. The second draw is the last card, not a LastTwo split.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_has_draw_capacity_one_then_last_card() {
+    let mut deck = shuffled_deck();
+    let drawn = deck.cards.pop().expect("a shuffled shoe has a top card");
+    let last = deck.cards.pop().expect("a shuffled shoe has a second card");
+    deck.cards.clear();
+    deck.cards.push(drawn);
+    deck.discard = vec![last];
+    let before = deck.clone();
+
+    assert!(deck.has_draw_capacity(2));
+    assert!(!deck.has_draw_capacity(3));
+    assert_eq!(deck, before);
+
+    let mut rng = StdRng::seed_from_u64(5);
+    assert_eq!(deck.draw_with(&mut rng), TurnDraw::One(drawn));
+    assert!(deck.has_draw_capacity(1));
+    assert!(!deck.has_draw_capacity(2));
+    assert_eq!(deck.draw_with(&mut rng), TurnDraw::LastCard(last));
+    assert_eq!(deck.draw_with(&mut rng), TurnDraw::Empty);
+    assert!(!deck.has_draw_capacity(1));
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal → invalid actor.
+/// A seat past the table is Invalid. The query leaves the dealt table.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_invalid_actor() {
+    let mut deck = shuffled_deck();
+    let players = deal_table(&mut deck, 2);
+    let top = deck.cards.pop().expect("the dealt shoe still has a card");
+    deck.discard.push(top);
+    let state = GameState::new(players, deck);
+    let before = state.clone();
+    let out = GameError::ActorOutOfRange { actor: 2, seats: 2 };
+
+    assert_eq!(
+        invalid_resolution(&state, 2, &Action::TakeDiscard),
+        Some(ActionResolution::Invalid(out))
+    );
+    assert_eq!(
+        invalid_resolution(&state, 2, &Action::PushDiscard),
+        Some(ActionResolution::Invalid(out))
+    );
+    assert_eq!(invalid_resolution(&state, 0, &Action::TakeDiscard), None);
+    assert!(same_table(&state, &before));
+    assert_wilds(&cards_on_table(&state));
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → one seat → push.
+/// Push with one seat is Invalid before the piles are read. Take is not that error.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_one_seat_push_is_invalid() {
+    let mut deck = shuffled_deck();
+    let top = deck.cards.pop().expect("a shuffled shoe has a top card");
+    deck.discard.push(top);
+    let state = GameState::new(vec![Player::new(1, 0)], deck);
+    let before = state.clone();
+
+    assert_eq!(
+        invalid_resolution(&state, 0, &Action::PushDiscard),
+        Some(ActionResolution::Invalid(GameError::FewerThanTwoPlayers {
+            seats: 1
+        }))
+    );
+    assert_eq!(
+        invalid_resolution(&state, 4, &Action::PushDiscard),
+        Some(ActionResolution::Invalid(GameError::FewerThanTwoPlayers {
+            seats: 1
+        }))
+    );
+    assert_eq!(invalid_resolution(&state, 0, &Action::TakeDiscard), None);
+    assert!(same_table(&state, &before));
+    assert_wilds(&cards_on_table(&state));
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal → empty discard.
+/// Take and push are Invalid. A meld is not. A closed round is not, even with an empty discard.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_empty_discard_is_invalid() {
+    let mut deck = shuffled_deck();
+    let players = deal_table(&mut deck, 2);
+    assert!(deck.discard.is_empty());
+    assert!(deck.has_draw_capacity(deck.cards.len()));
+    let mut state = GameState::new(players, deck);
+    let before = state.clone();
+
+    assert_eq!(
+        invalid_resolution(&state, 0, &Action::TakeDiscard),
+        Some(ActionResolution::Invalid(GameError::EmptyDiscard))
+    );
+    assert_eq!(
+        invalid_resolution(&state, 1, &Action::PushDiscard),
+        Some(ActionResolution::Invalid(GameError::EmptyDiscard))
+    );
+    assert_eq!(
+        invalid_resolution(&state, 0, &Action::PlayMeld(Vec::new())),
+        None
+    );
+    state.round_over = true;
+    assert_eq!(invalid_resolution(&state, 0, &Action::TakeDiscard), None);
+    state.round_over = false;
+    assert!(same_table(&state, &before));
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal → has_draw_capacity → push draws.
+/// After the discard top is set aside, fewer than two one-card draws is Invalid.
+/// The available count is what `has_draw_capacity` reports. A stocked pile is not Invalid.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_push_without_two_draws_is_invalid() {
+    let mut deck = shuffled_deck();
+    let players = deal_table(&mut deck, 2);
+    let state = GameState::new(players, deck);
+
+    let short = piles_from(&state, 1, 1);
+    assert_eq!(draws_after_pop(&short.deck), 1);
+    assert_eq!(
+        invalid_resolution(&short, 0, &Action::PushDiscard),
+        Some(ActionResolution::Invalid(GameError::InsufficientDraws {
+            available: 1
+        }))
+    );
+
+    let last_two = piles_from(&state, 0, 3);
+    assert_eq!(draws_after_pop(&last_two.deck), 0);
+    assert!(!{
+        let mut popped = last_two.deck.clone();
+        popped.discard.pop();
+        popped.has_draw_capacity(1)
+    });
+    assert_eq!(
+        invalid_resolution(&last_two, 0, &Action::PushDiscard),
+        Some(ActionResolution::Invalid(GameError::InsufficientDraws {
+            available: 0
+        }))
+    );
+
+    let stocked = piles_from(&state, 2, 1);
+    assert!(draws_after_pop(&stocked.deck) >= 2);
+    assert_eq!(invalid_resolution(&stocked, 0, &Action::PushDiscard), None);
+    assert_wilds(&cards_on_table(&stocked));
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal → validate_action → apply_with_rng.
+/// A take is accepted, then applied. A push with one seed repeats. A fitting discard is rejected
+/// into penalty drawing. An empty discard is Invalid and apply leaves the table.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_validate_action_apply_with_rng() {
+    let mut deck = shuffled_deck();
+    let players = deal_table(&mut deck, 2);
+    let top = deck.cards.pop().expect("the dealt shoe still has a card");
+    deck.discard.push(top);
+    let mut state = GameState::new(players, deck);
+    let before = state.clone();
+
+    assert_eq!(
+        validate_action(&state, 0, &Action::TakeDiscard),
+        ActionResolution::Accepted(ActionPlan::TakeDiscard)
+    );
+    assert!(same_table(&state, &before));
+    assert!(state.apply_with_rng(Action::TakeDiscard, 0, &mut StdRng::seed_from_u64(1)));
+    assert_eq!(state.players[0].hand.len(), 11);
+    assert_eq!(state.drawn_card_id, Some(top.id));
+    assert!(state.players[0].hand.contains(&top));
+
+    let mut push_left = state.clone();
+    let pushed = push_left
+        .deck
+        .cards
+        .pop()
+        .expect("the shoe still has a draw card");
+    push_left.deck.discard.push(pushed);
+    assert!(push_left.deck.has_draw_capacity(2));
+    assert_eq!(
+        validate_action(&push_left, 0, &Action::PushDiscard),
+        ActionResolution::Accepted(ActionPlan::PushDiscard)
+    );
+    let mut push_right = push_left.clone();
+    assert!(push_left.apply_with_rng(Action::PushDiscard, 0, &mut StdRng::seed_from_u64(4)));
+    assert!(push_right.apply_with_rng(Action::PushDiscard, 0, &mut StdRng::seed_from_u64(4)));
+    assert_eq!(push_left.players, push_right.players);
+    assert_eq!(push_left.deck, push_right.deck);
+    assert_eq!(push_left.drawn_card_id, push_right.drawn_card_id);
+
+    let seven = pull_card(&mut state, Suit::Hearts, Rank::Seven);
+    let mut board = vec![
+        pull_card(&mut state, Suit::Spades, Rank::Seven),
+        pull_card(&mut state, Suit::Clubs, Rank::Seven),
+        pull_card(&mut state, Suit::Diamonds, Rank::Seven),
+    ];
+    state.players[0].hand.push(seven);
+    state.board = vec![board.split_off(0)];
+    state.drawn_card_id = None;
+    assert!(!state.players[0].is_on_board);
+    assert_eq!(
+        validate_action(&state, 0, &Action::DiscardCard(seven)),
+        ActionResolution::Rejected(RejectionPlan::StartPenaltyDraw { seat: 0 })
+    );
+    assert!(!state.apply_with_rng(Action::DiscardCard(seven), 0, &mut StdRng::seed_from_u64(1)));
+    assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+    assert_eq!(state.penalty_seat, Some(0));
+    assert!(state.players[0].hand.contains(&seven));
+
+    state.deck.cards.append(&mut state.deck.discard);
+    let before = state.clone();
+    assert_eq!(
+        validate_action(&state, 0, &Action::TakeDiscard),
+        ActionResolution::Invalid(GameError::EmptyDiscard)
+    );
+    assert!(!state.apply_with_rng(Action::TakeDiscard, 0, &mut StdRng::seed_from_u64(1)));
+    assert!(same_table(&state, &before));
+    assert_wilds(&cards_on_table(&state));
+}
+
+/// Chain: Suit → Rank → Card → Deck::new → is_wild → shuffle → deal → visit_legal_moves.
+/// The visitor matches the compatibility list as a multiset. A hit visit lists no lay-down.
+/// A wild taken from that shoe is still part of a visited lay-down.
+#[test]
+fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_visit_legal_moves_matches_generate() {
+    let mut deck = shuffled_deck();
+    let players = deal_table(&mut deck, 2);
+    let state = GameState::new(players, deck);
+    let listed = generate_legal_moves(&state, 0);
+    let mut visited = Vec::new();
+    visit_legal_moves(&state, 0, &mut |action| visited.push(action));
+    assert_eq!(visited.len(), listed.len());
+    assert_eq!(sorted_actions(&visited), sorted_actions(&listed));
+
+    let mut hits = Vec::new();
+    visit_legal_kind(&state, 0, LegalKind::Hit, &mut |action| hits.push(action));
+    assert!(hits
+        .iter()
+        .all(|action| matches!(action, Action::HitMeld(_))));
+    assert!(hits
+        .iter()
+        .all(|action| !matches!(action, Action::PlayMeld(_))));
+
+    let mut wild = state;
+    let joker = pull_card(&mut wild, Suit::None, Rank::Joker);
+    let four_h = pull_card(&mut wild, Suit::Hearts, Rank::Four);
+    let four_s = pull_card(&mut wild, Suit::Spades, Rank::Four);
+    let five_h = pull_card(&mut wild, Suit::Hearts, Rank::Five);
+    let five_s = pull_card(&mut wild, Suit::Spades, Rank::Five);
+    let five_c = pull_card(&mut wild, Suit::Clubs, Rank::Five);
+    wild.players[0].hand = vec![joker, four_h, four_s, five_h, five_s, five_c];
+    wild.players[0].is_on_board = false;
+    let mut plays = Vec::new();
+    visit_legal_kind(&wild, 0, LegalKind::Play, &mut |action| plays.push(action));
+    assert!(plays.iter().any(|action| {
+        matches!(action, Action::PlayMeld(melds) if melds.iter().flatten().any(|card| card.is_wild()))
+    }));
+    assert_wilds(&cards_on_table(&wild));
+}
+
+fn sorted_actions(actions: &[Action]) -> Vec<String> {
+    let mut keys: Vec<String> = actions.iter().map(|action| format!("{action:?}")).collect();
+    keys.sort();
+    keys
+}
+
+fn pull_card(state: &mut GameState, suit: Suit, rank: Rank) -> Card {
+    for player in &mut state.players {
+        if let Some(index) = player
+            .hand
+            .iter()
+            .position(|card| card.suit == suit && card.rank == rank)
+        {
+            return player.hand.remove(index);
+        }
+    }
+    if let Some(index) = state
+        .deck
+        .cards
+        .iter()
+        .position(|card| card.suit == suit && card.rank == rank)
+    {
+        return state.deck.cards.remove(index);
+    }
+    if let Some(index) = state
+        .deck
+        .discard
+        .iter()
+        .position(|card| card.suit == suit && card.rank == rank)
+    {
+        return state.deck.discard.remove(index);
+    }
+    panic!("the shoe has {rank:?} of {suit:?}");
+}
+
+fn piles_from(state: &GameState, draw: usize, discard: usize) -> GameState {
+    let mut next = state.clone();
+    let mut shoe = std::mem::take(&mut next.deck.cards);
+    shoe.append(&mut next.deck.discard);
+    assert!(shoe.len() >= draw + discard);
+    next.deck.discard = shoe.split_off(shoe.len() - discard);
+    next.deck.cards = shoe.split_off(shoe.len() - draw);
+    next.players[0].hand.append(&mut shoe);
+    next
+}
+
+fn draws_after_pop(deck: &Deck) -> usize {
+    let mut deck = deck.clone();
+    deck.discard.pop().expect("the discard has a top card");
+    let mut available = 0;
+    while deck.has_draw_capacity(available + 1) {
+        available += 1;
+    }
+    available
+}
+
+fn same_table(left: &GameState, right: &GameState) -> bool {
+    left.players == right.players
+        && left.deck == right.deck
+        && left.round_number == right.round_number
+        && left.board == right.board
+        && left.turn_counter == right.turn_counter
+        && left.drawn_card_id == right.drawn_card_id
+        && left.turn_phase == right.turn_phase
+        && left.penalty_seat == right.penalty_seat
+        && left.round_over == right.round_over
 }
 
 fn chain_push_next_hand(before: &GameState, seed: u64) -> Vec<Card> {

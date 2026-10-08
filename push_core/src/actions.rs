@@ -6,6 +6,7 @@ use crate::card::{Card, Rank, Suit};
 use crate::deck::{Deck, TurnDraw};
 use crate::game_state::{GameState, TurnPhase};
 use crate::player::Player;
+use crate::resolution::{invalid_resolution, ActionPlan, ActionResolution, RejectionPlan};
 use crate::validation::{card_can_be_played, check_round_requirements, validate_run, validate_set};
 
 /// A player choice during a turn.
@@ -100,42 +101,203 @@ impl GameState {
     /// Once `round_over` is set, every action is refused and the table stays.
     /// A push and a penalty draw shuffle with the thread rng.
     /// [`Self::apply_with_rng`] uses the caller's rng for those draws.
+    /// An invalid action returns false and leaves the table as it was.
     pub fn apply(&mut self, action: Action, actor_index: usize) -> bool {
         self.apply_with_rng(action, actor_index, &mut rand::thread_rng())
     }
 
     /// Runs `action` for the player at `actor_index`, using `rng` when a pile is shuffled.
     ///
-    /// Same results as [`Self::apply`]. Take, meld, hit, steal, and discard do not draw.
-    /// A push draws the penalty card and the turn card through `rng`. A penalty draw does too.
-    /// The same seed repeats those draws.
+    /// [`validate_action`] decides first, without cloning the table. An accepted plan
+    /// commits and returns true. A rejected plan commits only its refusal effect and
+    /// returns false. An invalid plan does not change the table and returns false.
+    /// Take, meld, hit, steal, and discard do not draw. A push draws the penalty card
+    /// and the turn card through `rng`. A penalty draw does too. The same seed repeats those draws.
     pub fn apply_with_rng(
         &mut self,
         action: Action,
         actor_index: usize,
         rng: &mut impl Rng,
     ) -> bool {
-        if self.round_over {
-            return false;
-        }
-        match action {
-            Action::TakeDiscard => {
-                Action::TakeDiscard.apply(&mut self.players, actor_index, &mut self.deck);
-                self.drawn_card_id = self.players[actor_index].hand.last().map(|card| card.id);
+        match validate_action(self, actor_index, &action) {
+            ActionResolution::Invalid(_) => false,
+            ActionResolution::Rejected(RejectionPlan::Unchanged) => false,
+            ActionResolution::Rejected(RejectionPlan::StartPenaltyDraw { seat }) => {
+                self.turn_phase = TurnPhase::PenaltyDrawing;
+                self.penalty_seat = Some(seat);
+                false
+            }
+            ActionResolution::Accepted(plan) => {
+                commit_plan(self, actor_index, plan, rng);
                 true
             }
-            Action::PushDiscard => {
-                push_discard(&mut self.players, actor_index, &mut self.deck, rng);
-                self.drawn_card_id = self.players[actor_index].hand.last().map(|card| card.id);
-                true
-            }
-            Action::PlayMeld(melds) => play_meld(self, actor_index, &melds),
-            Action::HitMeld(hits) => hit_meld(self, actor_index, &hits),
-            Action::StealWild(steal) => steal_wild(self, actor_index, &steal),
-            Action::DiscardCard(card) => discard_card(self, actor_index, card),
-            Action::DrawFromDeck => draw_from_deck(self, actor_index, rng),
         }
     }
+}
+
+/// Classifies `action` for `actor` without changing `state` and without cloning it.
+///
+/// A closed round is [`RejectionPlan::Unchanged`]. A move [`GameState::apply`] would
+/// panic on is [`ActionResolution::Invalid`]. A fitting off-board discard that opens
+/// penalty drawing is [`RejectionPlan::StartPenaltyDraw`]. Anything else `apply` would
+/// refuse without changing the table is [`RejectionPlan::Unchanged`].
+pub fn validate_action(state: &GameState, actor: usize, action: &Action) -> ActionResolution {
+    if state.round_over {
+        return unchanged();
+    }
+    if let Some(resolution) = invalid_resolution(state, actor, action) {
+        return resolution;
+    }
+    match action {
+        Action::TakeDiscard => ActionResolution::Accepted(ActionPlan::TakeDiscard),
+        Action::PushDiscard => ActionResolution::Accepted(ActionPlan::PushDiscard),
+        Action::PlayMeld(melds) => validate_play(state, actor, melds),
+        Action::HitMeld(hits) => validate_hit(state, actor, hits),
+        Action::StealWild(steal) => validate_steal(state, actor, steal),
+        Action::DiscardCard(card) => validate_discard(state, actor, *card),
+        Action::DrawFromDeck => validate_draw(state, actor),
+    }
+}
+
+fn unchanged() -> ActionResolution {
+    ActionResolution::Rejected(RejectionPlan::Unchanged)
+}
+
+fn validate_play(state: &GameState, actor: usize, melds: &[Vec<Card>]) -> ActionResolution {
+    if state.players[actor].is_on_board {
+        return unchanged();
+    }
+    if melds
+        .iter()
+        .flatten()
+        .any(|card| !card_can_be_played(card, state.turn_counter))
+    {
+        return unchanged();
+    }
+    if !check_round_requirements(state.round_number, melds) {
+        return unchanged();
+    }
+    if hand_without(&state.players[actor].hand, melds).is_none() {
+        return unchanged();
+    }
+    ActionResolution::Accepted(ActionPlan::PlayMeld(melds.to_vec()))
+}
+
+fn validate_hit(state: &GameState, actor: usize, hits: &[MeldHit]) -> ActionResolution {
+    if hits.is_empty() || !state.players[actor].is_on_board {
+        return unchanged();
+    }
+    if hits
+        .iter()
+        .flat_map(|hit| &hit.cards)
+        .any(|card| !card_can_be_played(card, state.turn_counter))
+    {
+        return unchanged();
+    }
+    let mut extras = vec![Vec::new(); state.board.len()];
+    let mut removing = Vec::new();
+    for hit in hits {
+        if hit.cards.is_empty() {
+            return unchanged();
+        }
+        let Some(extra) = extras.get_mut(hit.meld_index) else {
+            return unchanged();
+        };
+        extra.extend(hit.cards.iter().copied());
+        removing.extend(hit.cards.iter().copied());
+    }
+    for (meld, extra) in state.board.iter().zip(&extras) {
+        if extra.is_empty() {
+            continue;
+        }
+        let mut with = Vec::with_capacity(meld.len() + extra.len());
+        with.extend(meld.iter().copied());
+        with.extend(extra.iter().copied());
+        if !validate_set(&with) && !validate_run(&with) {
+            return unchanged();
+        }
+    }
+    if hand_without(&state.players[actor].hand, &[removing]).is_none() {
+        return unchanged();
+    }
+    ActionResolution::Accepted(ActionPlan::HitMeld(hits.to_vec()))
+}
+
+fn validate_steal(state: &GameState, actor: usize, steal: &WildSteal) -> ActionResolution {
+    if !state.players[actor].is_on_board || steal.natural.is_wild() || !steal.wild.is_wild() {
+        return unchanged();
+    }
+    if !card_can_be_played(&steal.natural, state.turn_counter) {
+        return unchanged();
+    }
+    let Some(meld) = state.board.get(steal.meld_index) else {
+        return unchanged();
+    };
+    let Some(wild_at) = meld.iter().position(|card| card == &steal.wild) else {
+        return unchanged();
+    };
+    if meld.iter().any(|card| card.id == steal.natural.id)
+        || !natural_replaces_wild(meld, &steal.natural)
+    {
+        return unchanged();
+    }
+    if hand_without(&state.players[actor].hand, &[vec![steal.natural]]).is_none() {
+        return unchanged();
+    }
+    let mut replaced = meld.to_vec();
+    replaced[wild_at] = steal.natural;
+    if !validate_set(&replaced) && !validate_run(&replaced) {
+        return unchanged();
+    }
+    ActionResolution::Accepted(ActionPlan::StealWild(*steal))
+}
+
+fn validate_discard(state: &GameState, actor: usize, card: Card) -> ActionResolution {
+    if !state.players[actor].hand.contains(&card) {
+        return unchanged();
+    }
+    let quick = state.drawn_card_id == Some(card.id);
+    if !state.players[actor].is_on_board
+        && !quick
+        && card_fits_board(&state.board, &card, state.turn_counter)
+    {
+        if state.penalty_seat.is_none() || state.penalty_seat == Some(actor) {
+            return ActionResolution::Rejected(RejectionPlan::StartPenaltyDraw { seat: actor });
+        }
+        return unchanged();
+    }
+    ActionResolution::Accepted(ActionPlan::DiscardCard(card))
+}
+
+fn validate_draw(state: &GameState, actor: usize) -> ActionResolution {
+    if state.turn_phase != TurnPhase::PenaltyDrawing || state.penalty_seat != Some(actor) {
+        return unchanged();
+    }
+    if state.deck.cards.is_empty() && state.deck.discard.is_empty() {
+        return unchanged();
+    }
+    ActionResolution::Accepted(ActionPlan::DrawFromDeck)
+}
+
+fn commit_plan(state: &mut GameState, actor: usize, plan: ActionPlan, rng: &mut impl Rng) {
+    let committed = match plan {
+        ActionPlan::TakeDiscard => {
+            Action::TakeDiscard.apply(&mut state.players, actor, &mut state.deck);
+            state.drawn_card_id = state.players[actor].hand.last().map(|card| card.id);
+            true
+        }
+        ActionPlan::PushDiscard => {
+            push_discard(&mut state.players, actor, &mut state.deck, rng);
+            state.drawn_card_id = state.players[actor].hand.last().map(|card| card.id);
+            true
+        }
+        ActionPlan::PlayMeld(melds) => play_meld(state, actor, &melds),
+        ActionPlan::HitMeld(hits) => hit_meld(state, actor, &hits),
+        ActionPlan::StealWild(steal) => steal_wild(state, actor, &steal),
+        ActionPlan::DiscardCard(card) => discard_card(state, actor, card),
+        ActionPlan::DrawFromDeck => draw_from_deck(state, actor, rng),
+    };
+    assert!(committed, "an accepted plan commits");
 }
 
 /// Places one card from the actor's hand onto the discard pile.

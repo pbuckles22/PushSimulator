@@ -46,22 +46,22 @@ Execute the following using strict Red/Green/Refactor TDD.
 
 ### Phase 1: Safe Validation Architecture
 
-* [ ] **Sequential Capacity Model:** Implement `Deck::has_draw_capacity(count: usize) -> bool`. This must correctly model sequential draws/reshuffles to reject boundaries.
-* [ ] **Resolution Types:** Define `ActionPlan` (intents), `RejectionPlan` (penalty state mutations), `GameError`, and the `ActionResolution` enum.
-* [ ] **Panic Boundary Tests:** Write explicit tests for invalid actors, fewer than two players, empty discards, and insufficient drawable cards. Prove they return `Invalid` rather than panicking.
+* [x] **Sequential Capacity Model:** Implement `Deck::has_draw_capacity(count: usize) -> bool`. This must correctly model sequential draws/reshuffles to reject boundaries.
+* [x] **Resolution Types:** Define `ActionPlan` (intents), `RejectionPlan` (penalty state mutations), `GameError`, and the `ActionResolution` enum.
+* [x] **Panic Boundary Tests:** Write explicit tests for invalid actors, fewer than two players, empty discards, and insufficient drawable cards. Prove they return `Invalid` rather than panicking.
 
 ### Phase 2: Deterministic Locks & `apply_with_rng`
 
-* [ ] **Implement `validate_action`:** Write the shared validation pathway without cloning.
-* [ ] **Implement `apply_with_rng`:** Refactor mutation to consume the validated plan.
-* [ ] **State Mutation Mapping:** Ensure `Accepted` → commit → returns `true`; `Rejected` → commit rejection effects → returns `false`; `Invalid` → no mutation → returns `false`.
-* [ ] **Lock 1 (Deep Legality & State Match):** Compare `validate_action`/`ActionResolution` and resulting states (penalty transitions, draws, locks, round completion) of the new `apply_with_rng` against the `legacy_apply_with_rng` oracle using identically seeded RNGs. Test invalid/panic states separately.
+* [x] **Implement `validate_action`:** Write the shared validation pathway without cloning.
+* [x] **Implement `apply_with_rng`:** Refactor mutation to consume the validated plan.
+* [x] **State Mutation Mapping:** Ensure `Accepted` → commit → returns `true`; `Rejected` → commit rejection effects → returns `false`; `Invalid` → no mutation → returns `false`.
+* [x] **Lock 1 (Deep Legality & State Match):** Compare `validate_action`/`ActionResolution` and resulting states (penalty transitions, draws, locks, round completion) of the new `apply_with_rng` against the `legacy_apply_with_rng` oracle using identically seeded RNGs. Test invalid/panic states separately.
 
 ### Phase 3: Lazy Generation & Admissible Pruning
 
-* [ ] **Targeted Pruning Locks:** Write specific tests to prove pruning admissibility against wild cards, ace-high/low runs, duplicate cards, all-wild melds, and rounds requiring repeated meld types.
-* [ ] **Lazy Iterator API:** Refactor generation to use an iterator/callback API. Update bots to use targeted searches instead of generating all combinations.
-* [ ] **Lock 2 (Completeness via Multisets):** Compare the exact output of the new generator against the old generator on bounded hands. The equality assertion **must** compare them as multisets to prevent sets from concealing duplicate generation.
+* [x] **Targeted Pruning Locks:** Write specific tests to prove pruning admissibility against wild cards, ace-high/low runs, duplicate cards, all-wild melds, and rounds requiring repeated meld types.
+* [x] **Lazy Iterator API:** Refactor generation to use an iterator/callback API. Update bots to use targeted searches instead of generating all combinations.
+* [x] **Lock 2 (Completeness via Multisets):** Compare the exact output of the new generator against the old generator on bounded hands. The equality assertion **must** compare them as multisets to prevent sets from concealing duplicate generation.
 
 ### Phase 4: Cargo Benchmarks & Throughput Gates
 

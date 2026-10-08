@@ -2,58 +2,122 @@
 
 use std::collections::HashSet;
 
-use crate::actions::{Action, MeldHit, WildSteal};
-use crate::card::Card;
-use crate::deck::{Deck, TurnDraw};
+use crate::actions::{validate_action, Action, MeldHit, WildSteal};
+use crate::card::{Card, Suit};
+use crate::deck::{one_card_draw_count, Deck};
 use crate::game_state::{GameState, TurnPhase};
+use crate::resolution::ActionResolution;
 use crate::validation::{card_can_be_played, check_round_requirements, validate_run, validate_set};
+
+/// Which family of legal actions a search wants.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LegalKind {
+    Take,
+    Push,
+    Play,
+    Hit,
+    Steal,
+    Discard,
+    Draw,
+}
 
 /// Actions [`GameState::apply`] would accept for `actor_index` on this table.
 ///
+/// This is the compatibility list. [`visit_legal_moves`] is the search.
 /// The hand is checked against the board: a hit has to leave a set or a run,
 /// a steal has to replace a wild, and an off-board discard of a card that fits
 /// is left out. The table stays as it was.
 pub fn generate_legal_moves(state: &GameState, actor_index: usize) -> Vec<Action> {
-    if state.round_over || actor_index >= state.players.len() {
-        return Vec::new();
-    }
-
     let mut moves = Vec::new();
-    if !state.deck.discard.is_empty() && accepts(state, actor_index, Action::TakeDiscard) {
-        moves.push(Action::TakeDiscard);
-    }
-    if push_is_legal(&state.deck) {
-        moves.push(Action::PushDiscard);
-    }
-    moves.extend(play_moves(state, actor_index));
-    moves.extend(hit_moves(state, actor_index));
-    moves.extend(steal_moves(state, actor_index));
-    moves.extend(discard_moves(state, actor_index));
-    if state.turn_phase == TurnPhase::PenaltyDrawing
-        && state.penalty_seat == Some(actor_index)
-        && accepts(state, actor_index, Action::DrawFromDeck)
-    {
-        moves.push(Action::DrawFromDeck);
-    }
+    visit_legal_moves(state, actor_index, &mut |action| moves.push(action));
     moves
 }
 
+/// Calls `visit` once for each action [`generate_legal_moves`] would list, in that order.
+pub fn visit_legal_moves(state: &GameState, actor: usize, visit: &mut impl FnMut(Action)) {
+    for kind in [
+        LegalKind::Take,
+        LegalKind::Push,
+        LegalKind::Play,
+        LegalKind::Hit,
+        LegalKind::Steal,
+        LegalKind::Discard,
+        LegalKind::Draw,
+    ] {
+        visit_legal_kind(state, actor, kind, visit);
+    }
+}
+
+/// Calls `visit` for one family of actions, in the same order the full list has them.
+///
+/// A partial meld that already has two natural ranks and two natural suits is skipped.
+/// Adding cards cannot make that group a set or a run. Wilds, ace-high runs, ace-low
+/// runs, duplicate cards, all-wild melds, and a second meld of the same type stay.
+pub fn visit_legal_kind(
+    state: &GameState,
+    actor: usize,
+    kind: LegalKind,
+    visit: &mut impl FnMut(Action),
+) {
+    if state.round_over || actor >= state.players.len() {
+        return;
+    }
+    match kind {
+        LegalKind::Take => {
+            if !state.deck.discard.is_empty() && accepts(state, actor, Action::TakeDiscard) {
+                visit(Action::TakeDiscard);
+            }
+        }
+        LegalKind::Push => {
+            if push_is_legal(&state.deck) {
+                visit(Action::PushDiscard);
+            }
+        }
+        LegalKind::Play => visit_plays(state, actor, visit),
+        LegalKind::Hit => visit_hits(state, actor, visit),
+        LegalKind::Steal => visit_steals(state, actor, visit),
+        LegalKind::Discard => visit_discards(state, actor, visit),
+        LegalKind::Draw => {
+            if state.turn_phase == TurnPhase::PenaltyDrawing
+                && state.penalty_seat == Some(actor)
+                && accepts(state, actor, Action::DrawFromDeck)
+            {
+                visit(Action::DrawFromDeck);
+            }
+        }
+    }
+}
+
 fn accepts(state: &GameState, actor_index: usize, action: Action) -> bool {
-    let mut trial = state.clone();
-    trial.apply(action, actor_index)
+    matches!(
+        validate_action(state, actor_index, &action),
+        ActionResolution::Accepted(_)
+    )
 }
 
 pub(crate) fn push_is_legal(deck: &Deck) -> bool {
-    if deck.discard.is_empty() {
+    let Some(left) = deck.discard.len().checked_sub(1) else {
         return false;
-    }
-    let mut trial = deck.clone();
-    trial.discard.pop();
-    one_card(&mut trial) && one_card(&mut trial)
+    };
+    one_card_draw_count(deck.cards.len(), left) >= 2
 }
 
-fn one_card(deck: &mut Deck) -> bool {
-    matches!(deck.draw(), TurnDraw::One(_) | TurnDraw::LastCard(_))
+/// Two natural ranks and two natural suits cannot become a set or a run.
+fn group_is_dead(cards: &[Card]) -> bool {
+    let mut ranks = Vec::new();
+    let mut suits = Vec::new();
+    for card in cards {
+        if card.is_wild() {
+            continue;
+        }
+        if !ranks.contains(&card.rank) {
+            ranks.push(card.rank);
+        }
+        if card.suit != Suit::None && !suits.contains(&card.suit) {
+            suits.push(card.suit);
+        }
+    }
+    ranks.len() >= 2 && suits.len() >= 2
 }
 
 fn playable_hand(state: &GameState, actor_index: usize) -> Vec<Card> {
@@ -65,67 +129,72 @@ fn playable_hand(state: &GameState, actor_index: usize) -> Vec<Card> {
         .collect()
 }
 
-fn play_moves(state: &GameState, actor_index: usize) -> Vec<Action> {
-    if state.players[actor_index].is_on_board {
-        return Vec::new();
+fn visit_plays(state: &GameState, actor: usize, visit: &mut impl FnMut(Action)) {
+    if state.players[actor].is_on_board {
+        return;
     }
     let groups = match state.round_number {
         1 | 2 | 3 | 5 => 2,
         4 => 3,
-        _ => return Vec::new(),
+        _ => return,
     };
-    let cards = playable_hand(state, actor_index);
+    let cards = playable_hand(state, actor);
     let mut built = vec![Vec::new(); groups];
-    let mut found = Vec::new();
-    assign_plays(state.round_number, &cards, 0, &mut built, &mut found);
-    found
-        .into_iter()
-        .filter(|action| accepts(state, actor_index, action.clone()))
-        .collect()
+    assign_plays(
+        state,
+        actor,
+        state.round_number,
+        &cards,
+        0,
+        &mut built,
+        visit,
+    );
 }
 
 fn assign_plays(
+    state: &GameState,
+    actor: usize,
     round: u8,
     cards: &[Card],
     index: usize,
     groups: &mut [Vec<Card>],
-    found: &mut Vec<Action>,
+    visit: &mut impl FnMut(Action),
 ) {
     if index == cards.len() {
         if groups.iter().all(|group| !group.is_empty()) && check_round_requirements(round, groups) {
-            found.push(Action::PlayMeld(groups.to_vec()));
+            let action = Action::PlayMeld(groups.to_vec());
+            if accepts(state, actor, action.clone()) {
+                visit(action);
+            }
         }
         return;
     }
-    assign_plays(round, cards, index + 1, groups, found);
+    assign_plays(state, actor, round, cards, index + 1, groups, visit);
     for slot in 0..groups.len() {
         groups[slot].push(cards[index]);
-        assign_plays(round, cards, index + 1, groups, found);
+        if !group_is_dead(&groups[slot]) {
+            assign_plays(state, actor, round, cards, index + 1, groups, visit);
+        }
         groups[slot].pop();
     }
 }
 
-fn hit_moves(state: &GameState, actor_index: usize) -> Vec<Action> {
-    if !state.players[actor_index].is_on_board || state.board.is_empty() {
-        return Vec::new();
+fn visit_hits(state: &GameState, actor: usize, visit: &mut impl FnMut(Action)) {
+    if !state.players[actor].is_on_board || state.board.is_empty() {
+        return;
     }
-    let hand = playable_hand(state, actor_index);
+    let hand = playable_hand(state, actor);
     if hand.is_empty() {
-        return Vec::new();
+        return;
     }
     let additions: Vec<Vec<Vec<Card>>> = state
         .board
         .iter()
         .map(|meld| additions(meld, &hand))
         .collect();
-    let mut found = Vec::new();
     let mut hits = Vec::new();
     let mut used = HashSet::new();
-    combine_hits(0, &additions, &mut used, &mut hits, &mut found);
-    found
-        .into_iter()
-        .filter(|action| accepts(state, actor_index, action.clone()))
-        .collect()
+    combine_hits(state, actor, 0, &additions, &mut used, &mut hits, visit);
 }
 
 fn additions(meld: &[Card], hand: &[Card]) -> Vec<Vec<Card>> {
@@ -155,24 +224,38 @@ fn collect_additions(
     }
     collect_additions(meld, hand, index + 1, extra, found);
     extra.push(hand[index]);
-    collect_additions(meld, hand, index + 1, extra, found);
+    if !group_is_dead_with(meld, extra) {
+        collect_additions(meld, hand, index + 1, extra, found);
+    }
     extra.pop();
 }
 
+fn group_is_dead_with(meld: &[Card], extra: &[Card]) -> bool {
+    let mut joined = Vec::with_capacity(meld.len() + extra.len());
+    joined.extend(meld.iter().copied());
+    joined.extend(extra.iter().copied());
+    group_is_dead(&joined)
+}
+
 fn combine_hits(
+    state: &GameState,
+    actor: usize,
     meld_index: usize,
     additions: &[Vec<Vec<Card>>],
     used: &mut HashSet<u32>,
     hits: &mut Vec<MeldHit>,
-    found: &mut Vec<Action>,
+    visit: &mut impl FnMut(Action),
 ) {
     if meld_index == additions.len() {
         if !hits.is_empty() {
-            found.push(Action::HitMeld(hits.clone()));
+            let action = Action::HitMeld(hits.clone());
+            if accepts(state, actor, action.clone()) {
+                visit(action);
+            }
         }
         return;
     }
-    combine_hits(meld_index + 1, additions, used, hits, found);
+    combine_hits(state, actor, meld_index + 1, additions, used, hits, visit);
     for extra in &additions[meld_index] {
         if extra.iter().any(|card| used.contains(&card.id)) {
             continue;
@@ -184,7 +267,7 @@ fn combine_hits(
             meld_index,
             cards: extra.clone(),
         });
-        combine_hits(meld_index + 1, additions, used, hits, found);
+        combine_hits(state, actor, meld_index + 1, additions, used, hits, visit);
         hits.pop();
         for card in extra {
             used.remove(&card.id);
@@ -192,14 +275,13 @@ fn combine_hits(
     }
 }
 
-fn steal_moves(state: &GameState, actor_index: usize) -> Vec<Action> {
-    if !state.players[actor_index].is_on_board {
-        return Vec::new();
+fn visit_steals(state: &GameState, actor: usize, visit: &mut impl FnMut(Action)) {
+    if !state.players[actor].is_on_board {
+        return;
     }
-    let mut found = Vec::new();
     for (meld_index, meld) in state.board.iter().enumerate() {
         for wild in meld.iter().copied().filter(|card| card.is_wild()) {
-            for natural in state.players[actor_index]
+            for natural in state.players[actor]
                 .hand
                 .iter()
                 .copied()
@@ -210,35 +292,33 @@ fn steal_moves(state: &GameState, actor_index: usize) -> Vec<Action> {
                     wild,
                     natural,
                 });
-                if accepts(state, actor_index, action.clone()) {
-                    found.push(action);
+                if accepts(state, actor, action.clone()) {
+                    visit(action);
                 }
             }
         }
     }
-    found
 }
 
-fn discard_moves(state: &GameState, actor_index: usize) -> Vec<Action> {
-    state.players[actor_index]
-        .hand
-        .iter()
-        .copied()
-        .filter_map(|card| {
-            let action = Action::DiscardCard(card);
-            accepts(state, actor_index, action.clone()).then_some(action)
-        })
-        .collect()
+fn visit_discards(state: &GameState, actor: usize, visit: &mut impl FnMut(Action)) {
+    for card in &state.players[actor].hand {
+        let action = Action::DiscardCard(*card);
+        if accepts(state, actor, action.clone()) {
+            visit(action);
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::generate_legal_moves;
+    use super::{generate_legal_moves, visit_legal_kind, LegalKind};
     use crate::actions::{Action, MeldHit, WildSteal};
     use crate::card::{Card, Rank, Suit};
     use crate::deck::Deck;
     use crate::game_state::{GameState, TurnPhase};
+    use crate::legacy_oracle::{accepts, assign_plays, hit_moves};
     use crate::player::Player;
+    use crate::validation::card_can_be_played;
 
     fn card(id: u32, suit: Suit, rank: Rank) -> Card {
         Card {
@@ -771,5 +851,301 @@ mod tests {
         assert!(!moves.contains(&Action::DrawFromDeck));
         assert_eq!(moves.len(), 1);
         assert!(listed(&state, 2).is_empty());
+    }
+
+    /// A wild still forms a set. The visited plays match the oracle as a multiset.
+    #[test]
+    fn test_visit_legal_moves_keeps_a_wild_set() {
+        let joker = card(1, Suit::None, Rank::Joker);
+        let four_h = card(2, Suit::Hearts, Rank::Four);
+        let four_s = card(3, Suit::Spades, Rank::Four);
+        let five_h = card(4, Suit::Hearts, Rank::Five);
+        let five_s = card(5, Suit::Spades, Rank::Five);
+        let five_c = card(6, Suit::Clubs, Rank::Five);
+        let state = play_table(1, vec![joker, four_h, four_s, five_h, five_s, five_c]);
+        let plays = played(&state);
+        assert_same_multiset(&plays, &oracle_plays(&state));
+        assert!(plays.iter().any(|action| meld_has(action, joker.id)));
+    }
+
+    /// Ace-low and ace-high runs stay. An ace wrap is not a run.
+    #[test]
+    fn test_visit_legal_moves_keeps_ace_low_and_ace_high_runs() {
+        let low = play_table(
+            2,
+            vec![
+                card(1, Suit::Hearts, Rank::Ace),
+                card(2, Suit::Clubs, Rank::Two),
+                card(3, Suit::Hearts, Rank::Three),
+                card(4, Suit::Hearts, Rank::Four),
+                card(5, Suit::Spades, Rank::Nine),
+                card(6, Suit::Hearts, Rank::Nine),
+                card(7, Suit::Diamonds, Rank::Nine),
+            ],
+        );
+        let low_plays = played(&low);
+        assert_same_multiset(&low_plays, &oracle_plays(&low));
+        assert!(low_plays.iter().any(|action| meld_has(action, 1)));
+
+        let high = play_table(
+            2,
+            vec![
+                card(11, Suit::Hearts, Rank::Jack),
+                card(12, Suit::Hearts, Rank::Queen),
+                card(13, Suit::Hearts, Rank::King),
+                card(14, Suit::Hearts, Rank::Ace),
+                card(15, Suit::Spades, Rank::Nine),
+                card(16, Suit::Hearts, Rank::Nine),
+                card(17, Suit::Diamonds, Rank::Nine),
+            ],
+        );
+        let high_plays = played(&high);
+        assert_same_multiset(&high_plays, &oracle_plays(&high));
+        assert!(high_plays.iter().any(|action| meld_has(action, 14)));
+
+        let wrap = play_table(
+            2,
+            vec![
+                card(21, Suit::Hearts, Rank::King),
+                card(22, Suit::Hearts, Rank::Ace),
+                card(23, Suit::Clubs, Rank::Two),
+                card(24, Suit::Hearts, Rank::Three),
+                card(25, Suit::Spades, Rank::Nine),
+                card(26, Suit::Hearts, Rank::Nine),
+                card(27, Suit::Diamonds, Rank::Nine),
+            ],
+        );
+        assert!(played(&wrap).is_empty());
+        assert!(oracle_plays(&wrap).is_empty());
+    }
+
+    /// Two fours of hearts stay distinct. One card id is not listed twice inside a meld.
+    #[test]
+    fn test_visit_legal_moves_keeps_duplicate_cards() {
+        let state = play_table(
+            1,
+            vec![
+                card(1, Suit::Hearts, Rank::Four),
+                card(2, Suit::Hearts, Rank::Four),
+                card(3, Suit::Spades, Rank::Four),
+                card(4, Suit::Hearts, Rank::Five),
+                card(5, Suit::Spades, Rank::Five),
+                card(6, Suit::Clubs, Rank::Five),
+            ],
+        );
+        let plays = played(&state);
+        assert_same_multiset(&plays, &oracle_plays(&state));
+        assert!(plays
+            .iter()
+            .any(|action| { meld_has(action, 1) && meld_has(action, 2) }));
+        assert!(plays.iter().all(|action| !meld_repeats_an_id(action)));
+    }
+
+    /// Four wilds are still one set beside a natural set.
+    #[test]
+    fn test_visit_legal_moves_keeps_an_all_wild_meld() {
+        let state = play_table(
+            1,
+            vec![
+                card(1, Suit::None, Rank::Joker),
+                card(2, Suit::None, Rank::Joker),
+                card(3, Suit::Hearts, Rank::Two),
+                card(4, Suit::Spades, Rank::Two),
+                card(5, Suit::Hearts, Rank::Eight),
+                card(6, Suit::Spades, Rank::Eight),
+                card(7, Suit::Clubs, Rank::Eight),
+            ],
+        );
+        let plays = played(&state);
+        assert_same_multiset(&plays, &oracle_plays(&state));
+        assert!(plays.iter().any(|action| {
+            matches!(action, Action::PlayMeld(melds) if melds.iter().any(|meld| {
+                meld.len() == 4 && meld.iter().all(|card| card.is_wild())
+            }))
+        }));
+    }
+
+    /// Round 3 asks for two runs. One run is not enough. Both runs are visited.
+    #[test]
+    fn test_visit_legal_moves_keeps_repeated_meld_types() {
+        let state = play_table(
+            3,
+            vec![
+                card(1, Suit::Hearts, Rank::Four),
+                card(2, Suit::Hearts, Rank::Five),
+                card(3, Suit::Hearts, Rank::Six),
+                card(4, Suit::Hearts, Rank::Seven),
+                card(5, Suit::Spades, Rank::Four),
+                card(6, Suit::Spades, Rank::Five),
+                card(7, Suit::Spades, Rank::Six),
+                card(8, Suit::Spades, Rank::Seven),
+            ],
+        );
+        let plays = played(&state);
+        assert_same_multiset(&plays, &oracle_plays(&state));
+        assert!(plays
+            .iter()
+            .all(|action| matches!(action, Action::PlayMeld(melds) if melds.len() == 2)));
+        assert!(plays
+            .iter()
+            .any(|action| meld_has(action, 1) && meld_has(action, 5)));
+    }
+
+    /// Hits that use a wild, an ace, or a second copy match the oracle multiset.
+    #[test]
+    fn test_visit_legal_moves_keeps_wild_ace_and_duplicate_hits() {
+        let joker = card(1, Suit::None, Rank::Joker);
+        let ace = card(2, Suit::Hearts, Rank::Ace);
+        let eight_a = card(3, Suit::Hearts, Rank::Eight);
+        let eight_b = card(4, Suit::Diamonds, Rank::Eight);
+        let mut state = play_table(1, vec![joker, ace, eight_a, eight_b]);
+        state.players[0].is_on_board = true;
+        state.board = vec![
+            vec![
+                card(10, Suit::Spades, Rank::Eight),
+                card(11, Suit::Clubs, Rank::Eight),
+                card(12, Suit::Diamonds, Rank::Joker),
+            ],
+            vec![
+                card(13, Suit::Hearts, Rank::Jack),
+                card(14, Suit::Hearts, Rank::Queen),
+                card(15, Suit::Hearts, Rank::King),
+            ],
+            vec![
+                card(16, Suit::Clubs, Rank::Two),
+                card(17, Suit::Hearts, Rank::Three),
+                card(18, Suit::Hearts, Rank::Four),
+            ],
+        ];
+        let hits = hit(&state);
+        assert_same_multiset(&hits, &oracle_hits(&state));
+        assert!(hits.iter().any(|action| meld_has(action, joker.id)));
+        assert!(hits.iter().any(|action| meld_has(action, ace.id)));
+        assert!(hits.iter().any(|action| meld_has(action, eight_a.id)));
+        assert!(hits.iter().any(|action| meld_has(action, eight_b.id)));
+    }
+
+    /// One kind is that kind only, in the same order the full list has it.
+    #[test]
+    fn test_visit_legal_kind_matches_the_full_list_in_order() {
+        let state = play_table(
+            1,
+            vec![
+                card(1, Suit::Hearts, Rank::Four),
+                card(2, Suit::Spades, Rank::Four),
+                card(3, Suit::Clubs, Rank::Four),
+                card(4, Suit::Hearts, Rank::Five),
+                card(5, Suit::Spades, Rank::Five),
+                card(6, Suit::Clubs, Rank::Five),
+                card(7, Suit::Spades, Rank::King),
+            ],
+        );
+        let all = generate_legal_moves(&state, 0);
+        let plays = kinded(&state, LegalKind::Play);
+        let hits = kinded(&state, LegalKind::Hit);
+        assert_eq!(
+            plays,
+            all.iter()
+                .filter(|action| matches!(action, Action::PlayMeld(_)))
+                .cloned()
+                .collect::<Vec<_>>()
+        );
+        assert!(hits.is_empty());
+        assert!(plays
+            .iter()
+            .all(|action| matches!(action, Action::PlayMeld(_))));
+        assert_eq!(plays.len(), oracle_plays(&state).len());
+    }
+
+    fn play_table(round: u8, hand: Vec<Card>) -> GameState {
+        let mut state = table(
+            hand,
+            vec![card(90, Suit::Clubs, Rank::King)],
+            vec![card(91, Suit::Hearts, Rank::Three)],
+        );
+        state.round_number = round;
+        state
+    }
+
+    fn played(state: &GameState) -> Vec<Action> {
+        kinded(state, LegalKind::Play)
+    }
+
+    fn hit(state: &GameState) -> Vec<Action> {
+        kinded(state, LegalKind::Hit)
+    }
+
+    fn kinded(state: &GameState, kind: LegalKind) -> Vec<Action> {
+        let before = state.clone();
+        let mut found = Vec::new();
+        visit_legal_kind(state, 0, kind, &mut |action| found.push(action));
+        same_table(state, &before);
+        found
+    }
+
+    fn oracle_plays(state: &GameState) -> Vec<Action> {
+        let groups = match state.round_number {
+            1 | 2 | 3 | 5 => 2,
+            4 => 3,
+            _ => return Vec::new(),
+        };
+        if state.players[0].is_on_board {
+            return Vec::new();
+        }
+        let cards: Vec<Card> = state.players[0]
+            .hand
+            .iter()
+            .copied()
+            .filter(|card| card_can_be_played(card, state.turn_counter))
+            .collect();
+        let mut found = Vec::new();
+        let mut built = vec![Vec::new(); groups];
+        assign_plays(state.round_number, &cards, 0, &mut built, &mut found);
+        found
+            .into_iter()
+            .filter(|action| accepts(state, 0, action.clone()))
+            .collect()
+    }
+
+    fn oracle_hits(state: &GameState) -> Vec<Action> {
+        hit_moves(state, 0)
+    }
+
+    fn assert_same_multiset(live: &[Action], oracle: &[Action]) {
+        assert_eq!(sorted_actions(live), sorted_actions(oracle));
+        assert_eq!(live.len(), oracle.len());
+    }
+
+    fn sorted_actions(actions: &[Action]) -> Vec<String> {
+        let mut keys: Vec<String> = actions.iter().map(|action| format!("{action:?}")).collect();
+        keys.sort();
+        keys
+    }
+
+    fn meld_has(action: &Action, id: u32) -> bool {
+        match action {
+            Action::PlayMeld(melds) => melds.iter().flatten().any(|card| card.id == id),
+            Action::HitMeld(hits) => hits
+                .iter()
+                .flat_map(|hit| &hit.cards)
+                .any(|card| card.id == id),
+            _ => false,
+        }
+    }
+
+    fn meld_repeats_an_id(action: &Action) -> bool {
+        let Action::PlayMeld(melds) = action else {
+            return false;
+        };
+        for meld in melds {
+            let mut ids: Vec<u32> = meld.iter().map(|card| card.id).collect();
+            let before = ids.len();
+            ids.sort_unstable();
+            ids.dedup();
+            if ids.len() != before {
+                return true;
+            }
+        }
+        false
     }
 }
