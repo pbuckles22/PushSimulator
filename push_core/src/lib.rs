@@ -10,6 +10,7 @@ pub mod deck;
 pub mod game_state;
 pub mod legal_moves;
 pub mod player;
+pub mod random_bot;
 pub mod validation;
 
 /// Crate is alive; replace with real API as Epic 1.1 ships.

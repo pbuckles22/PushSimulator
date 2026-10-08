@@ -308,8 +308,8 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 *As the simulator, I want bots to play headless games so I can test completion.*
 
-* \[ \] Write test test\_headless\_random\_game asserting two random bots can finish 5 rounds.  
-* \[ \] Implement Random Bot AI logic.
+* \[x\] Write test test\_headless\_random\_game asserting two random bots can finish 5 rounds.  
+* \[x\] Implement Random Bot AI logic.
 
 **User Story 2.3: Parallelization & Metric Logging**
 

@@ -43,7 +43,7 @@ fn accepts(state: &GameState, actor_index: usize, action: Action) -> bool {
     trial.apply(action, actor_index)
 }
 
-fn push_is_legal(deck: &Deck) -> bool {
+pub(crate) fn push_is_legal(deck: &Deck) -> bool {
     if deck.discard.is_empty() {
         return false;
     }
