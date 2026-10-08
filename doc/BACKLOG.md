@@ -262,8 +262,8 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 *As the game engine, I want to ensure complex turn chains resolve perfectly.*
 
-* \[ \] Write test test\_steal\_hold\_win matching PM plan scenario (Steal Joker \-\> wait \-\> win).  
-* \[ \] Execute test and debug any state machine failures.
+* \[x\] Write test test\_steal\_hold\_win matching PM plan scenario (Steal Joker \-\> wait \-\> win).  
+* \[x\] Execute test and debug any state machine failures.
 
 **User Story 1.8.2: Pushed Penalty Trap**
 
