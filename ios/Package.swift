@@ -7,11 +7,17 @@ let package = Package(
     products: [
         .library(name: "PushApp", targets: ["PushApp"]),
     ],
+    dependencies: [
+        .package(path: "PushUI"),
+    ],
     targets: [
         .binaryTarget(name: "PushCore", path: "PushCore.xcframework"),
         .target(
             name: "PushApp",
-            dependencies: ["PushCore"],
+            dependencies: [
+                "PushCore",
+                .product(name: "PushUI", package: "PushUI"),
+            ],
             path: "PushApp",
             exclude: [
                 "Generated/push_ffiFFI.h",

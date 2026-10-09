@@ -42,6 +42,7 @@ ios/generated/
 ios/PushCore.xcframework/
 ios/.swiftpm/
 ios/.build/
+ios/PushUI/.build/
 
 # Full-repo Gemini XML dump (script/Export-GeminiSnapshot.ps1)
 Gemini_Snapshot.txt
