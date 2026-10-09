@@ -426,12 +426,14 @@ The page is `viewer/`. The bridge is `push_wasm`. Four seats come from `finish_p
 
 **User Story 3.3.3: On-screen drag**
 
+**Status:** on `main`. Content is `f895827`. Public version **0.3.5**. A hand card lifts. A drop calls `settleDrop`. A refusal leaves the card in the hand. The stand-in takes an unlocked card onto a new meld and refuses a drop onto a row. iPhone 16 simulator, PASS. `swift test --package-path ios/PushUI` is green (77 tests). `feature/3.3.3-on-screen-drag` is kept.
+
 *As a player, I want to drag a hand card onto a meld or a new-meld zone.*
 
-* \[ \] A drop calls the 3.3.1 API.  
-* \[ \] A `GameError` or a refusal leaves the card in the hand.  
-* \[ \] The picture updates only on accept.  
-* \[ \] The engine is still a stand-in.
+* \[x\] A drop calls the 3.3.1 API.  
+* \[x\] A `GameError` or a refusal leaves the card in the hand.  
+* \[x\] The picture updates only on accept.  
+* \[x\] The engine is still a stand-in.
 
 **User Story 3.3.4: Engine drop**
 

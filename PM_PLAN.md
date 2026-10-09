@@ -53,7 +53,7 @@ Operating model: `.cursor/rules/` ship commands (UCPH, CMPH, SWAT), human check,
 - **Phase 2:** complete — 2026-10-09. Legal moves, a random bot, bounded search, Rayon batches, CSV metrics, and strategic profiles. The lowest total wins. A tie is not a win. On this Mac, 5 threads, release keep-N versus point-averse: at 3 seats keep-4 won 94,133 of 100,000 (mean 82.83); at 4 seats keep-5 won 79,222 (mean 144.32); at 5 seats keep-5 won 64,653 (mean 191.59). Pooled, keep-5 won 237,927 of 300,000 (mean 139.37). Keep-6 did not add wins.
 - **3.1:** on `main`. Content is `398e20a`. Public version **0.3.1**. `Game::get_deck_size` is the undealt shoe, 108. UniFFI exports that call. The SwiftUI screen shows Deck size 108. Device Hub, iPhone 16, PASS. `feature/3.1-uniffi-deck-size` is kept.
 - **3.2:** on `main`. Content is `adac445`. Public version **0.3.2**. `@Published` state wraps the Rust table. The screen shows 0.3.2, Deck size 108, Round 2, three fours, and 4♥ 5♥ 6♥ 7♥. iPhone 16 simulator, PASS. `feature/3.2-board-ui` is kept.
-- **Phase 1b:** open. Not started. Parallel to Phase 3. It does not block 3.3.3. Stories are in [doc/BACKLOG.md](doc/BACKLOG.md). One seed, four seats, profiles `push_sim` already has. `feature/1b-wasm-tick` is a two-seat sketch from `6d52fbd`. Do not branch from it.
+- **Phase 1b:** open. Not started. Parallel to Phase 3. It does not block 3.3.4. Stories are in [doc/BACKLOG.md](doc/BACKLOG.md). One seed, four seats, profiles `push_sim` already has. `feature/1b-wasm-tick` is a two-seat sketch from `6d52fbd`. Do not branch from it.
 - **1b.1:** Four dealt hands on `viewer/`. Draw, discard, Round 1. The board is empty.
 - **1b.2:** One step. The log names the seat, the action, and the cards.
 - **1b.3:** The first meld is cards on the felt.
@@ -61,13 +61,14 @@ Operating model: `.cursor/rules/` ship commands (UCPH, CMPH, SWAT), human check,
 - **1b.5:** Five rounds play. Round 6 is dealt and unplayed. A rule-book mismatch becomes a `push_core` test.
 - **3.3.1:** on `main`. Content is `9afe342`. Public version stays **0.3.2**. Drop maps to `PlayMeld` or `HitMeld`. A `GameError` or a refusal snaps back. The screen is still 3.2. `swift test --package-path ios/PushUI` is green (35 tests). `feature/3.3-drag-drop` is kept.
 - **3.3.2:** on `main`. Content is `4acd3cf`. Public version **0.3.3**. The local seat's hand is on the screen. Opponent hands stay off the picture. The row scrolls. A card does not lift. iPhone 16 simulator, PASS. `swift test --package-path ios/PushUI` is green (38 tests). `feature/3.3.2-hand-row` is kept.
-- **Next (iOS):** 3.3.3 (on-screen drag) when asked. Then 3.3.4 (engine drop).
+- **3.3.3:** on `main`. Content is `f895827`. Public version **0.3.5**. A hand card lifts. A drop calls `settleDrop`. A `GameError` or a refusal leaves the card in the hand. The picture changes only on accept. The stand-in takes an unlocked card onto a new meld and refuses a drop onto a row. The king becomes its own row. The locked joker and the eight stay in the hand. The fours stay three cards. The shoe stays 108. iPhone 16 simulator, PASS. `swift test --package-path ios/PushUI` is green (77 tests). `feature/3.3.3-on-screen-drag` is kept.
+- **Next (iOS):** 3.3.4 (engine drop) when asked.
 - **Next (viewer):** 1b.1 when asked.
 - **Full backlog:** [doc/BACKLOG.md](doc/BACKLOG.md)
 - **Commentary / deltas:** [doc/PLAN_COMMENTARY.md](doc/PLAN_COMMENTARY.md) (3.3 split; integration-chain Epic 1.9 suggested; Google export quirks)
 
 ## Version
 
-Plan coordinate starts at **0.1.0**. Phase 2 stayed there (headless sim). Story 3.1 is **0.3.1**. Story 3.2 is **0.3.2**. Story 3.3.1 keeps **0.3.2** (no screen change). Story 3.3.2 is **0.3.3**. See [doc/VERSIONING.md](doc/VERSIONING.md).
+Plan coordinate starts at **0.1.0**. Phase 2 stayed there (headless sim). Story 3.1 is **0.3.1**. Story 3.2 is **0.3.2**. Story 3.3.1 keeps **0.3.2** (no screen change). Story 3.3.2 is **0.3.3**. Story 3.3.3 is **0.3.5**. See [doc/VERSIONING.md](doc/VERSIONING.md).
 
 Keep in sync with AGENT_HANDOFF *Current state* and [doc/PROJECT_STATUS.md](doc/PROJECT_STATUS.md).
