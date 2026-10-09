@@ -4,7 +4,7 @@ use crate::card::Card;
 use crate::deck::Deck;
 
 /// One seat. A new player has no cards, is not on the board, and has 0 points and a 0 total score.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Player {
     pub id: u32,
     pub seat_index: u32,

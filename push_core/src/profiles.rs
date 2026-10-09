@@ -118,21 +118,61 @@ pub fn finish_profile_game(seed: u64, seats: impl AsRef<[BotProfile]>) -> Finish
                 state.board.len(),
             );
         }
-        play_profile_turn(&mut state, seat, &mut rng, seats[seat]);
-        if state.round_over {
-            assert!(state.advance_to_next_round_with(&mut rng));
+        let stepped = step_profile_turn(&mut state, seat, &mut rng, seats[seat]);
+        seat = stepped.seat;
+        if stepped.round_completed {
             finished += 1;
-            seat = 0;
-            continue;
         }
-        if state.turn_phase == TurnPhase::PenaltyDrawing {
-            continue;
-        }
-        state.advance_turn();
-        seat = (seat + 1) % state.players.len();
     }
     debug_assert!(game_finished_five_rounds(&state));
     FinishedGame { seed, turns, state }
+}
+
+/// Where the next tick starts after one profile turn.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ProfileStep {
+    pub seat: usize,
+    /// This step scored a finished round and dealt the next one.
+    pub round_completed: bool,
+}
+
+/// Plays one profile turn, then the same advance [`finish_profile_game`] uses.
+///
+/// A finished five-round table stays as it is. A seat that is not at the table
+/// stays as it is. A round that just ended is scored and dealt, and the next
+/// seat is 0. Penalty drawing that is still open stays on this seat. Otherwise
+/// the turn counter moves and the next seat plays.
+pub fn step_profile_turn(
+    state: &mut GameState,
+    seat: usize,
+    rng: &mut impl Rng,
+    profile: BotProfile,
+) -> ProfileStep {
+    if game_finished_five_rounds(state) || seat >= state.players.len() {
+        return ProfileStep {
+            seat,
+            round_completed: false,
+        };
+    }
+    play_profile_turn(state, seat, rng, profile);
+    if state.round_over {
+        assert!(state.advance_to_next_round_with(rng));
+        return ProfileStep {
+            seat: 0,
+            round_completed: true,
+        };
+    }
+    if state.turn_phase == TurnPhase::PenaltyDrawing {
+        return ProfileStep {
+            seat,
+            round_completed: false,
+        };
+    }
+    state.advance_turn();
+    ProfileStep {
+        seat: (seat + 1) % state.players.len(),
+        round_completed: false,
+    }
 }
 
 /// Plays one turn for `actor` using `profile`.

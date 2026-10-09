@@ -27,7 +27,7 @@ pub enum TurnDraw {
 /// An empty draw pile recycles a discard of three or more, leaving that top card.
 /// One leftover discard card goes to the current player. Two leftover cards are shuffled
 /// and split between the current player and the next player.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Deck {
     pub cards: Vec<Card>,
     pub discard: Vec<Card>,

@@ -1,7 +1,7 @@
 //! Card primitives — Suit, Rank, Card (Epic 1.1).
 
 /// Suit of a playing card. `None` is the suit of a joker.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Suit {
     Hearts,
     Diamonds,
@@ -11,7 +11,7 @@ pub enum Suit {
 }
 
 /// Rank from two through ace, plus joker.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Rank {
     Two,
     Three,
@@ -30,7 +30,7 @@ pub enum Rank {
 }
 
 /// One card. `id` distinguishes copies of the same suit and rank.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Card {
     pub id: u32,
     pub suit: Suit,

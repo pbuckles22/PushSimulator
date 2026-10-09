@@ -7,8 +7,20 @@ authors.workspace = true
 description = "WebAssembly bindings for the Push debug table viewer"
 
 [lib]
+# `rlib` is what `cargo test` links. `cdylib` is the WASM module.
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 push_core = { workspace = true }
 wasm-bindgen = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde-wasm-bindgen = { workspace = true }
+rand = { workspace = true }
+# `rand` draws through `getrandom`. The wasm32 target needs the `js` feature.
+getrandom = { version = "0.2", features = ["js"] }
+
+[dev-dependencies]
+push_core = { workspace = true }
+rand = { workspace = true }
+serde_json = { workspace = true }
