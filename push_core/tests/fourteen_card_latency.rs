@@ -8,7 +8,7 @@ use push_core::card::{Card, Rank, Suit};
 use push_core::deck::Deck;
 use push_core::game_state::GameState;
 use push_core::latency::{
-    profile_fourteen_card, summarize_latencies, HIT_GATE, PLAY_GATE, VALIDATE_GATE, LatencyGate,
+    profile_fourteen_card, summarize_latencies, LatencyGate, HIT_GATE, PLAY_GATE, VALIDATE_GATE,
 };
 use push_core::legal_moves::{visit_legal_kind, LegalKind};
 use push_core::player::Player;
@@ -72,7 +72,7 @@ fn same_table(left: &GameState, right: &GameState) -> bool {
 
 fn counted(state: &GameState, kind: LegalKind) -> usize {
     let mut actions = 0usize;
-    visit_legal_kind(state, 0, kind, &mut |_| actions += 1);
+    let _ = visit_legal_kind(state, 0, kind, &mut |_| actions += 1);
     actions
 }
 
@@ -118,8 +118,8 @@ fn test_latency_summary_median_p95_and_p99() {
 /// The take is accepted and the table stays. Play emits 750. Hit emits 15.
 /// Each profile's median is at most its p95, and that is at most its p99.
 #[test]
-fn test_suit_rank_card_deck_new_has_draw_capacity_validate_action_visit_play_hit_fourteen_card_latency()
-{
+fn test_suit_rank_card_deck_new_has_draw_capacity_validate_action_visit_play_hit_fourteen_card_latency(
+) {
     let state = table_from(set_hand(), 4);
     assert_eq!(state.players[0].hand.len(), 14);
     assert!(state.deck.has_draw_capacity(2));

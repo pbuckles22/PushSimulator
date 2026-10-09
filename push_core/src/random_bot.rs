@@ -6,11 +6,11 @@ use std::time::{Duration, Instant};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 
-use crate::actions::{validate_action, Action, MeldHit};
+use crate::actions::{validate_action, Action};
 use crate::card::{Card, Rank, Suit};
 use crate::deck::Deck;
 use crate::game_state::{GameState, TurnPhase};
-use crate::legal_moves::{push_is_legal, visit_legal_kind, LegalKind};
+use crate::legal_moves::{push_is_legal, visit_legal_kind, visit_legal_kind_within, LegalKind};
 use crate::player::{deal_initial_hands, Player};
 use crate::resolution::ActionResolution;
 use crate::validation::{card_can_be_played, check_round_requirements, validate_run, validate_set};
@@ -26,10 +26,19 @@ pub const THROUGHPUT_BATCH_COUNT: usize = 5;
 
 /// Release ceiling for one batch of [`THROUGHPUT_BATCH_GAMES`] five-round games.
 ///
-/// Five release batches on this machine, with the large-hand fallback still in
-/// place, finished in 20.350s, 24.099s, 21.034s, 20.484s, and 19.539s.
-/// A batch at the ceiling still passes. Debug runs do not apply this ceiling.
+/// Five release batches with the one-card fallback finished in 20.350s, 24.099s,
+/// 21.034s, 20.484s, and 19.539s. After the visit stop, batch 0 finished in
+/// 13.305s. A batch at the ceiling still passes. Debug runs do not apply this ceiling.
 pub const THROUGHPUT_BATCH_GATE: Duration = Duration::from_secs(60);
+
+/// Actions kept from one play or hit walk. A longer list stops there.
+const ACTION_SAMPLE_CAP: usize = 100;
+
+/// Search steps for a hand above 11 cards.
+///
+/// A walk that emits nothing never calls the visitor, so the step ceiling
+/// stops that search. Hands of 11 or fewer still walk until the visitor stops.
+const LARGE_HAND_WALK_NODES: u32 = 10_000;
 
 /// Two seats play five rounds.
 ///
@@ -137,7 +146,7 @@ fn game_finished_five_rounds(state: &GameState) -> bool {
 /// it, then lays additional valid sets or runs while on the board, hits until
 /// nothing else fits, and sometimes steals. The turn ends with a discard, or with
 /// a draw until a safe card. That draw, and a push that recycles the discard, use
-/// `rng`. A hand above 11 cards is played one card at a time.
+/// `rng`. A play or hit walk keeps at most 100 actions.
 pub fn play_random_turn(state: &mut GameState, actor: usize, rng: &mut impl Rng) {
     if state.round_over || actor >= state.players.len() {
         return;
@@ -147,10 +156,6 @@ pub fn play_random_turn(state: &mut GameState, actor: usize, rng: &mut impl Rng)
         return;
     }
     if discard_to_go_out(state, actor, rng) {
-        return;
-    }
-    if state.players[actor].hand.len() > 11 {
-        play_one_card_at_a_time(state, actor, rng);
         return;
     }
     if state.players[actor].is_on_board && !can_play_or_hit(state, actor) {
@@ -210,61 +215,9 @@ pub fn play_random_turn(state: &mut GameState, actor: usize, rng: &mut impl Rng)
     draw_until_a_safe_card(state, actor, rng);
 }
 
-/// Take, lay down, hit one fitting card at a time, and discard.
-///
-/// Listing every meld of a large hand is too slow. A lay-down is checked with
-/// [`check_round_requirements`]. Each hit is one card the engine accepts.
-fn play_one_card_at_a_time(state: &mut GameState, actor: usize, rng: &mut impl Rng) {
-    if state.drawn_card_id.is_none() && !state.deck.discard.is_empty() {
-        apply_listed(state, actor, Action::TakeDiscard, rng);
-    }
-    if state.round_over {
-        return;
-    }
-    lay_down(state, actor, rng);
-    let mut guard = state.players[actor].hand.len();
-    while guard > 0 {
-        guard -= 1;
-        if state.round_over {
-            return;
-        }
-        let Some(action) = one_card_hit(state, actor, rng) else {
-            break;
-        };
-        apply_listed(state, actor, action, rng);
-    }
-    if state.round_over || apply_one_discard(state, actor, rng) {
-        return;
-    }
-    draw_until_a_safe_card(state, actor, rng);
-}
-
-fn one_card_hit(state: &GameState, actor: usize, rng: &mut impl Rng) -> Option<Action> {
-    if !state.players[actor].is_on_board {
-        return None;
-    }
-    let mut hits = Vec::new();
-    for card in &state.players[actor].hand {
-        for meld_index in 0..state.board.len() {
-            let action = Action::HitMeld(vec![MeldHit {
-                meld_index,
-                cards: vec![*card],
-            }]);
-            let mut trial = state.clone();
-            if trial.apply(action.clone(), actor) {
-                hits.push(action);
-            }
-        }
-    }
-    if hits.is_empty() {
-        return None;
-    }
-    Some(hits[rng.gen_range(0..hits.len())].clone())
-}
-
 fn apply_one_discard(state: &mut GameState, actor: usize, rng: &mut impl Rng) -> bool {
     let mut discards = Vec::new();
-    visit_legal_kind(state, actor, LegalKind::Discard, &mut |action| {
+    let _ = visit_legal_kind(state, actor, LegalKind::Discard, &mut |action| {
         discards.push(action);
     });
     if discards.is_empty() {
@@ -279,12 +232,27 @@ fn apply_one_discard(state: &mut GameState, actor: usize, rng: &mut impl Rng) ->
 /// Taking first would put that card back.
 fn can_play_or_hit(state: &GameState, actor: usize) -> bool {
     let mut found = false;
-    visit_legal_kind(state, actor, LegalKind::Play, &mut |_| found = true);
+    let nodes = walk_nodes(state, actor);
+    let _ = visit_legal_kind_within(state, actor, LegalKind::Play, nodes, &mut |_| {
+        found = true;
+        false
+    });
     if found {
         return true;
     }
-    visit_legal_kind(state, actor, LegalKind::Hit, &mut |_| found = true);
+    let _ = visit_legal_kind_within(state, actor, LegalKind::Hit, nodes, &mut |_| {
+        found = true;
+        false
+    });
     found
+}
+
+fn walk_nodes(state: &GameState, actor: usize) -> u32 {
+    if state.players[actor].hand.len() > 11 {
+        LARGE_HAND_WALK_NODES
+    } else {
+        u32::MAX
+    }
 }
 
 /// One card, once that seat is on the board, is a discard that ends the round.
@@ -322,9 +290,16 @@ fn choose_opening(state: &GameState) -> Option<Action> {
 
 fn apply_widest_hit(state: &mut GameState, actor: usize, rng: &mut impl Rng) -> bool {
     let mut hits = Vec::new();
-    visit_legal_kind(state, actor, LegalKind::Hit, &mut |action| {
-        hits.push(action)
-    });
+    let _ = visit_legal_kind_within(
+        state,
+        actor,
+        LegalKind::Hit,
+        walk_nodes(state, actor),
+        &mut |action| {
+            hits.push(action);
+            hits.len() < ACTION_SAMPLE_CAP
+        },
+    );
     if hits.is_empty() {
         return false;
     }
@@ -360,7 +335,16 @@ fn choose_kind(
     kind: LegalKind,
 ) -> Option<Action> {
     let mut choices = Vec::new();
-    visit_legal_kind(state, actor, kind, &mut |action| choices.push(action));
+    let _ = visit_legal_kind_within(
+        state,
+        actor,
+        kind,
+        walk_nodes(state, actor),
+        &mut |action| {
+            choices.push(action);
+            choices.len() < ACTION_SAMPLE_CAP
+        },
+    );
     if choices.is_empty() {
         return None;
     }
@@ -415,35 +399,7 @@ fn lay_down(state: &mut GameState, actor: usize, rng: &mut impl Rng) {
 }
 
 fn lay_free_meld(state: &mut GameState, actor: usize, rng: &mut impl Rng) {
-    if state.players[actor].hand.len() > 11 {
-        lay_free_meld_large(state, actor, rng);
-        return;
-    }
     apply_kind(state, actor, rng, LegalKind::Play);
-}
-
-fn lay_free_meld_large(state: &mut GameState, actor: usize, rng: &mut impl Rng) {
-    let cards: Vec<Card> = state.players[actor]
-        .hand
-        .iter()
-        .copied()
-        .filter(|card| card_can_be_played(card, state.turn_counter))
-        .collect();
-    let mut candidates = set_groups(&cards);
-    candidates.extend(run_groups(&cards, 4));
-    if candidates.is_empty() {
-        return;
-    }
-    let start = rng.gen_range(0..candidates.len());
-    for offset in 0..candidates.len() {
-        let meld = &candidates[(start + offset) % candidates.len()];
-        let action = Action::PlayMeld(vec![meld.clone()]);
-        let mut trial = state.clone();
-        if trial.apply(action.clone(), actor) {
-            apply_listed(state, actor, action, rng);
-            return;
-        }
-    }
 }
 
 fn melds_for_round(round: u8, cards: &[Card]) -> Option<Vec<Vec<Card>>> {

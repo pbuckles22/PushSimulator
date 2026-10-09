@@ -151,7 +151,7 @@ fn time_validate(state: &GameState, samples: usize) -> TimedComponent {
 fn time_kind(state: &GameState, kind: LegalKind, samples: usize) -> TimedComponent {
     warmup(|| {
         let mut seen = 0usize;
-        visit_legal_kind(state, 0, kind, &mut |_| seen += 1);
+        let _ = visit_legal_kind(state, 0, kind, &mut |_| seen += 1);
         std::hint::black_box(seen);
     });
     let mut times = Vec::with_capacity(samples);
@@ -159,7 +159,7 @@ fn time_kind(state: &GameState, kind: LegalKind, samples: usize) -> TimedCompone
     for _ in 0..samples {
         let started = Instant::now();
         let mut seen = 0usize;
-        visit_legal_kind(state, 0, kind, &mut |_| seen += 1);
+        let _ = visit_legal_kind(state, 0, kind, &mut |_| seen += 1);
         let elapsed = started.elapsed().as_nanos();
         std::hint::black_box(seen);
         actions = seen;

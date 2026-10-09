@@ -46,7 +46,7 @@ fn test_throughput_batch_windows_are_five_disjoint_thousands() {
 
 /// Chain: new_two_seat_table → play_random_turn → play_random_game → play_game_batch.
 ///
-/// One turn keeps every card. Seed 1 scores 340 and 80. A one-game batch of that
+/// One turn keeps every card. Seed 1 scores 5 and 85. A one-game batch of that
 /// seed finishes, and so do the seeds that used to stop at 8,000 turns.
 #[test]
 fn test_new_two_seat_table_play_random_turn_play_random_game_batch_finishes() {
@@ -60,8 +60,8 @@ fn test_new_two_seat_table_play_random_turn_play_random_game_batch_finishes() {
 
     let state = play_random_game(1);
     assert_eq!(state.round_number, 6);
-    assert_eq!(state.players[0].total_score, 340);
-    assert_eq!(state.players[1].total_score, 80);
+    assert_eq!(state.players[0].total_score, 5);
+    assert_eq!(state.players[1].total_score, 85);
     assert_eq!(cards_on_the_table(&state), 108);
 
     let one = play_game_batch(1, 1);
@@ -76,6 +76,31 @@ fn test_new_two_seat_table_play_random_turn_play_random_game_batch_finishes() {
         assert_eq!(batch.first_seed, seed);
         assert_eq!(batch.games, 1);
     }
+}
+
+/// One batch of 1,000 games finishes inside the release ceiling.
+/// This is the check for removing the one-card large-hand path.
+#[test]
+#[ignore = "one batch of 1000 headless games"]
+fn test_one_thousand_game_batch_stays_inside_the_throughput_gate() {
+    let first = throughput_batch_first_seed(0);
+    let batch = play_game_batch(first, THROUGHPUT_BATCH_GAMES);
+    assert_eq!(batch.first_seed, first);
+    assert_eq!(batch.games, THROUGHPUT_BATCH_GAMES);
+    assert_eq!(batch.finished, batch.games);
+    eprintln!(
+        "throughput_batch index=0 first_seed={first} games={} finished={} elapsed_ms={}",
+        batch.games,
+        batch.finished,
+        batch.elapsed.as_millis()
+    );
+    #[cfg(not(debug_assertions))]
+    assert!(
+        batch.elapsed <= THROUGHPUT_BATCH_GATE,
+        "batch 0 took {:?}, gate {:?}",
+        batch.elapsed,
+        THROUGHPUT_BATCH_GATE
+    );
 }
 
 /// Five batches of 1,000 games finish inside the release ceiling.

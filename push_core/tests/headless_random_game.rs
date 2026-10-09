@@ -42,8 +42,8 @@ fn fresh_shoe_ids() -> Vec<u32> {
 
 /// Two seats finish five rounds. The sixth round is dealt and not played.
 /// `points` stay 0. An on-board seat that cannot lay or hit discards instead of
-/// taking, so seed 1 totals are 340 and 80.
-/// Every card id is still on the table.
+/// taking. A hand above 11 keeps at most 100 plays or hits, so seed 1 totals
+/// are 5 and 85. Every card id is still on the table.
 #[test]
 fn test_headless_random_game() {
     let state = play_random_game(1);
@@ -62,8 +62,8 @@ fn test_headless_random_game() {
         assert!(!player.is_on_board);
         assert_eq!(player.points, 0);
     }
-    assert_eq!(state.players[0].total_score, 340);
-    assert_eq!(state.players[1].total_score, 80);
+    assert_eq!(state.players[0].total_score, 5);
+    assert_eq!(state.players[1].total_score, 85);
     assert_eq!(shoe_ids(&state), fresh_shoe_ids());
 }
 

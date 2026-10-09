@@ -5394,7 +5394,7 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_visit_legal_moves_matches_g
     assert_eq!(sorted_actions(&visited), sorted_actions(&listed));
 
     let mut hits = Vec::new();
-    visit_legal_kind(&state, 0, LegalKind::Hit, &mut |action| hits.push(action));
+    let _ = visit_legal_kind(&state, 0, LegalKind::Hit, &mut |action| hits.push(action));
     assert!(hits
         .iter()
         .all(|action| matches!(action, Action::HitMeld(_))));
@@ -5412,7 +5412,7 @@ fn test_suit_rank_card_deck_new_is_wild_shuffle_deal_visit_legal_moves_matches_g
     wild.players[0].hand = vec![joker, four_h, four_s, five_h, five_s, five_c];
     wild.players[0].is_on_board = false;
     let mut plays = Vec::new();
-    visit_legal_kind(&wild, 0, LegalKind::Play, &mut |action| plays.push(action));
+    let _ = visit_legal_kind(&wild, 0, LegalKind::Play, &mut |action| plays.push(action));
     assert!(plays.iter().any(|action| {
         matches!(action, Action::PlayMeld(melds) if melds.iter().flatten().any(|card| card.is_wild()))
     }));

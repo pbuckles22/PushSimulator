@@ -1,6 +1,7 @@
 //! Every action the engine would accept for one seat.
 
 use std::collections::{BTreeMap, HashSet};
+use std::ops::ControlFlow;
 
 use crate::actions::{validate_action, Action, MeldHit, WildSteal};
 use crate::card::{Card, Rank, Suit};
@@ -8,6 +9,66 @@ use crate::deck::{one_card_draw_count, Deck};
 use crate::game_state::{GameState, TurnPhase};
 use crate::resolution::ActionResolution;
 use crate::validation::{card_can_be_played, check_round_requirements, validate_run, validate_set};
+
+/// What a legal-move visitor returns.
+///
+/// `()`, `true`, and [`ControlFlow::Continue`] keep walking.
+/// `false` and [`ControlFlow::Break`] stop the walk.
+pub trait VisitFlow {
+    fn visit_flow(self) -> ControlFlow<()>;
+}
+
+impl VisitFlow for () {
+    fn visit_flow(self) -> ControlFlow<()> {
+        ControlFlow::Continue(())
+    }
+}
+
+impl VisitFlow for bool {
+    fn visit_flow(self) -> ControlFlow<()> {
+        if self {
+            ControlFlow::Continue(())
+        } else {
+            ControlFlow::Break(())
+        }
+    }
+}
+
+impl<B, C> VisitFlow for ControlFlow<B, C> {
+    fn visit_flow(self) -> ControlFlow<()> {
+        match self {
+            ControlFlow::Continue(_) => ControlFlow::Continue(()),
+            ControlFlow::Break(_) => ControlFlow::Break(()),
+        }
+    }
+}
+
+/// Search steps already taken. [`u32::MAX`] does not count and does not stop.
+struct WalkLimit {
+    nodes: u32,
+    max_nodes: u32,
+}
+
+impl WalkLimit {
+    fn new(max_nodes: u32) -> Self {
+        Self {
+            nodes: 0,
+            max_nodes,
+        }
+    }
+
+    fn tick(&mut self) -> ControlFlow<()> {
+        if self.max_nodes == u32::MAX {
+            return ControlFlow::Continue(());
+        }
+        self.nodes = self.nodes.saturating_add(1);
+        if self.nodes > self.max_nodes {
+            ControlFlow::Break(())
+        } else {
+            ControlFlow::Continue(())
+        }
+    }
+}
 
 /// Which family of legal actions a search wants.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -34,7 +95,14 @@ pub fn generate_legal_moves(state: &GameState, actor_index: usize) -> Vec<Action
 }
 
 /// Calls `visit` once for each action [`generate_legal_moves`] would list, in that order.
-pub fn visit_legal_moves(state: &GameState, actor: usize, visit: &mut impl FnMut(Action)) {
+///
+/// `visit` returns `()`, `true`, or [`ControlFlow::Continue`] to keep walking.
+/// `false` or [`ControlFlow::Break`] stops this walk, including later kinds.
+pub fn visit_legal_moves<V, R>(state: &GameState, actor: usize, visit: &mut V)
+where
+    V: FnMut(Action) -> R,
+    R: VisitFlow,
+{
     for kind in [
         LegalKind::Take,
         LegalKind::Push,
@@ -44,7 +112,9 @@ pub fn visit_legal_moves(state: &GameState, actor: usize, visit: &mut impl FnMut
         LegalKind::Discard,
         LegalKind::Draw,
     ] {
-        visit_legal_kind(state, actor, kind, visit);
+        if visit_legal_kind(state, actor, kind, visit).is_break() {
+            return;
+        }
     }
 }
 
@@ -53,37 +123,68 @@ pub fn visit_legal_moves(state: &GameState, actor: usize, visit: &mut impl FnMut
 /// A partial meld that already has two natural ranks and two natural suits is skipped.
 /// Adding cards cannot make that group a set or a run. Wilds, ace-high runs, ace-low
 /// runs, duplicate cards, all-wild melds, and a second meld of the same type stay.
-pub fn visit_legal_kind(
+/// The return is [`ControlFlow::Break`] when `visit` stops the walk.
+pub fn visit_legal_kind<V, R>(
     state: &GameState,
     actor: usize,
     kind: LegalKind,
-    visit: &mut impl FnMut(Action),
-) {
+    visit: &mut V,
+) -> ControlFlow<()>
+where
+    V: FnMut(Action) -> R,
+    R: VisitFlow,
+{
+    visit_legal_kind_within(state, actor, kind, u32::MAX, visit)
+}
+
+/// Same walk as [`visit_legal_kind`], stopping after `max_nodes` search steps.
+///
+/// [`u32::MAX`] walks until `visit` stops or the family is finished. A walk that
+/// has not emitted an action yet can still stop on this ceiling.
+pub(crate) fn visit_legal_kind_within<V, R>(
+    state: &GameState,
+    actor: usize,
+    kind: LegalKind,
+    max_nodes: u32,
+    visit: &mut V,
+) -> ControlFlow<()>
+where
+    V: FnMut(Action) -> R,
+    R: VisitFlow,
+{
     if state.round_over || actor >= state.players.len() {
-        return;
+        return ControlFlow::Continue(());
     }
+    let mut limit = WalkLimit::new(max_nodes);
+    let mut adapted = |action: Action| visit(action).visit_flow();
     match kind {
         LegalKind::Take => {
             if !state.deck.discard.is_empty() && accepts(state, actor, Action::TakeDiscard) {
-                visit(Action::TakeDiscard);
+                adapted(Action::TakeDiscard)
+            } else {
+                ControlFlow::Continue(())
             }
         }
         LegalKind::Push => {
             if push_is_legal(&state.deck) {
-                visit(Action::PushDiscard);
+                adapted(Action::PushDiscard)
+            } else {
+                ControlFlow::Continue(())
             }
         }
-        LegalKind::Play => visit_plays(state, actor, visit),
-        LegalKind::Hit => visit_hits(state, actor, visit),
-        LegalKind::Steal => visit_steals(state, actor, visit),
-        LegalKind::Discard => visit_discards(state, actor, visit),
+        LegalKind::Play => visit_plays(state, actor, &mut limit, &mut adapted),
+        LegalKind::Hit => visit_hits(state, actor, &mut limit, &mut adapted),
+        LegalKind::Steal => visit_steals(state, actor, &mut adapted),
+        LegalKind::Discard => visit_discards(state, actor, &mut adapted),
         LegalKind::Draw => {
             // An empty shoe is still a draw. That draw ends the round.
             if state.turn_phase == TurnPhase::PenaltyDrawing
                 && state.penalty_seat == Some(actor)
                 && accepts(state, actor, Action::DrawFromDeck)
             {
-                visit(Action::DrawFromDeck);
+                adapted(Action::DrawFromDeck)
+            } else {
+                ControlFlow::Continue(())
             }
         }
     }
@@ -170,15 +271,22 @@ fn playable_hand(state: &GameState, actor_index: usize) -> Vec<Card> {
         .collect()
 }
 
-fn visit_plays(state: &GameState, actor: usize, visit: &mut impl FnMut(Action)) {
+fn visit_plays<F>(
+    state: &GameState,
+    actor: usize,
+    limit: &mut WalkLimit,
+    visit: &mut F,
+) -> ControlFlow<()>
+where
+    F: FnMut(Action) -> ControlFlow<()>,
+{
     if state.players[actor].is_on_board {
-        visit_free_plays(state, actor, visit);
-        return;
+        return visit_free_plays(state, actor, limit, visit);
     }
     let groups = match state.round_number {
         1 | 2 | 3 | 5 => 2,
         4 => 3,
-        _ => return,
+        _ => return ControlFlow::Continue(()),
     };
     let cards = playable_hand(state, actor);
     let mut built = vec![Vec::new(); groups];
@@ -189,56 +297,72 @@ fn visit_plays(state: &GameState, actor: usize, visit: &mut impl FnMut(Action)) 
         &cards,
         0,
         &mut built,
+        limit,
         visit,
-    );
+    )
 }
 
 /// On the board, any valid set or run may be laid. Candidates are maximal sets
 /// and runs from the playable hand. Each candidate is yielded alone. When there
 /// are at most six, disjoint combinations are yielded too.
-fn visit_free_plays(state: &GameState, actor: usize, visit: &mut impl FnMut(Action)) {
+fn visit_free_plays<F>(
+    state: &GameState,
+    actor: usize,
+    limit: &mut WalkLimit,
+    visit: &mut F,
+) -> ControlFlow<()>
+where
+    F: FnMut(Action) -> ControlFlow<()>,
+{
     let cards = playable_hand(state, actor);
     let candidates = free_meld_candidates(&cards);
     for meld in &candidates {
+        limit.tick()?;
         let action = Action::PlayMeld(vec![meld.clone()]);
         if accepts(state, actor, action.clone()) {
-            visit(action);
+            visit(action)?;
         }
     }
     if candidates.len() > 6 {
-        return;
+        return ControlFlow::Continue(());
     }
     let mut chosen = Vec::new();
-    visit_disjoint_free_melds(state, actor, &candidates, 0, &mut chosen, visit);
+    visit_disjoint_free_melds(state, actor, &candidates, 0, &mut chosen, limit, visit)
 }
 
-fn visit_disjoint_free_melds(
+fn visit_disjoint_free_melds<F>(
     state: &GameState,
     actor: usize,
     candidates: &[Vec<Card>],
     index: usize,
     chosen: &mut Vec<Vec<Card>>,
-    visit: &mut impl FnMut(Action),
-) {
+    limit: &mut WalkLimit,
+    visit: &mut F,
+) -> ControlFlow<()>
+where
+    F: FnMut(Action) -> ControlFlow<()>,
+{
+    limit.tick()?;
     if index == candidates.len() {
         if chosen.len() >= 2 {
             let action = Action::PlayMeld(chosen.clone());
             if accepts(state, actor, action.clone()) {
-                visit(action);
+                return visit(action);
             }
         }
-        return;
+        return ControlFlow::Continue(());
     }
-    visit_disjoint_free_melds(state, actor, candidates, index + 1, chosen, visit);
+    visit_disjoint_free_melds(state, actor, candidates, index + 1, chosen, limit, visit)?;
     if chosen
         .iter()
         .any(|held| shares_a_card(held, &candidates[index]))
     {
-        return;
+        return ControlFlow::Continue(());
     }
     chosen.push(candidates[index].clone());
-    visit_disjoint_free_melds(state, actor, candidates, index + 1, chosen, visit);
+    let flow = visit_disjoint_free_melds(state, actor, candidates, index + 1, chosen, limit, visit);
     chosen.pop();
+    flow
 }
 
 fn shares_a_card(left: &[Card], right: &[Card]) -> bool {
@@ -387,57 +511,71 @@ fn run_rank_value(rank: Rank, ace_high: bool) -> Option<u8> {
     })
 }
 
-fn assign_plays(
+fn assign_plays<F>(
     state: &GameState,
     actor: usize,
     round: u8,
     cards: &[Card],
     index: usize,
     groups: &mut [Vec<Card>],
-    visit: &mut impl FnMut(Action),
-) {
+    limit: &mut WalkLimit,
+    visit: &mut F,
+) -> ControlFlow<()>
+where
+    F: FnMut(Action) -> ControlFlow<()>,
+{
+    limit.tick()?;
     if index == cards.len() {
         if groups.iter().all(|group| !group.is_empty()) && check_round_requirements(round, groups) {
             let action = Action::PlayMeld(groups.to_vec());
             if accepts(state, actor, action.clone()) {
-                visit(action);
+                return visit(action);
             }
         }
-        return;
+        return ControlFlow::Continue(());
     }
-    assign_plays(state, actor, round, cards, index + 1, groups, visit);
+    assign_plays(state, actor, round, cards, index + 1, groups, limit, visit)?;
     for slot in 0..groups.len() {
         groups[slot].push(cards[index]);
-        if !group_is_dead(&groups[slot]) {
-            assign_plays(state, actor, round, cards, index + 1, groups, visit);
-        }
+        let flow = if !group_is_dead(&groups[slot]) {
+            assign_plays(state, actor, round, cards, index + 1, groups, limit, visit)
+        } else {
+            ControlFlow::Continue(())
+        };
         groups[slot].pop();
+        flow?;
     }
+    ControlFlow::Continue(())
 }
 
-fn visit_hits(state: &GameState, actor: usize, visit: &mut impl FnMut(Action)) {
+fn visit_hits<F>(
+    state: &GameState,
+    actor: usize,
+    limit: &mut WalkLimit,
+    visit: &mut F,
+) -> ControlFlow<()>
+where
+    F: FnMut(Action) -> ControlFlow<()>,
+{
     if !state.players[actor].is_on_board || state.board.is_empty() {
-        return;
+        return ControlFlow::Continue(());
     }
     let hand = playable_hand(state, actor);
     if hand.is_empty() {
-        return;
+        return ControlFlow::Continue(());
     }
-    let additions: Vec<Vec<Vec<Card>>> = state
-        .board
-        .iter()
-        .map(|meld| additions(meld, &hand))
-        .collect();
+    let mut additions = Vec::with_capacity(state.board.len());
+    for meld in &state.board {
+        let mut found = Vec::new();
+        let mut extra = Vec::new();
+        collect_additions(meld, &hand, 0, &mut extra, &mut found, limit)?;
+        additions.push(found);
+    }
     let mut hits = Vec::new();
     let mut used = HashSet::new();
-    combine_hits(state, actor, 0, &additions, &mut used, &mut hits, visit);
-}
-
-fn additions(meld: &[Card], hand: &[Card]) -> Vec<Vec<Card>> {
-    let mut found = Vec::new();
-    let mut extra = Vec::new();
-    collect_additions(meld, hand, 0, &mut extra, &mut found);
-    found
+    combine_hits(
+        state, actor, 0, &additions, &mut used, &mut hits, limit, visit,
+    )
 }
 
 fn collect_additions(
@@ -446,43 +584,62 @@ fn collect_additions(
     index: usize,
     extra: &mut Vec<Card>,
     found: &mut Vec<Vec<Card>>,
-) {
+    limit: &mut WalkLimit,
+) -> ControlFlow<()> {
+    limit.tick()?;
     if index == hand.len() {
         if extra.is_empty() {
-            return;
+            return ControlFlow::Continue(());
         }
         if addition_fits(meld, extra) {
             found.push(extra.clone());
         }
-        return;
+        return ControlFlow::Continue(());
     }
-    collect_additions(meld, hand, index + 1, extra, found);
+    collect_additions(meld, hand, index + 1, extra, found, limit)?;
     extra.push(hand[index]);
-    if !group_is_dead_with(meld, extra) {
-        collect_additions(meld, hand, index + 1, extra, found);
-    }
+    let flow = if !group_is_dead_with(meld, extra) {
+        collect_additions(meld, hand, index + 1, extra, found, limit)
+    } else {
+        ControlFlow::Continue(())
+    };
     extra.pop();
+    flow
 }
 
-fn combine_hits(
+fn combine_hits<F>(
     state: &GameState,
     actor: usize,
     meld_index: usize,
     additions: &[Vec<Vec<Card>>],
     used: &mut HashSet<u32>,
     hits: &mut Vec<MeldHit>,
-    visit: &mut impl FnMut(Action),
-) {
+    limit: &mut WalkLimit,
+    visit: &mut F,
+) -> ControlFlow<()>
+where
+    F: FnMut(Action) -> ControlFlow<()>,
+{
+    limit.tick()?;
     if meld_index == additions.len() {
         if !hits.is_empty() {
             let action = Action::HitMeld(hits.clone());
             if accepts(state, actor, action.clone()) {
-                visit(action);
+                return visit(action);
             }
         }
-        return;
+        return ControlFlow::Continue(());
     }
-    combine_hits(state, actor, meld_index + 1, additions, used, hits, visit);
+    combine_hits(
+        state,
+        actor,
+        meld_index + 1,
+        additions,
+        used,
+        hits,
+        limit,
+        visit,
+    )?;
     for extra in &additions[meld_index] {
         if extra.iter().any(|card| used.contains(&card.id)) {
             continue;
@@ -494,17 +651,31 @@ fn combine_hits(
             meld_index,
             cards: extra.clone(),
         });
-        combine_hits(state, actor, meld_index + 1, additions, used, hits, visit);
+        let flow = combine_hits(
+            state,
+            actor,
+            meld_index + 1,
+            additions,
+            used,
+            hits,
+            limit,
+            visit,
+        );
         hits.pop();
         for card in extra {
             used.remove(&card.id);
         }
+        flow?;
     }
+    ControlFlow::Continue(())
 }
 
-fn visit_steals(state: &GameState, actor: usize, visit: &mut impl FnMut(Action)) {
+fn visit_steals<F>(state: &GameState, actor: usize, visit: &mut F) -> ControlFlow<()>
+where
+    F: FnMut(Action) -> ControlFlow<()>,
+{
     if !state.players[actor].is_on_board {
-        return;
+        return ControlFlow::Continue(());
     }
     for (meld_index, meld) in state.board.iter().enumerate() {
         for wild in meld.iter().copied().filter(|card| card.is_wild()) {
@@ -520,20 +691,25 @@ fn visit_steals(state: &GameState, actor: usize, visit: &mut impl FnMut(Action))
                     natural,
                 });
                 if accepts(state, actor, action.clone()) {
-                    visit(action);
+                    visit(action)?;
                 }
             }
         }
     }
+    ControlFlow::Continue(())
 }
 
-fn visit_discards(state: &GameState, actor: usize, visit: &mut impl FnMut(Action)) {
+fn visit_discards<F>(state: &GameState, actor: usize, visit: &mut F) -> ControlFlow<()>
+where
+    F: FnMut(Action) -> ControlFlow<()>,
+{
     for card in &state.players[actor].hand {
         let action = Action::DiscardCard(*card);
         if accepts(state, actor, action.clone()) {
-            visit(action);
+            visit(action)?;
         }
     }
+    ControlFlow::Continue(())
 }
 
 #[cfg(test)]
@@ -1316,6 +1492,33 @@ mod tests {
         assert!(hits.iter().any(|action| meld_has(action, eight_b.id)));
     }
 
+    /// A node ceiling stops a play walk before it lists the plays a full walk lists.
+    #[test]
+    fn test_visit_node_ceiling_stops_a_play_walk_before_it_finishes() {
+        let state = play_table(
+            1,
+            vec![
+                card(1, Suit::Hearts, Rank::Four),
+                card(2, Suit::Spades, Rank::Four),
+                card(3, Suit::Clubs, Rank::Four),
+                card(4, Suit::Hearts, Rank::Five),
+                card(5, Suit::Spades, Rank::Five),
+                card(6, Suit::Clubs, Rank::Five),
+                card(7, Suit::Spades, Rank::King),
+            ],
+        );
+        let full = played(&state);
+        assert!(!full.is_empty());
+        let mut capped = Vec::new();
+        let flow = super::visit_legal_kind_within(&state, 0, LegalKind::Play, 0, &mut |action| {
+            capped.push(action);
+            true
+        });
+        assert!(flow.is_break());
+        assert!(capped.is_empty());
+        assert!(capped.len() < full.len());
+    }
+
     /// One kind is that kind only, in the same order the full list has it.
     #[test]
     fn test_visit_legal_kind_matches_the_full_list_in_order() {
@@ -1369,7 +1572,7 @@ mod tests {
     fn kinded(state: &GameState, kind: LegalKind) -> Vec<Action> {
         let before = state.clone();
         let mut found = Vec::new();
-        visit_legal_kind(state, 0, kind, &mut |action| found.push(action));
+        let _ = visit_legal_kind(state, 0, kind, &mut |action| found.push(action));
         same_table(state, &before);
         found
     }
