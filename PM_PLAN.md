@@ -59,7 +59,7 @@ Operating model: `.cursor/rules/` ship commands (UCPH, CMPH, SWAT), human check,
 - **1b.3:** The first meld is cards on the felt.
 - **1b.4:** Round 1 ends. Four scores show. Round 2 is dealt and the board is empty.
 - **1b.5:** Five rounds play. Round 6 is dealt and unplayed. A rule-book mismatch becomes a `push_core` test.
-- **3.3.1:** on `feature/3.3-drag-drop`. Not merged. `swift test --package-path ios/PushUI` is green (35 tests). Drop maps to `PlayMeld` or `HitMeld`. A `GameError` or a refusal snaps back. The screen is still 3.2. Public version stays **0.3.2**.
+- **3.3.1:** on `main`. Content is `9afe342`. Public version stays **0.3.2**. Drop maps to `PlayMeld` or `HitMeld`. A `GameError` or a refusal snaps back. The screen is still 3.2. `swift test --package-path ios/PushUI` is green (35 tests). `feature/3.3-drag-drop` is kept.
 - **Next (iOS):** 3.3.2 (hand row) when asked. Then 3.3.3 (on-screen drag), 3.3.4 (engine drop).
 - **Next (viewer):** 1b.1 when asked.
 - **Full backlog:** [doc/BACKLOG.md](doc/BACKLOG.md)

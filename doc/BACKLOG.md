@@ -405,7 +405,7 @@ The page is `viewer/`. The bridge is `push_wasm`. Four seats come from `finish_p
 
 **User Story 3.3.1: Drop API**
 
-**Status:** on `feature/3.3-drag-drop`. Not merged. `swift test --package-path ios/PushUI` is green (35 tests). Public version stays **0.3.2**. The screen is still 3.2.
+**Status:** on `main`. Content is `9afe342`. Public version stays **0.3.2**. The screen is still 3.2. `swift test --package-path ios/PushUI` is green (35 tests). `feature/3.3-drag-drop` is kept.
 
 *As a player, I want a drop to become a play or a hit before the screen animates.*
 
