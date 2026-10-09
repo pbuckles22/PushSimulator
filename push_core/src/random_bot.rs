@@ -111,9 +111,24 @@ pub fn finish_random_game(seed: u64) -> FinishedGame {
 
 /// Shuffles a fresh shoe, deals two seats, and flips one discard.
 pub fn new_two_seat_table(rng: &mut impl Rng) -> GameState {
+    new_seat_table(rng, 2)
+}
+
+/// Shuffles a fresh shoe, deals `seats` players, and flips one discard.
+///
+/// Push is played with 2 or more players. Ten cards each plus the opening
+/// discard have to fit in the 108-card shoe, so `seats` stops at 10.
+pub fn new_seat_table(rng: &mut impl Rng, seats: usize) -> GameState {
+    assert!(seats >= 2, "Push is played with 2 or more players");
+    assert!(
+        seats <= 10,
+        "ten cards for each seat plus the opening discard fit at most 10 seats"
+    );
     let mut deck = Deck::new();
     deck.shuffle_with(rng);
-    let mut players = vec![Player::new(0, 0), Player::new(1, 1)];
+    let mut players: Vec<Player> = (0..seats)
+        .map(|seat| Player::new(seat as u32, seat as u32))
+        .collect();
     deal_initial_hands(&mut players, &mut deck);
     let starter = deck
         .cards

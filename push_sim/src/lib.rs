@@ -32,7 +32,7 @@ pub struct ParallelBatch {
 pub struct SimArgs {
     games: Option<u64>,
     csv: Option<PathBuf>,
-    seats: [BotProfile; 2],
+    seats: Vec<BotProfile>,
 }
 
 impl SimArgs {
@@ -47,17 +47,20 @@ impl SimArgs {
         })
     }
 
-    /// Seat 0 then seat 1. Both are [`BotProfile::Random`] when the flags are omitted.
-    pub fn seats(&self) -> [BotProfile; 2] {
-        self.seats
+    /// Seat 0, then each later seat. Both are [`BotProfile::Random`] when the flags are omitted.
+    ///
+    /// `--players` above 2 copies seat 1 into every later seat.
+    pub fn seats(&self) -> &[BotProfile] {
+        &self.seats
     }
 }
 
-/// Reads `--games <count>`, `--csv <path>`, `--seat0`, and `--seat1`.
+/// Reads `--games <count>`, `--csv <path>`, `--seat0`, `--seat1`, and `--players`.
 ///
 /// An empty list leaves the one-game print in place. `--csv` without `--games`
 /// is refused. An unknown flag is refused. A seat is `random`, `point-averse`,
-/// `hoarder`, or `keep-<count>`. Omitting a seat leaves it random.
+/// `hoarder`, or `keep-<count>`. Omitting a seat leaves it random. `--players`
+/// deals that many seats: seat 0 keeps `--seat0`, and every other seat is `--seat1`.
 pub fn parse_sim_args<I, S>(args: I) -> SimArgs
 where
     I: IntoIterator<Item = S>,
@@ -65,7 +68,8 @@ where
 {
     let mut games = None;
     let mut csv = None;
-    let mut seats = [BotProfile::Random, BotProfile::Random];
+    let mut players = None;
+    let mut seats = vec![BotProfile::Random, BotProfile::Random];
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
         match arg.as_ref() {
@@ -89,11 +93,31 @@ where
             }
             "--seat0" => seats[0] = parse_profile("--seat0", &mut iter),
             "--seat1" => seats[1] = parse_profile("--seat1", &mut iter),
+            "--players" => {
+                let value = iter
+                    .next()
+                    .map(|item| item.as_ref().to_string())
+                    .expect("--players needs a count");
+                players = Some(
+                    value
+                        .parse::<usize>()
+                        .unwrap_or_else(|_| panic!("--players is a number")),
+                );
+            }
             other => panic!("unknown argument {other}"),
         }
     }
     if csv.is_some() && games.is_none() {
         panic!("--csv needs --games");
+    }
+    if let Some(count) = players {
+        assert!(count >= 2, "--players is at least 2");
+        assert!(count <= 10, "--players fits the shoe");
+        let seat0 = seats[0];
+        let rest = seats[1];
+        seats = Vec::with_capacity(count);
+        seats.push(seat0);
+        seats.extend(std::iter::repeat(rest).take(count - 1));
     }
     SimArgs { games, csv, seats }
 }
@@ -169,11 +193,12 @@ pub fn write_metrics_csv(path: &Path, metrics: &BatchMetrics) -> Result<(), csv:
 
 /// Plays `games` five-round matches on the Rayon pool.
 ///
-/// Seat 0 uses `seats[0]`. Seat 1 uses `seats[1]`. Result order matches seed order.
+/// Seat 0 uses `seats[0]`. Each later seat uses its own profile. Result order
+/// matches seed order.
 pub fn play_profile_games_parallel(
     first_seed: u64,
     games: u64,
-    seats: [BotProfile; 2],
+    seats: &[BotProfile],
 ) -> ParallelBatch {
     let seen = Mutex::new(HashSet::<ThreadId>::new());
     let pool_threads = AtomicUsize::new(0);
@@ -214,7 +239,7 @@ pub fn run_parallel_batch(
 pub fn run_profile_batch(
     first_seed: u64,
     games: u64,
-    seats: [BotProfile; 2],
+    seats: &[BotProfile],
     csv_path: &Path,
 ) -> Result<(ParallelBatch, BatchMetrics), csv::Error> {
     let batch = play_profile_games_parallel(first_seed, games, seats);

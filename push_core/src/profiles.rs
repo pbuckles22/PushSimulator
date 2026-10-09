@@ -15,8 +15,8 @@ use crate::card::Card;
 use crate::game_state::{GameState, TurnPhase};
 use crate::legal_moves::{push_is_legal, visit_legal_kind_within, LegalKind};
 use crate::random_bot::{
-    finish_random_game, game_finished_five_rounds, melds_for_round, new_two_seat_table,
-    FinishedGame, ACTION_SAMPLE_CAP, LARGE_HAND_WALK_NODES, TURN_LIMIT,
+    finish_random_game, game_finished_five_rounds, melds_for_round, new_seat_table, FinishedGame,
+    ACTION_SAMPLE_CAP, LARGE_HAND_WALK_NODES, TURN_LIMIT,
 };
 use crate::resolution::ActionResolution;
 use crate::validation::card_can_be_played;
@@ -79,34 +79,45 @@ impl BotProfile {
     }
 }
 
-/// Two seats play five rounds. Each seat uses its own profile.
+/// Each seat plays five rounds on its own profile.
 ///
 /// Two [`BotProfile::Random`] seats are [`finish_random_game`]. Seed 1 still
-/// scores 5 and 85 on that path. A strategic seat pushes, takes, lays down,
-/// hits, and discards. It does not steal. A hand above 11 still stops after
-/// 10,000 search steps, and a play or hit walk still keeps 100 actions.
-pub fn finish_profile_game(seed: u64, seats: [BotProfile; 2]) -> FinishedGame {
+/// scores 5 and 85 on that path. Three or more seats deal that many players.
+/// Seat 0 uses `seats[0]`, and each later seat uses its own profile. A
+/// strategic seat pushes, takes, lays down, hits, and discards. It does not
+/// steal. A hand above 11 still stops after 10,000 search steps, and a play
+/// or hit walk still keeps 100 actions.
+pub fn finish_profile_game(seed: u64, seats: impl AsRef<[BotProfile]>) -> FinishedGame {
+    let seats = seats.as_ref();
+    assert!(seats.len() >= 2, "Push is played with 2 or more players");
     if seats == [BotProfile::Random, BotProfile::Random] {
         return finish_random_game(seed);
     }
     let mut rng = StdRng::seed_from_u64(seed);
-    let mut state = new_two_seat_table(&mut rng);
+    let mut state = new_seat_table(&mut rng, seats.len());
     let mut seat = 0usize;
     let mut finished = 0u8;
     let mut turns = 0u32;
     while finished < 5 {
         turns += 1;
-        assert!(
-            turns <= TURN_LIMIT,
-            "seed {seed} did not finish five rounds in {TURN_LIMIT} turns at round {} hands {}/{} draw {} board {} on_board {:?}/{:?}",
-            state.round_number,
-            state.players[0].hand.len(),
-            state.players[1].hand.len(),
-            state.deck.cards.len(),
-            state.board.len(),
-            state.players[0].is_on_board,
-            state.players[1].is_on_board
-        );
+        if turns > TURN_LIMIT {
+            let hands: Vec<usize> = state
+                .players
+                .iter()
+                .map(|player| player.hand.len())
+                .collect();
+            let on_board: Vec<bool> = state
+                .players
+                .iter()
+                .map(|player| player.is_on_board)
+                .collect();
+            panic!(
+                "seed {seed} did not finish five rounds in {TURN_LIMIT} turns at round {} hands {hands:?} draw {} board {} on_board {on_board:?}",
+                state.round_number,
+                state.deck.cards.len(),
+                state.board.len(),
+            );
+        }
         play_profile_turn(&mut state, seat, &mut rng, seats[seat]);
         if state.round_over {
             assert!(state.advance_to_next_round_with(&mut rng));

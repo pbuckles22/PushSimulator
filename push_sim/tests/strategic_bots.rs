@@ -40,7 +40,7 @@ fn read_rows(path: &Path) -> (Vec<String>, Vec<Vec<String>>) {
 fn test_finish_profile_game_par_iter_batch_metrics_csv_point_averse_vs_hoarder() {
     let seats = [BotProfile::PointAverse, BotProfile::Hoarder];
     let path = csv_path("profiles");
-    let (batch, metrics) = run_profile_batch(1, 2, seats, &path).expect("profile csv");
+    let (batch, metrics) = run_profile_batch(1, 2, &seats, &path).expect("profile csv");
     assert_eq!(batch.games.len(), 2);
     assert!(batch
         .games
@@ -109,6 +109,65 @@ fn test_parse_sim_args_selects_point_averse_and_hoarder() {
             .map(|(games, path)| (games, path.display().to_string())),
         Some((100_000, "profiles.csv".to_string()))
     );
+}
+
+/// `--players 3` copies seat 1 into the third seat.
+#[test]
+fn test_parse_sim_args_players_copies_seat1_around_the_table() {
+    let table = parse_sim_args([
+        "--games",
+        "2",
+        "--players",
+        "3",
+        "--seat0",
+        "keep-4",
+        "--seat1",
+        "point-averse",
+        "--csv",
+        "three.csv",
+    ]);
+    assert_eq!(
+        table.seats(),
+        [
+            BotProfile::Keep(4),
+            BotProfile::PointAverse,
+            BotProfile::PointAverse,
+        ]
+    );
+}
+
+/// Chain: finish_profile_game → rayon par_iter → batch_metrics → CSV.
+///
+/// Three seats. Seat 0 keeps one wild. The other two are point-averse.
+/// The CSV records three rows and both games.
+#[test]
+fn test_finish_profile_game_par_iter_three_seats_keep_vs_point_averse() {
+    let seats = [
+        BotProfile::Keep(1),
+        BotProfile::PointAverse,
+        BotProfile::PointAverse,
+    ];
+    let path = csv_path("three-seats");
+    let (batch, metrics) = run_profile_batch(1, 2, &seats, &path).expect("three-seat csv");
+    assert_eq!(batch.games.len(), 2);
+    assert!(batch.games.iter().all(|game| game.state.players.len() == 3));
+    assert!(batch
+        .games
+        .iter()
+        .all(|game| game_finished_five_rounds(&game.state)));
+    assert_eq!(metrics.seats.len(), 3);
+    assert_eq!(metrics.games, 2);
+    let (_headers, rows) = read_rows(&path);
+    assert_eq!(rows.len(), 3);
+    assert_eq!(rows[0][2], "2");
+    assert_eq!(rows[2][0], "2");
+    let _ = std::fs::remove_file(&path);
+}
+
+#[test]
+#[should_panic(expected = "--players is at least 2")]
+fn test_parse_sim_args_rejects_one_player() {
+    let _ = parse_sim_args(["--games", "1", "--players", "1"]);
 }
 
 #[test]

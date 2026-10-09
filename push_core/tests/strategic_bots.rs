@@ -435,6 +435,40 @@ fn test_deal_profile_turns_point_averse_vs_hoarder_round_three_seeds_finish() {
     }
 }
 
+/// Chain: deal three seats → keep-1 and two point-averse turns → five rounds.
+/// The shoe is intact.
+#[test]
+fn test_deal_three_seats_keep_one_vs_point_averse_finishes_five_rounds() {
+    let seats = [
+        BotProfile::Keep(1),
+        BotProfile::PointAverse,
+        BotProfile::PointAverse,
+    ];
+    let game = finish_profile_game(1, seats);
+    assert_eq!(game.state.players.len(), 3);
+    assert!(game_finished_five_rounds(&game.state));
+    assert!(game.state.players.iter().all(|player| player.points == 0));
+    assert_eq!(shoe_ids(&game.state), fresh_shoe_ids());
+}
+
+/// Chain: deal five seats → keep-4 and four point-averse turns → five rounds.
+/// The shoe is intact.
+#[test]
+fn test_deal_five_seats_keep_four_vs_point_averse_finishes_five_rounds() {
+    let seats = [
+        BotProfile::Keep(4),
+        BotProfile::PointAverse,
+        BotProfile::PointAverse,
+        BotProfile::PointAverse,
+        BotProfile::PointAverse,
+    ];
+    let game = finish_profile_game(1, seats);
+    assert_eq!(game.state.players.len(), 5);
+    assert!(game_finished_five_rounds(&game.state));
+    assert!(game.state.players.iter().all(|player| player.points == 0));
+    assert_eq!(shoe_ids(&game.state), fresh_shoe_ids());
+}
+
 /// Chain: deal → point-averse and hoarder turns → five rounds. The shoe is intact.
 #[test]
 fn test_deal_profile_turns_point_averse_vs_hoarder_finishes_five_rounds() {

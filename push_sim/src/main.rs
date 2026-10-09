@@ -20,10 +20,13 @@ fn main() {
             push_sim::run_profile_batch(1, games, seats, Path::new(&csv))
                 .expect("write metrics csv")
         };
+        let labels = seats
+            .iter()
+            .map(|seat| seat.label())
+            .collect::<Vec<_>>()
+            .join(",");
         println!(
-            "push_sim parallel games={games} seats={},{} csv={} ties={} average_turns={}",
-            seats[0].label(),
-            seats[1].label(),
+            "push_sim parallel games={games} seats={labels} csv={} ties={} average_turns={}",
             csv.display(),
             metrics.ties,
             metrics.average_turns
