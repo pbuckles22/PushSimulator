@@ -416,11 +416,13 @@ The page is `viewer/`. The bridge is `push_wasm`. Four seats come from `finish_p
 
 **User Story 3.3.2: Hand row**
 
+**Status:** on `main`. Content is `4acd3cf`. Public version **0.3.3**. The screen shows 0.3.3, Deck size 108, Round 2, the set, the run, and a hand of 8♦, K♠, a locked joker, and 2♣. iPhone 16 simulator, PASS. `swift test --package-path ios/PushUI` is green (38 tests). `feature/3.3.2-hand-row` is kept.
+
 *As a player, I want to see my hand on the screen so I know what I can drag.*
 
-* \[ \] The local seat’s hand is on the screen.  
-* \[ \] Opponent hands stay off the picture.  
-* \[ \] No drag yet.
+* \[x\] The local seat’s hand is on the screen.  
+* \[x\] Opponent hands stay off the picture.  
+* \[x\] No drag yet. The row scrolls left and right. A card does not lift.
 
 **User Story 3.3.3: On-screen drag**
 

@@ -62,14 +62,14 @@ Phase 1b (WASM viewer) can start once Epic 1.2+ is playable headless; full bot-v
 
 ## Next concrete step
 
-Phase 1b is in [BACKLOG.md](BACKLOG.md) as stories 1b.1–1b.5. It is parallel to Phase 3 and does not block 3.3.1. The iOS thread starts at 3.3.1. The viewer thread starts at 1b.1 from current `main`. `feature/1b-wasm-tick` stays a two-seat sketch.
+Phase 1b is in [BACKLOG.md](BACKLOG.md) as stories 1b.1–1b.5. It is parallel to Phase 3 and does not block 3.3.3. The iOS thread is 3.3.3 when asked. The viewer thread starts at 1b.1 from current `main`. `feature/1b-wasm-tick` stays a two-seat sketch.
 
 ## Phase 3 and later: mini-wins (2026-10-09)
 
 The old 3.3 story was three bullets and never named the Swift drop API. That hid a ship of the same size as 3.1 and 3.2. Open work is now:
 
 - **3.3.1** Drop API (`Transferable`, `PlayMeld` / `HitMeld`, snap-back). Screen unchanged; version stays 0.3.2.
-- **3.3.2** Hand row on screen. No drag yet.
+- **3.3.2** Hand row on screen. No drag yet. On `main`. Public version **0.3.3**. The row scrolls. A card does not lift.
 - **3.3.3** On-screen drag through 3.3.1. Stand-in engine.
 - **3.3.4** UniFFI applies the drop. Rust returns `GameError` and refusals.
 

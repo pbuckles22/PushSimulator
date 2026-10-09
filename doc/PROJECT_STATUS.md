@@ -6,7 +6,7 @@
 
 ## Summary
 
-**3.3.1** is on `main`. Content is `9afe342`. Public version stays **0.3.2**. A drop maps to one `PlayMeld` or one `HitMeld`. A `GameError` or a refusal returns the same hand and board. The screen is still 3.2. `feature/3.3-drag-drop` is kept. Next iOS story is 3.3.2 when asked. **3.2** is on `main`. Content is `adac445`. Public version **0.3.2**. The screen shows 0.3.2, Deck size 108, Round 2, three fours, and 4♥ 5♥ 6♥ 7♥. iPhone 16 simulator, PASS. `feature/3.2-board-ui` is kept.
+**3.3.2** is on `main`. Content is `4acd3cf`. Public version **0.3.3**. The local seat's hand is on the screen. Opponent hands stay off the picture. The row scrolls. A card does not lift. iPhone 16 simulator, PASS. `feature/3.3.2-hand-row` is kept. Next iOS story is 3.3.3 when asked. **3.3.1** is on `main`. Content is `9afe342`. Public version stays **0.3.2**. A drop maps to one `PlayMeld` or one `HitMeld`. A `GameError` or a refusal returns the same hand and board. The screen is still 3.2. `feature/3.3-drag-drop` is kept. **3.2** is on `main`. Content is `adac445`. Public version **0.3.2**. The screen shows 0.3.2, Deck size 108, Round 2, three fours, and 4♥ 5♥ 6♥ 7♥. iPhone 16 simulator, PASS. `feature/3.2-board-ui` is kept.
 
 Phase 1b is planned and not started. It is parallel to Phase 3 and does not block 3.3. Stories 1b.1 through 1b.5 are in `doc/BACKLOG.md`: four dealt hands, one logged step, the first meld, the end of round 1, then a five-round match. Next viewer story is 1b.1 when asked. `feature/1b-wasm-tick` is a two-seat sketch from `6d52fbd`. Do not branch from it. **3.1** is on `main`. Content is `398e20a`. Public version **0.3.1**. `Game::get_deck_size` is the undealt shoe, 108. The SwiftUI screen shows Deck size 108. Device Hub, iPhone 16, PASS. `feature/3.1-uniffi-deck-size` is kept.
 
@@ -24,7 +24,8 @@ Phase 2 is complete — 2026-10-09. 2.4 content is `f5868db`. A point-averse sea
 
 | Branch | Role |
 |--------|------|
-| **`main`** | 3.3.1 on main. Content `9afe342`. Public version stays 0.3.2. 3.2 content `adac445` |
+| **`main`** | 3.3.2 on main. Content `4acd3cf`. Public version 0.3.3. 3.3.1 content `9afe342` |
+| **`feature/3.3.2-hand-row`** | Kept. Local hand on the screen. No drag. Do not merge again |
 | **`feature/3.3-drag-drop`** | Kept. Drop maps to a play or a hit. Screen stays 0.3.2. Do not merge again |
 | **`feature/3.2-board-ui`** | Kept. Board shows a set and a run. Public version 0.3.2. Do not merge again |
 | **`feature/3.1-uniffi-deck-size`** | Kept. UniFFI deck size 108. Public version 0.3.1. Do not merge again |
@@ -77,6 +78,7 @@ Phase 2 is complete — 2026-10-09. 2.4 content is `f5868db`. A point-averse sea
 
 ## Completed
 
+- **3.3.2** on `main`. Content is `4acd3cf`. Public version **0.3.3**. The local seat's hand is on the screen. Opponent hands stay off the picture. The row scrolls. A card does not lift. `feature/3.3.2-hand-row` is kept
 - **3.3.1** on `main`. Content is `9afe342`. Public version stays **0.3.2**. A drop maps to one `PlayMeld` or one `HitMeld`. A `GameError` or a refusal returns the same hand and board. The screen is still 3.2. `feature/3.3-drag-drop` is kept
 - **3.2** on `main`. Content is `adac445`. Public version **0.3.2**. `@Published` state wraps the Rust table. The screen shows 0.3.2, Deck size 108, Round 2, three fours, and 4♥ 5♥ 6♥ 7♥. `feature/3.2-board-ui` is kept
 - **3.1** on `main`. Content is `398e20a`. Public version **0.3.1**. `Game::get_deck_size` is the undealt shoe, 108. UniFFI exports that call. The SwiftUI screen shows Deck size 108. `feature/3.1-uniffi-deck-size` is kept
