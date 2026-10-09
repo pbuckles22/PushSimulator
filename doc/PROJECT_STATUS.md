@@ -6,7 +6,7 @@
 
 ## Summary
 
-2.3 is on `main` at `69534dd`. One thousand games run through `rayon::par_iter`. The lowest total wins. A tie is not a win. The CSV records seat win rates, average turns, and population score variance. Debug `test_rayon_parallelization` finished 1000 of 1000 in 12.77s. Seed 1 scores 5 and 85. `feature/2.3-parallel-csv` is deleted. Next is 2.4.
+2.3 is on `main` at `69534dd`. One thousand games run through `rayon::par_iter`. The lowest total wins. A tie is not a win. The CSV records seat win rates, average turns, and population score variance. Debug `test_rayon_parallelization` finished 1000 of 1000 in 12.77s. Seed 1 scores 5 and 85. `feature/2.3-parallel-csv` is kept. Next is 2.4.
 
 2.2.1 is on `main` at `faa63d4`. The visit callback returns `bool` or `ControlFlow` and stops a play, hit, steal, or discard walk. The bot keeps 100 plays or hits. A hand above 11 stops after 10,000 search steps. The one-card large-hand bypass is gone. Release batch 0 finished 1000 of 1000 in 13.305s, inside 60s. Seed 1 scores 5 and 85. Stage 3's five batches with the bypass still in place finished in 20.350s, 24.099s, 21.034s, 20.484s, and 19.539s. `legacy_oracle` stays frozen. Deck-out sudden death stays on `main` at `9de67aa`. An empty penalty draw sets `round_over` and stays in penalty drawing. The hand keeps every card it drew. A safe card still returns to playing. The stall fix stays on `main` at `a4708f2`. Seeds 1..=10000 finished in 213.42s with 0 stalls under that earlier rule. Story 2.2.1 stages 1–2 stay on `main` at `90ab20b`. Free melding stays on `main` at `2a1dadb`. Seed 1 before the stall fix scored 420 and 40. 2.2.1 stays on `main` at `faa63d4`.
 
@@ -19,6 +19,7 @@
 | Branch | Role |
 |--------|------|
 | **`main`** | 2.3 parallel CSV at `69534dd`. Seed 1 is 5 and 85. 2.2.1 visit-stop at `faa63d4` |
+| **`feature/2.3-parallel-csv`** | Kept. Rayon batches and CSV metrics. Do not merge again |
 | **`fix/free-melding-post-board`** | Kept. Free melding breakfix. Do not merge again |
 | **`fix/residual-turn-limit-stalemates`** | Kept. Empty penalty draw used to return to playing. On-board shed. Seed 1 is 340 and 80 |
 | **`fix/penalty-deck-out`** | Deck-out sudden death. Empty penalty draw sets `round_over`. Kept after land |
@@ -66,7 +67,7 @@
 
 ## Completed
 
-- **2.3** on `main` at `69534dd`. One thousand games run through `rayon::par_iter`. The lowest total wins. A tie is not a win. The CSV records seat win rates, average turns, and population score variance. Debug `test_rayon_parallelization` finished 1000 of 1000 in 12.77s. Seed 1 scores 5 and 85. `feature/2.3-parallel-csv` is deleted
+- **2.3** on `main` at `69534dd`. One thousand games run through `rayon::par_iter`. The lowest total wins. A tie is not a win. The CSV records seat win rates, average turns, and population score variance. Debug `test_rayon_parallelization` finished 1000 of 1000 in 12.77s. Seed 1 scores 5 and 85. `feature/2.3-parallel-csv` is kept
 - **2.2** on `main` at `d815423`. Two random seats finish five rounds. Seed 1 leaves round 6 dealt and unplayed. `points` stay 0. Totals are 340 and 1025. Every card id stays on the table. `feature/2.2-random-bot` is kept
 - **2.1** on `main` at `e0e6b42`. `generate_legal_moves` lists every action `apply` would accept for one seat. The table stays as it was. The 8♦ hits the eights. The 9♥ hits the heart run. The joker hits either. The 4♦ and the king are discards only. The 3♠ joins 5♠–8♠ only with the 4♠. Off the board, two sets of three can be laid down. The 8♦ that fits cannot be discarded. Six fours are two sets of three. A locked card can be discarded and cannot be hit. The 5♦ steals the joker. The card just taken can be discarded. `DrawFromDeck` is listed only for the penalty seat. A closed round lists nothing. `points` and `total_score` stay as they were. `feature/2.1-legal-moves` is kept
 - **Epic 1.8** complete — 2026-10-07. A stolen joker can wait and win. A push can trap a seat into the penalty draw. One turn can lay down, hit, steal, and discard. The round scores the hands that remain and deals again. A joker drawn in that penalty stays in the hand. The close is on `main`. Content is `b2303b9`. `feature/1.8.5-trapped-by-a-draw` stays
