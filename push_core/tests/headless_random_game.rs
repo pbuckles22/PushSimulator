@@ -63,6 +63,67 @@ fn test_headless_random_game() {
     assert_eq!(shoe_ids(&state), fresh_shoe_ids());
 }
 
+/// Chain: play_random_game → a closed suit run → one take and one discard.
+///
+/// Seed 1 still scores 340 and 1025. Seed 2's round 3 is this shape: a suit run
+/// already covers 3 through Ace, the seat is on the board, and the hand is
+/// longer than 11. One turn takes the discard and discards one card. The hand
+/// size stays. The round stays open. `points` stay 0.
+#[test]
+fn test_play_random_game_closed_suit_run_take_and_discard_keeps_the_hand_size() {
+    let seed_1 = play_random_game(1);
+    assert_eq!(seed_1.players[0].total_score, 340);
+    assert_eq!(seed_1.players[1].total_score, 1025);
+
+    let ranks = [
+        Rank::Three,
+        Rank::Four,
+        Rank::Five,
+        Rank::Six,
+        Rank::Seven,
+        Rank::Eight,
+        Rank::Nine,
+        Rank::Ten,
+        Rank::Jack,
+        Rank::Queen,
+        Rank::King,
+        Rank::Ace,
+    ];
+    let run: Vec<Card> = ranks
+        .iter()
+        .enumerate()
+        .map(|(index, rank)| card(index as u32 + 1, Suit::Hearts, *rank))
+        .collect();
+    let hand: Vec<Card> = ranks
+        .iter()
+        .enumerate()
+        .map(|(index, rank)| card(100 + index as u32, Suit::Clubs, *rank))
+        .collect();
+    let mut actor = Player::new(0, 0);
+    actor.is_on_board = true;
+    actor.hand = hand;
+    let mut other = Player::new(1, 1);
+    other.is_on_board = true;
+    other.hand = vec![card(200, Suit::Spades, Rank::Three)];
+    let mut deck = Deck::new();
+    deck.cards.clear();
+    deck.discard.clear();
+    deck.cards.push(card(301, Suit::Diamonds, Rank::Four));
+    deck.discard.push(card(300, Suit::Diamonds, Rank::Three));
+    let mut state = GameState::new(vec![actor, other], deck);
+    state.board = vec![run];
+    let mut rng = StdRng::seed_from_u64(1);
+
+    play_random_turn(&mut state, 0, &mut rng);
+
+    assert_eq!(state.players[0].hand.len(), 12);
+    assert_eq!(state.deck.cards.len(), 1);
+    assert_eq!(state.deck.discard.len(), 1);
+    assert!(!state.round_over);
+    assert_eq!(state.players[0].points, 0);
+    assert_eq!(state.players[1].points, 0);
+}
+
 /// The same seed deals the same sixth round and the same totals.
 #[test]
 fn test_headless_random_game_same_seed_repeats() {

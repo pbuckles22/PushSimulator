@@ -13,6 +13,7 @@ pub mod legal_moves;
 pub mod player;
 pub mod random_bot;
 pub mod resolution;
+pub mod throughput;
 pub mod validation;
 
 #[cfg(test)]
