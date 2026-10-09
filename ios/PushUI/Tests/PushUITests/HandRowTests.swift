@@ -41,7 +41,7 @@ final class HandRowTests: XCTestCase {
         )
     }
 
-    func testHandRowShowsOrderLocksJokersAndDoesNotDrag() {
+    func testHandRowShowsOrderLocksJokersAndLiftsACard() {
         let empty = HandView(cards: [])
         XCTAssertEqual(empty.emptyTitle, "No cards")
         XCTAssertTrue(empty.layout.faces.isEmpty)
@@ -55,7 +55,8 @@ final class HandRowTests: XCTestCase {
         ]
         let hand = HandView(cards: cards)
         XCTAssertNil(hand.emptyTitle)
-        XCTAssertFalse(hand.allowsDrag)
+        XCTAssertTrue(hand.allowsDrag)
+        XCTAssertTrue(cards.allSatisfy { hand.canLift($0) })
         XCTAssertEqual(hand.layout.faces.map(\.spoken), [
             "Eight of Diamonds",
             "King of Spades",
@@ -72,12 +73,13 @@ final class HandRowTests: XCTestCase {
         ])
         XCTAssertEqual(twins.layout.faces.map(\.pip), ["4", "5"])
         XCTAssertEqual(twins.layout.faces.map(\.suitSymbol), ["♥", "♠"])
-        XCTAssertFalse(twins.allowsDrag)
+        XCTAssertTrue(twins.allowsDrag)
+        XCTAssertTrue(twins.canLift(twins.cards[0]))
     }
 
     /// Chain: empty published shoe → board rows → local hand row.
-    /// An opponent card is not on the picture. The hand does not drag.
-    func testPublishedShoeBoardRowsThenLocalHandOmitsTheOpponentAndDoesNotDrag() {
+    /// An opponent card is not on the picture. A card in the hand can lift.
+    func testPublishedShoeBoardRowsThenLocalHandOmitsTheOpponentAndLifts() {
         let set = [
             card(id: 1, suit: .hearts, rank: .four, locked: 0),
             card(id: 2, suit: .spades, rank: .four, locked: 0),
@@ -138,7 +140,9 @@ final class HandRowTests: XCTestCase {
         XCTAssertEqual(screen.versionLine, "0.3.3")
         XCTAssertNil(screen.board.emptyTitle)
         XCTAssertNil(screen.hand.emptyTitle)
-        XCTAssertFalse(screen.hand.allowsDrag)
+        XCTAssertTrue(screen.hand.allowsDrag)
+        XCTAssertTrue(screen.hand.cards.allSatisfy { screen.hand.canLift($0) })
+        XCTAssertFalse(screen.hand.canLift(opponent))
         XCTAssertEqual(screen.board.layout.rows.count, 2)
         XCTAssertEqual(screen.board.layout.rows[0].faces.map(\.pip), ["4", "4", "4"])
         XCTAssertEqual(screen.board.layout.rows[0].faces.map(\.suitSymbol), ["♥", "♠", "♣"])

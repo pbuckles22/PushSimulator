@@ -14,7 +14,7 @@ fn test_deck_new_uniffi_game_get_deck_size_table_snapshot_empty_board() {
     let game = Game::new();
     let snap = game.table_snapshot();
     assert_eq!(game.get_deck_size(), 108);
-    assert_eq!(game.public_version(), "0.3.3");
+    assert_eq!(game.public_version(), "0.3.5");
     assert_eq!(snap.deck_size, 108);
     assert_eq!(snap.round_number, 1);
     assert!(snap.board.is_empty());

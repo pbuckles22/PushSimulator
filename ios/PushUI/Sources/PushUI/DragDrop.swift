@@ -87,6 +87,49 @@ public func settleDrop(
     }
 }
 
+/// Calls `settleDrop`. A game error, a refusal, or a drag that never asks
+/// returns the same picture. An accept keeps the version, the shoe, and the round,
+/// and shows the hand and board the stand-in returned.
+public func applyScreenDrop(
+    picture: TablePicture,
+    drag: CardDrag,
+    onto target: DropTarget,
+    engine: (MoveIntent) -> DropAnswer
+) -> TablePicture {
+    let held = HeldCards(hand: picture.hand, board: picture.board)
+    let next = settleDrop(table: held, drag: drag, onto: target, perform: engine)
+    if next.hand == held.hand && next.board == held.board {
+        return picture
+    }
+    return TablePicture(
+        version: picture.version,
+        deckSize: picture.deckSize,
+        roundNumber: picture.roundNumber,
+        board: next.board,
+        hand: next.hand
+    )
+}
+
+/// The live stand-in. It is not the rules engine.
+/// A new meld takes an unlocked card. A drop onto a row is refused, so an
+/// eight does not join the fours. Rust makes that decision in the next story.
+public func standInAnswer(picture: TablePicture, intent: MoveIntent) -> DropAnswer {
+    switch intent {
+    case .playMeld(let groups):
+        guard groups.count == 1, let cards = groups.first else {
+            return .refused
+        }
+        if cards.contains(where: { $0.lockedUntilTurn > 0 }) {
+            return .refused
+        }
+        let ids = Set(cards.map(\.id))
+        let hand = picture.hand.filter { !ids.contains($0.id) }
+        return .accepted(HeldCards(hand: hand, board: picture.board + [cards]))
+    case .hitMeld:
+        return .refused
+    }
+}
+
 private func cardsInHand(_ drag: CardDrag, hand: [BoardCard]) -> [BoardCard]? {
     if drag.cards.isEmpty {
         return nil

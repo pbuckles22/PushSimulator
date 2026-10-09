@@ -22,4 +22,11 @@ public final class PublishedTable: ObservableObject {
             picture = next
         }
     }
+
+    /// Shows a drop result. Does not read the engine.
+    public func show(_ next: TablePicture) {
+        if next != picture {
+            picture = next
+        }
+    }
 }
