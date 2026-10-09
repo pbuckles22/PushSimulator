@@ -80,6 +80,7 @@ To end your turn, you must place one card from your hand face-up onto the Discar
 * **The Safe Discard Rule:** If you are *not* on the board yet, you are **not allowed** to discard a card that could be played anywhere on the table.  
   * **The Penalty Draw:** If every single card in your hand is playable on the board, you cannot discard\! You must continuously draw one card at a time from the Draw Pile until you draw a "safe" card that *cannot* be played on the board. You then discard that safe card to end your turn.  
   * *Example:* You have 2 cards left, but both could be played on an opponent's Set. You must draw from the deck. It takes you 3 draws before finding a card that doesn't fit anywhere on the board. You discard it, ending your turn with 4 cards stuck in your hand.
+  * **The Deck Out Trap:** If a player is trapped in a Penalty Draw and is forced to draw when nothing is left in the deck, the round ends immediately. That player is stuck with all the cards they drew, and everyone scores their hands as-is.
 
 ## **The 5 Rounds**
 

@@ -367,8 +367,9 @@ fn test_random_turn_push_reshuffle_follows_the_bot_seed() {
 }
 
 /// Chain: fitting discard → penalty drawing → `generate_legal_moves` lists
-/// `DrawFromDeck` on empty piles → `play_random_turn` draws → the phase returns
-/// to playing → the next seat takes a turn.
+/// `DrawFromDeck` on empty piles → `play_random_turn` draws → the round ends
+/// with the phase still penalty drawing → `advance_to_next_round_with` scores
+/// both hands as they stand and deals the next round.
 #[test]
 fn test_discard_penalty_generate_legal_moves_random_turn_ends_when_the_deck_is_empty() {
     let held = card(4, Suit::Hearts, Rank::Seven);
@@ -405,31 +406,40 @@ fn test_discard_penalty_generate_legal_moves_random_turn_ends_when_the_deck_is_e
     let mut rng = StdRng::seed_from_u64(16);
     play_random_turn(&mut state, 0, &mut rng);
 
-    assert_eq!(state.turn_phase, TurnPhase::Playing);
-    assert_eq!(state.penalty_seat, None);
+    assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+    assert_eq!(state.penalty_seat, Some(0));
     assert_eq!(state.players[0].hand, vec![held]);
     assert_eq!(state.players[1].hand, vec![four, king]);
     assert!(state.deck.cards.is_empty());
     assert!(state.deck.discard.is_empty());
-    assert!(!state.round_over);
+    assert!(state.round_over);
+    assert_eq!(state.players[0].calculate_hand_penalty(), 5);
+    assert_eq!(state.players[1].calculate_hand_penalty(), 15);
     assert_eq!(state.players[0].points, 0);
     assert_eq!(state.players[1].points, 0);
     assert_eq!(state.players[0].total_score, 0);
     assert_eq!(state.players[1].total_score, 0);
 
-    state.advance_turn();
-    assert_eq!(state.turn_counter, 1);
-    assert_eq!(state.turn_phase, TurnPhase::Playing);
-    play_random_turn(&mut state, 1, &mut rng);
+    let present = shoe_ids(&state);
+    let rest: Vec<Card> = Deck::new()
+        .cards
+        .into_iter()
+        .filter(|card| !present.contains(&card.id))
+        .collect();
+    state.deck.cards.extend(rest);
 
+    assert!(state.advance_to_next_round_with(&mut rng));
+    assert_eq!(state.round_number, 2);
+    assert!(!state.round_over);
     assert_eq!(state.turn_phase, TurnPhase::Playing);
     assert_eq!(state.penalty_seat, None);
-    assert_eq!(state.players[0].hand, vec![held]);
-    assert_eq!(state.players[1].hand.len(), 1);
-    assert!(!state.round_over);
-    assert_eq!(state.deck.discard.len(), 1);
     assert_eq!(state.players[0].points, 0);
     assert_eq!(state.players[1].points, 0);
+    assert_eq!(state.players[0].total_score, 5);
+    assert_eq!(state.players[1].total_score, 15);
+    assert_eq!(state.players[0].hand.len(), 10);
+    assert_eq!(state.players[1].hand.len(), 10);
+    assert!(state.board.is_empty());
 }
 
 /// Chain: the last card is a legal discard → `generate_legal_moves` lists it and

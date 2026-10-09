@@ -78,7 +78,7 @@ pub fn visit_legal_kind(
         LegalKind::Steal => visit_steals(state, actor, visit),
         LegalKind::Discard => visit_discards(state, actor, visit),
         LegalKind::Draw => {
-            // An empty shoe is still a draw. That draw ends the penalty turn.
+            // An empty shoe is still a draw. That draw ends the round.
             if state.turn_phase == TurnPhase::PenaltyDrawing
                 && state.penalty_seat == Some(actor)
                 && accepts(state, actor, Action::DrawFromDeck)
@@ -1053,8 +1053,8 @@ mod tests {
         assert!(has_discard(&other, card(3, Suit::Clubs, Rank::Three)));
     }
 
-    /// Both piles are empty. The penalty seat is still offered the draw that ends the turn.
-    /// The other seat is not. After that draw, the phase is playing and the draw is gone.
+    /// Both piles are empty. The penalty seat is still offered the draw that ends the round.
+    /// The other seat is not. After that draw, the round is over and the draw is gone.
     #[test]
     fn test_generate_legal_moves_lists_draw_when_both_piles_are_empty() {
         let eight = card(1, Suit::Diamonds, Rank::Eight);
@@ -1081,10 +1081,10 @@ mod tests {
         assert_eq!(state.players[0].hand, vec![eight]);
         assert!(state.deck.cards.is_empty());
         assert!(state.deck.discard.is_empty());
-        assert_eq!(state.turn_phase, TurnPhase::Playing);
-        assert_eq!(state.penalty_seat, None);
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(state.penalty_seat, Some(0));
         assert!(!listed(&state, 0).contains(&Action::DrawFromDeck));
-        assert!(!state.round_over);
+        assert!(state.round_over);
     }
 
     /// On the board, a run of 4 in the hand is offered as PlayMeld.

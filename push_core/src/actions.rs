@@ -34,7 +34,7 @@ pub enum Action {
     /// Refusing that discard for an off-board player enters penalty drawing.
     DiscardCard(Card),
     /// While the turn is in penalty drawing, draw until a card that fits nothing is discarded.
-    /// If nothing is left to draw, the turn ends and the hand keeps what it drew.
+    /// If nothing is left to draw, the round ends and the hand keeps what it drew.
     DrawFromDeck,
 }
 
@@ -355,8 +355,8 @@ fn end_round_if_hand_empty(state: &mut GameState, actor_index: usize) {
 /// `rng` shuffles when the draw pile is empty and the discard is recycled or split.
 /// Only the seat already in [`TurnPhase::PenaltyDrawing`] may draw. Playable cards
 /// stay in the hand. The first safe card goes onto the discard pile and the
-/// phase returns to playing. When nothing is left to draw, the turn ends the
-/// same way: the phase returns to playing and the hand keeps every card it drew.
+/// phase returns to playing. When nothing is left to draw, the round ends at
+/// once. The phase stays penalty drawing and the hand keeps every card it drew.
 fn draw_from_deck(state: &mut GameState, actor_index: usize, rng: &mut impl Rng) -> bool {
     if state.turn_phase != TurnPhase::PenaltyDrawing || state.penalty_seat != Some(actor_index) {
         return false;
@@ -370,8 +370,7 @@ fn draw_from_deck(state: &mut GameState, actor_index: usize, rng: &mut impl Rng)
                 current
             }
             TurnDraw::Empty => {
-                state.turn_phase = TurnPhase::Playing;
-                state.penalty_seat = None;
+                state.round_over = true;
                 return true;
             }
         };
@@ -3404,9 +3403,9 @@ mod tests {
         assert_eq!(state.players[0].hand, vec![held, first, second]);
         assert!(state.deck.cards.is_empty());
         assert!(state.deck.discard.is_empty());
-        assert_eq!(state.turn_phase, TurnPhase::Playing);
-        assert_eq!(state.penalty_seat, None);
-        assert!(!state.round_over);
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(state.penalty_seat, Some(0));
+        assert!(state.round_over);
         assert_eq!(state.turn_counter, 0);
         assert_eq!(state.round_number, 1);
     }
@@ -3429,9 +3428,9 @@ mod tests {
         assert_eq!(state.players[1].hand.len(), other_before.len() + 1);
         assert!(state.deck.cards.is_empty());
         assert!(state.deck.discard.is_empty());
-        assert_eq!(state.turn_phase, TurnPhase::Playing);
-        assert_eq!(state.penalty_seat, None);
-        assert!(!state.round_over);
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(state.penalty_seat, Some(0));
+        assert!(state.round_over);
         let mut moved = vec![
             state.players[0].hand[1],
             state.players[1].hand[other_before.len()],
@@ -3713,7 +3712,7 @@ mod tests {
     }
 
     /// Both piles are empty while this seat is drawing a penalty. The draw is
-    /// accepted, the turn returns to playing, and the playable card stays.
+    /// accepted, the round ends, and the playable card stays in the hand.
     #[test]
     fn test_penalty_draw_ends_turn_when_deck_exhausted() {
         let held = card(4, Suit::Hearts, Rank::Seven);
@@ -3734,19 +3733,19 @@ mod tests {
         assert_eq!(state.board, board);
         assert!(state.deck.cards.is_empty());
         assert!(state.deck.discard.is_empty());
-        assert_eq!(state.turn_phase, TurnPhase::Playing);
-        assert_eq!(state.penalty_seat, None);
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(state.penalty_seat, Some(0));
         assert_eq!(state.drawn_card_id, None);
         assert_eq!(state.turn_counter, 0);
         assert_eq!(state.round_number, 1);
-        assert!(!state.round_over);
+        assert!(state.round_over);
         assert!(!state.players[0].is_on_board);
         assert_eq!(state.players[0].points, 4);
         assert_eq!(state.players[0].total_score, 9);
 
         assert!(!state.apply_with_rng(Action::DrawFromDeck, 0, &mut rng));
-        assert_eq!(state.turn_phase, TurnPhase::Playing);
-        assert_eq!(state.penalty_seat, None);
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(state.penalty_seat, Some(0));
         assert_eq!(state.players[0].hand, vec![held]);
         assert!(state.deck.cards.is_empty());
         assert!(state.deck.discard.is_empty());
@@ -3815,7 +3814,7 @@ mod tests {
         assert!(state.round_over);
     }
 
-    /// Every recycled card fits. The hand keeps them and the turn ends.
+    /// Every recycled card fits. The hand keeps them and the round ends.
     #[test]
     fn test_penalty_draw_ends_turn_when_every_recycled_card_fits() {
         let held = card(4, Suit::Hearts, Rank::Seven);
@@ -3841,9 +3840,9 @@ mod tests {
         assert!(state.deck.discard.is_empty());
         assert_eq!(state.players[1], other);
         assert_eq!(state.board, board);
-        assert_eq!(state.turn_phase, TurnPhase::Playing);
-        assert_eq!(state.penalty_seat, None);
-        assert!(!state.round_over);
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(state.penalty_seat, Some(0));
+        assert!(state.round_over);
         assert_eq!(state.turn_counter, 0);
         assert_eq!(state.players[0].points, 4);
         assert_eq!(state.players[0].total_score, 9);
@@ -3866,6 +3865,8 @@ mod tests {
         assert_eq!(state.deck.discard, vec![king]);
         assert!(state.deck.cards.is_empty());
         assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.penalty_seat, None);
+        assert!(!state.round_over);
         assert_eq!(state.turn_counter, 0);
     }
 
@@ -3885,9 +3886,9 @@ mod tests {
         assert_eq!(state.players[1], other);
         assert!(state.deck.discard.is_empty());
         assert!(state.deck.cards.is_empty());
-        assert_eq!(state.turn_phase, TurnPhase::Playing);
-        assert_eq!(state.penalty_seat, None);
-        assert!(!state.round_over);
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(state.penalty_seat, Some(0));
+        assert!(state.round_over);
         assert_eq!(state.turn_counter, 0);
         assert_eq!(state.round_number, 1);
     }
