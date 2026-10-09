@@ -5,12 +5,13 @@ use std::collections::BTreeMap;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 
-use crate::actions::{Action, MeldHit};
+use crate::actions::{validate_action, Action, MeldHit};
 use crate::card::{Card, Rank, Suit};
 use crate::deck::Deck;
 use crate::game_state::{GameState, TurnPhase};
 use crate::legal_moves::{push_is_legal, visit_legal_kind, LegalKind};
 use crate::player::{deal_initial_hands, Player};
+use crate::resolution::ActionResolution;
 use crate::validation::{card_can_be_played, check_round_requirements, validate_run, validate_set};
 
 /// Stop after this many turns so a stuck table fails instead of running on.
@@ -70,7 +71,10 @@ pub fn new_two_seat_table(rng: &mut impl Rng) -> GameState {
 /// Plays one turn for `actor`.
 ///
 /// The seat pushes when the deck can give the next seat a card and this seat a
-/// card. Otherwise the seat takes the discard. It lays down when the round allows
+/// card. Otherwise the seat takes the discard. On the board, a hand of one card
+/// that can be discarded is discarded first, which ends the round. If nothing
+/// on the board can be laid down or hit, one card is discarded without taking.
+/// Off the board, one safe card is still pushed or taken. It lays down when the round allows
 /// it, then lays additional valid sets or runs while on the board, hits until
 /// nothing else fits, and sometimes steals. The turn ends with a discard, or with
 /// a draw until a safe card. That draw, and a push that recycles the discard, use
@@ -83,9 +87,17 @@ pub fn play_random_turn(state: &mut GameState, actor: usize, rng: &mut impl Rng)
         let _ = state.apply_with_rng(Action::DrawFromDeck, actor, rng);
         return;
     }
+    if discard_to_go_out(state, actor, rng) {
+        return;
+    }
     if state.players[actor].hand.len() > 11 {
         play_one_card_at_a_time(state, actor, rng);
         return;
+    }
+    if state.players[actor].is_on_board && !can_play_or_hit(state, actor) {
+        if apply_one_discard(state, actor, rng) {
+            return;
+        }
     }
     if state.drawn_card_id.is_none() {
         if let Some(action) = choose_opening(state) {
@@ -200,6 +212,40 @@ fn apply_one_discard(state: &mut GameState, actor: usize, rng: &mut impl Rng) ->
         return false;
     }
     let action = discards[rng.gen_range(0..discards.len())].clone();
+    apply_listed(state, actor, action, rng);
+    true
+}
+
+/// On the board, with nothing to lay down or hit, a discard sheds one card.
+/// Taking first would put that card back.
+fn can_play_or_hit(state: &GameState, actor: usize) -> bool {
+    let mut found = false;
+    visit_legal_kind(state, actor, LegalKind::Play, &mut |_| found = true);
+    if found {
+        return true;
+    }
+    visit_legal_kind(state, actor, LegalKind::Hit, &mut |_| found = true);
+    found
+}
+
+/// One card, once that seat is on the board, is a discard that ends the round.
+/// Taking or pushing first would put a card back into the hand. Off the board,
+/// a single safe card is still pushed or taken.
+fn discard_to_go_out(state: &mut GameState, actor: usize, rng: &mut impl Rng) -> bool {
+    if !state.players[actor].is_on_board {
+        return false;
+    }
+    let card = match state.players[actor].hand.as_slice() {
+        [card] => *card,
+        _ => return false,
+    };
+    let action = Action::DiscardCard(card);
+    if !matches!(
+        validate_action(state, actor, &action),
+        ActionResolution::Accepted(_)
+    ) {
+        return false;
+    }
     apply_listed(state, actor, action, rng);
     true
 }

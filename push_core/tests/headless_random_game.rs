@@ -41,7 +41,9 @@ fn fresh_shoe_ids() -> Vec<u32> {
 }
 
 /// Two seats finish five rounds. The sixth round is dealt and not played.
-/// `points` stay 0. Every card id is still on the table.
+/// `points` stay 0. An on-board seat that cannot lay or hit discards instead of
+/// taking, so seed 1 totals are 340 and 80.
+/// Every card id is still on the table.
 #[test]
 fn test_headless_random_game() {
     let state = play_random_game(1);
@@ -60,8 +62,8 @@ fn test_headless_random_game() {
         assert!(!player.is_on_board);
         assert_eq!(player.points, 0);
     }
-    assert_eq!(state.players[0].total_score, 420);
-    assert_eq!(state.players[1].total_score, 40);
+    assert_eq!(state.players[0].total_score, 340);
+    assert_eq!(state.players[1].total_score, 80);
     assert_eq!(shoe_ids(&state), fresh_shoe_ids());
 }
 
@@ -188,8 +190,8 @@ fn test_play_meld_generate_legal_moves_random_turn_free_meld_chain() {
 
     let mut players = vec![Player::new(0, 0), Player::new(1, 1)];
     players[0].hand = vec![
-        fours[0], fours[1], fours[2], fives[0], fives[1], fives[2], sixes[0], sixes[1],
-        sixes[2], king,
+        fours[0], fours[1], fours[2], fives[0], fives[1], fives[2], sixes[0], sixes[1], sixes[2],
+        king,
     ];
     players[1].hand = vec![other];
     let mut deck = Deck::new();
@@ -362,6 +364,200 @@ fn test_random_turn_push_reshuffle_follows_the_bot_seed() {
     assert_eq!(left.players[0].total_score, 0);
     assert_eq!(left.players[1].total_score, 0);
     assert!(!left.round_over);
+}
+
+/// Chain: fitting discard → penalty drawing → `generate_legal_moves` lists
+/// `DrawFromDeck` on empty piles → `play_random_turn` draws → the phase returns
+/// to playing → the next seat takes a turn.
+#[test]
+fn test_discard_penalty_generate_legal_moves_random_turn_ends_when_the_deck_is_empty() {
+    let held = card(4, Suit::Hearts, Rank::Seven);
+    let four = card(60, Suit::Diamonds, Rank::Four);
+    let king = card(61, Suit::Spades, Rank::King);
+    let mut players = vec![Player::new(0, 0), Player::new(1, 1)];
+    players[0].hand = vec![held];
+    players[1].hand = vec![four, king];
+    let mut state = GameState::new(
+        players,
+        Deck {
+            cards: Vec::new(),
+            discard: vec![card(9, Suit::Diamonds, Rank::Queen)],
+        },
+    );
+    state.board = vec![vec![
+        card(1, Suit::Hearts, Rank::Five),
+        card(2, Suit::Hearts, Rank::Six),
+        card(3, Suit::None, Rank::Joker),
+    ]];
+
+    assert!(!state.apply(Action::DiscardCard(held), 0));
+    assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+    assert_eq!(state.penalty_seat, Some(0));
+    state.deck.cards.clear();
+    state.deck.discard.clear();
+
+    let moves = generate_legal_moves(&state, 0);
+    assert!(moves.contains(&Action::DrawFromDeck));
+    assert!(!moves
+        .iter()
+        .any(|action| matches!(action, Action::DiscardCard(card) if card.id == held.id)));
+
+    let mut rng = StdRng::seed_from_u64(16);
+    play_random_turn(&mut state, 0, &mut rng);
+
+    assert_eq!(state.turn_phase, TurnPhase::Playing);
+    assert_eq!(state.penalty_seat, None);
+    assert_eq!(state.players[0].hand, vec![held]);
+    assert_eq!(state.players[1].hand, vec![four, king]);
+    assert!(state.deck.cards.is_empty());
+    assert!(state.deck.discard.is_empty());
+    assert!(!state.round_over);
+    assert_eq!(state.players[0].points, 0);
+    assert_eq!(state.players[1].points, 0);
+    assert_eq!(state.players[0].total_score, 0);
+    assert_eq!(state.players[1].total_score, 0);
+
+    state.advance_turn();
+    assert_eq!(state.turn_counter, 1);
+    assert_eq!(state.turn_phase, TurnPhase::Playing);
+    play_random_turn(&mut state, 1, &mut rng);
+
+    assert_eq!(state.turn_phase, TurnPhase::Playing);
+    assert_eq!(state.penalty_seat, None);
+    assert_eq!(state.players[0].hand, vec![held]);
+    assert_eq!(state.players[1].hand.len(), 1);
+    assert!(!state.round_over);
+    assert_eq!(state.deck.discard.len(), 1);
+    assert_eq!(state.players[0].points, 0);
+    assert_eq!(state.players[1].points, 0);
+}
+
+/// Chain: the last card is a legal discard → `generate_legal_moves` lists it and
+/// the take → `play_random_turn` discards that card instead of taking → the hand
+/// is empty and the round is over.
+#[test]
+fn test_discard_generate_legal_moves_random_turn_goes_out_with_one_card() {
+    let king = card(7, Suit::Spades, Rank::King);
+    let queen = card(8, Suit::Diamonds, Rank::Queen);
+    let other = card(11, Suit::Diamonds, Rank::Three);
+    let mut players = vec![Player::new(0, 0), Player::new(1, 1)];
+    players[0].hand = vec![king];
+    players[0].is_on_board = true;
+    players[1].hand = vec![other];
+    players[1].is_on_board = true;
+    let mut deck = Deck::new();
+    deck.cards = vec![card(10, Suit::Hearts, Rank::Three)];
+    deck.discard = vec![queen];
+    let mut state = GameState::new(players, deck);
+    state.board = vec![vec![
+        card(1, Suit::Hearts, Rank::Four),
+        card(2, Suit::Spades, Rank::Four),
+        card(3, Suit::Clubs, Rank::Four),
+    ]];
+
+    let moves = generate_legal_moves(&state, 0);
+    assert!(moves
+        .iter()
+        .any(|action| matches!(action, Action::DiscardCard(card) if card.id == king.id)));
+    assert!(moves.contains(&Action::TakeDiscard));
+
+    let mut rng = StdRng::seed_from_u64(1);
+    play_random_turn(&mut state, 0, &mut rng);
+
+    assert!(state.round_over);
+    assert!(state.players[0].hand.is_empty());
+    assert_eq!(state.deck.discard.last().copied(), Some(king));
+    assert_eq!(state.players[1].hand, vec![other]);
+    assert_eq!(state.deck.cards.len(), 1);
+    assert_eq!(state.turn_phase, TurnPhase::Playing);
+    assert_eq!(state.penalty_seat, None);
+    assert_eq!(state.players[0].points, 0);
+    assert_eq!(state.players[1].points, 0);
+    assert_eq!(state.players[0].total_score, 0);
+    assert_eq!(state.players[1].total_score, 0);
+}
+
+/// Chain: on the board, nothing fits → the discard is listed beside the take →
+/// `play_random_turn` discards without taking → the next turn discards the last card
+/// and the round ends.
+#[test]
+fn test_discard_generate_legal_moves_random_turn_sheds_when_nothing_fits() {
+    let king = card(7, Suit::Spades, Rank::King);
+    let queen = card(8, Suit::Diamonds, Rank::Queen);
+    let other_king = card(11, Suit::Clubs, Rank::King);
+    let other_queen = card(12, Suit::Hearts, Rank::Queen);
+    let mut players = vec![Player::new(0, 0), Player::new(1, 1)];
+    players[0].hand = vec![king, queen];
+    players[0].is_on_board = true;
+    players[1].hand = vec![other_king, other_queen];
+    players[1].is_on_board = true;
+    let mut deck = Deck::new();
+    deck.cards = vec![card(10, Suit::Hearts, Rank::Three)];
+    deck.discard = vec![card(9, Suit::Clubs, Rank::Ace)];
+    let mut state = GameState::new(players, deck);
+    state.board = vec![vec![
+        card(1, Suit::Hearts, Rank::Four),
+        card(2, Suit::Spades, Rank::Four),
+        card(3, Suit::Clubs, Rank::Four),
+    ]];
+
+    let moves = generate_legal_moves(&state, 0);
+    assert!(moves.contains(&Action::TakeDiscard));
+    assert!(moves
+        .iter()
+        .any(|action| matches!(action, Action::DiscardCard(_))));
+    assert!(!moves
+        .iter()
+        .any(|action| matches!(action, Action::PlayMeld(_) | Action::HitMeld(_))));
+
+    let mut rng = StdRng::seed_from_u64(1);
+    play_random_turn(&mut state, 0, &mut rng);
+
+    assert_eq!(state.players[0].hand.len(), 1);
+    assert_eq!(state.deck.cards.len(), 1);
+    assert!(!state.round_over);
+    assert_eq!(state.players[1].hand.len(), 2);
+
+    play_random_turn(&mut state, 0, &mut rng);
+
+    assert!(state.round_over);
+    assert!(state.players[0].hand.is_empty());
+    assert_eq!(state.players[1].hand.len(), 2);
+    assert_eq!(state.turn_phase, TurnPhase::Playing);
+    assert_eq!(state.penalty_seat, None);
+    assert_eq!(state.players[0].points, 0);
+    assert_eq!(state.players[1].points, 0);
+}
+
+/// Seeds 16, 55, and 84 used to stop at 8,000 turns. They finish five rounds.
+#[test]
+fn test_headless_random_game_finishes_seeds_that_exhausted_the_deck() {
+    for seed in [16_u64, 55, 84] {
+        let state = play_random_game(seed);
+        assert_eq!(state.round_number, 6, "seed {seed}");
+        assert!(!state.round_over, "seed {seed}");
+        assert_eq!(state.turn_phase, TurnPhase::Playing, "seed {seed}");
+        assert_eq!(state.penalty_seat, None, "seed {seed}");
+        assert_eq!(state.players[0].points, 0, "seed {seed}");
+        assert_eq!(state.players[1].points, 0, "seed {seed}");
+        assert_eq!(shoe_ids(&state), fresh_shoe_ids(), "seed {seed}");
+    }
+}
+
+/// Ten thousand seeds finish five rounds. This stays off the default run.
+#[test]
+#[ignore = "ten thousand headless games"]
+fn test_headless_random_games_finish_ten_thousand() {
+    for seed in 1..=10_000_u64 {
+        let state = play_random_game(seed);
+        assert_eq!(state.round_number, 6, "seed {seed}");
+        assert!(!state.round_over, "seed {seed}");
+        assert_eq!(state.turn_phase, TurnPhase::Playing, "seed {seed}");
+        assert_eq!(state.penalty_seat, None, "seed {seed}");
+        if seed == 1_000 {
+            eprintln!("finished 1000 of 10000");
+        }
+    }
 }
 
 /// Penalty drawing at the start of the turn uses the bot seed.

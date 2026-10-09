@@ -34,6 +34,7 @@ pub enum Action {
     /// Refusing that discard for an off-board player enters penalty drawing.
     DiscardCard(Card),
     /// While the turn is in penalty drawing, draw until a card that fits nothing is discarded.
+    /// If nothing is left to draw, the turn ends and the hand keeps what it drew.
     DrawFromDeck,
 }
 
@@ -281,9 +282,6 @@ fn validate_draw(state: &GameState, actor: usize) -> ActionResolution {
     if state.turn_phase != TurnPhase::PenaltyDrawing || state.penalty_seat != Some(actor) {
         return unchanged();
     }
-    if state.deck.cards.is_empty() && state.deck.discard.is_empty() {
-        return unchanged();
-    }
     ActionResolution::Accepted(ActionPlan::DrawFromDeck)
 }
 
@@ -357,12 +355,12 @@ fn end_round_if_hand_empty(state: &mut GameState, actor_index: usize) {
 /// `rng` shuffles when the draw pile is empty and the discard is recycled or split.
 /// Only the seat already in [`TurnPhase::PenaltyDrawing`] may draw. Playable cards
 /// stay in the hand. The first safe card goes onto the discard pile and the
-/// phase returns to playing. An empty pile leaves the phase as it was.
+/// phase returns to playing. When nothing is left to draw, the turn ends the
+/// same way: the phase returns to playing and the hand keeps every card it drew.
 fn draw_from_deck(state: &mut GameState, actor_index: usize, rng: &mut impl Rng) -> bool {
     if state.turn_phase != TurnPhase::PenaltyDrawing || state.penalty_seat != Some(actor_index) {
         return false;
     }
-    let mut drew = false;
     loop {
         let card = match state.deck.draw_with(rng) {
             TurnDraw::One(card) | TurnDraw::LastCard(card) => card,
@@ -371,9 +369,12 @@ fn draw_from_deck(state: &mut GameState, actor_index: usize, rng: &mut impl Rng)
                 state.players[next_index].hand.push(next);
                 current
             }
-            TurnDraw::Empty => break,
+            TurnDraw::Empty => {
+                state.turn_phase = TurnPhase::Playing;
+                state.penalty_seat = None;
+                return true;
+            }
         };
-        drew = true;
         if card_fits_board(&state.board, &card, state.turn_counter) {
             state.players[actor_index].hand.push(card);
             continue;
@@ -383,7 +384,6 @@ fn draw_from_deck(state: &mut GameState, actor_index: usize, rng: &mut impl Rng)
         state.penalty_seat = None;
         return true;
     }
-    drew
 }
 
 /// A card fits the board when it can be played and adding it to some meld is a set or a run.
@@ -3404,7 +3404,9 @@ mod tests {
         assert_eq!(state.players[0].hand, vec![held, first, second]);
         assert!(state.deck.cards.is_empty());
         assert!(state.deck.discard.is_empty());
-        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.penalty_seat, None);
+        assert!(!state.round_over);
         assert_eq!(state.turn_counter, 0);
         assert_eq!(state.round_number, 1);
     }
@@ -3427,7 +3429,9 @@ mod tests {
         assert_eq!(state.players[1].hand.len(), other_before.len() + 1);
         assert!(state.deck.cards.is_empty());
         assert!(state.deck.discard.is_empty());
-        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.penalty_seat, None);
+        assert!(!state.round_over);
         let mut moved = vec![
             state.players[0].hand[1],
             state.players[1].hand[other_before.len()],
@@ -3708,11 +3712,73 @@ mod tests {
         assert_eq!(locked_seven.get_penalty_value(), 5);
     }
 
+    /// Both piles are empty while this seat is drawing a penalty. The draw is
+    /// accepted, the turn returns to playing, and the playable card stays.
     #[test]
-    fn test_penalty_draw_refuses_when_nothing_is_left() {
+    fn test_penalty_draw_ends_turn_when_deck_exhausted() {
+        let held = card(4, Suit::Hearts, Rank::Seven);
+        let mut state = heart_gap(vec![held], false);
+        let other = state.players[1].clone();
+        let board = state.board.clone();
+        assert!(!state.apply(Action::DiscardCard(held), 0));
+        state.deck.cards.clear();
+        state.deck.discard.clear();
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(state.penalty_seat, Some(0));
+
+        let mut rng = StdRng::seed_from_u64(16);
+        assert!(state.apply_with_rng(Action::DrawFromDeck, 0, &mut rng));
+
+        assert_eq!(state.players[0].hand, vec![held]);
+        assert_eq!(state.players[1], other);
+        assert_eq!(state.board, board);
+        assert!(state.deck.cards.is_empty());
+        assert!(state.deck.discard.is_empty());
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.penalty_seat, None);
+        assert_eq!(state.drawn_card_id, None);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.round_number, 1);
+        assert!(!state.round_over);
+        assert!(!state.players[0].is_on_board);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
+
+        assert!(!state.apply_with_rng(Action::DrawFromDeck, 0, &mut rng));
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.penalty_seat, None);
+        assert_eq!(state.players[0].hand, vec![held]);
+        assert!(state.deck.cards.is_empty());
+        assert!(state.deck.discard.is_empty());
+    }
+
+    /// The other seat cannot draw, and the penalty stays, when nothing is left.
+    #[test]
+    fn test_penalty_draw_empty_piles_refuse_the_other_seat() {
         let held = card(4, Suit::Hearts, Rank::Seven);
         let mut state = heart_gap(vec![held], false);
         assert!(!state.apply(Action::DiscardCard(held), 0));
+        state.deck.cards.clear();
+        state.deck.discard.clear();
+        let before = state.clone();
+
+        assert!(!state.apply(Action::DrawFromDeck, 1));
+
+        assert_eq!(state.players, before.players);
+        assert_eq!(state.board, before.board);
+        assert_eq!(state.deck, before.deck);
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(state.penalty_seat, Some(0));
+        assert_eq!(state.drawn_card_id, None);
+        assert_eq!(state.turn_counter, 0);
+        assert!(!state.round_over);
+    }
+
+    /// An empty shoe outside penalty drawing is still refused. The phase stays playing.
+    #[test]
+    fn test_draw_from_deck_refuses_outside_penalty_when_the_piles_are_empty() {
+        let seven = card(4, Suit::Hearts, Rank::Seven);
+        let mut state = heart_gap(vec![seven], false);
         state.deck.cards.clear();
         state.deck.discard.clear();
         let before = state.clone();
@@ -3722,10 +3788,65 @@ mod tests {
         assert_eq!(state.players, before.players);
         assert_eq!(state.board, before.board);
         assert_eq!(state.deck, before.deck);
-        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
-        assert_eq!(state.drawn_card_id, None);
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.penalty_seat, None);
         assert_eq!(state.turn_counter, 0);
-        assert_eq!(state.round_number, 1);
+        assert!(!state.round_over);
+    }
+
+    /// A closed round does not accept the draw, even when the piles are empty.
+    #[test]
+    fn test_penalty_draw_closed_round_stays_when_the_piles_are_empty() {
+        let held = card(4, Suit::Hearts, Rank::Seven);
+        let mut state = heart_gap(vec![held], false);
+        state.turn_phase = TurnPhase::PenaltyDrawing;
+        state.penalty_seat = Some(0);
+        state.deck.cards.clear();
+        state.deck.discard.clear();
+        state.round_over = true;
+        let before = state.clone();
+
+        assert!(!state.apply(Action::DrawFromDeck, 0));
+
+        assert_eq!(state.players, before.players);
+        assert_eq!(state.deck, before.deck);
+        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(state.penalty_seat, Some(0));
+        assert!(state.round_over);
+    }
+
+    /// Every recycled card fits. The hand keeps them and the turn ends.
+    #[test]
+    fn test_penalty_draw_ends_turn_when_every_recycled_card_fits() {
+        let held = card(4, Suit::Hearts, Rank::Seven);
+        let four = card(6, Suit::Hearts, Rank::Four);
+        let eight = card(7, Suit::Hearts, Rank::Eight);
+        let another = card(8, Suit::Hearts, Rank::Seven);
+        let mut state = heart_gap(vec![held], false);
+        let other = state.players[1].clone();
+        let board = state.board.clone();
+        state.deck.cards.clear();
+        state.deck.discard = vec![four, eight, another];
+
+        assert!(!state.apply(Action::DiscardCard(held), 0));
+        let mut rng = StdRng::seed_from_u64(1);
+        assert!(state.apply_with_rng(Action::DrawFromDeck, 0, &mut rng));
+
+        let mut hand = state.players[0].hand.clone();
+        hand.sort_by_key(|card| card.id);
+        let mut expect = vec![held, four, eight, another];
+        expect.sort_by_key(|card| card.id);
+        assert_eq!(hand, expect);
+        assert!(state.deck.cards.is_empty());
+        assert!(state.deck.discard.is_empty());
+        assert_eq!(state.players[1], other);
+        assert_eq!(state.board, board);
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.penalty_seat, None);
+        assert!(!state.round_over);
+        assert_eq!(state.turn_counter, 0);
+        assert_eq!(state.players[0].points, 4);
+        assert_eq!(state.players[0].total_score, 9);
     }
 
     #[test]
@@ -3764,7 +3885,9 @@ mod tests {
         assert_eq!(state.players[1], other);
         assert!(state.deck.discard.is_empty());
         assert!(state.deck.cards.is_empty());
-        assert_eq!(state.turn_phase, TurnPhase::PenaltyDrawing);
+        assert_eq!(state.turn_phase, TurnPhase::Playing);
+        assert_eq!(state.penalty_seat, None);
+        assert!(!state.round_over);
         assert_eq!(state.turn_counter, 0);
         assert_eq!(state.round_number, 1);
     }

@@ -19,7 +19,7 @@ This is the durable home for technical debt across sessions. Handoff notes can m
 
 (High ROI; frequent pain; not blocking.)
 
-- **Liveness / High:** After free melding, seeds 1..=1000 finish 966 games and still hit the 8,000-turn limit on 34 seeds (3.4%). Seeds 2, 3, 10, and 11 finish. Probe from seed 16 (and the other stalled seeds) on `fix/residual-turn-limit-stalemates`. Do not treat Stage 3 throughput as green until finish rate is known.
+- **Liveness:** Closed on `fix/residual-turn-limit-stalemates`. Seeds 1..=10000 finished in 213.42s with 0 stalls at 8,000 turns. Seed 1 scores 340 and 80.
 
 - Older closes: **1.2.4.2** closed the seeded shuffle, the card-id property test, the uncalled reshuffle arms, the extra `Player::new` chains, CI for `cargo test -p push_core`, and the unused `serde` dependency. Epics 1.4–1.8 added no new Do-first item.
 
