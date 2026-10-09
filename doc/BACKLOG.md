@@ -340,7 +340,7 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 **User Story 3.1: Rust/Swift Bridge**
 
-**Status:** parked on `feature/3.1-uniffi-deck-size` — 2026-10-09. Public version **0.3.1**. `Game::get_deck_size` is 108. The SwiftUI screen shows Deck size 108.
+**Status:** on `main`. Content is `398e20a`. Public version **0.3.1**. `Game::get_deck_size` is 108. The SwiftUI screen shows Deck size 108. `feature/3.1-uniffi-deck-size` is kept.
 
 *As an iOS developer, I need to call my Rust engine from Swift so I don't have to rewrite the rules.*
 
