@@ -4,10 +4,11 @@ members = [
     "push_core",
     "push_wasm",
     "push_sim",
+    "push_ffi",
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.3.1"
 edition = "2021"
 license = "MIT"
 authors = ["PushSimulator"]

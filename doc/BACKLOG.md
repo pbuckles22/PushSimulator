@@ -340,10 +340,12 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 **User Story 3.1: Rust/Swift Bridge**
 
+**Status:** parked on `feature/3.1-uniffi-deck-size` — 2026-10-09. Public version **0.3.1**. `Game::get_deck_size` is 108. The SwiftUI screen shows Deck size 108.
+
 *As an iOS developer, I need to call my Rust engine from Swift so I don't have to rewrite the rules.*
 
-* \[ \] Generate .xcframework using UniFFI (or Swift-Bridge).  
-* \[ \] Write basic SwiftUI view calling Game.get\_deck\_size() and rendering text.
+* \[x\] Generate .xcframework using UniFFI (or Swift-Bridge).  
+* \[x\] Write basic SwiftUI view calling Game.get\_deck\_size() and rendering text.
 
 **User Story 3.2: Reactive UI & Board Rendering**
 

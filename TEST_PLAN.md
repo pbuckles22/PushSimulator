@@ -5,9 +5,10 @@
 ```bash
 cargo test -p push_core
 cargo test -p push_sim
+cargo test -p push_ffi
 ```
 
-GitHub Actions runs both commands (`.github/workflows/push-core.yml`) on push and pull request.
+GitHub Actions runs those commands (`.github/workflows/push-core.yml`) on push and pull request.
 
 Optional full workspace:
 
@@ -92,7 +93,14 @@ Suggested after Epic 1.8: Epic 1.9 chains (see [doc/PLAN_COMMENTARY.md](doc/PLAN
 ```bash
 cargo test -p push_core
 cargo test -p push_sim
+cargo test -p push_ffi
 ```
+
+The same three packages with `--release` are the release compile.
+
+Story 3.1 continues from the shoe. `test_deck_new_game_get_deck_size_matches_the_undealt_shoe` locks 108 and ids 0..107. A second ask is still 108. `test_deck_new_uniffi_game_get_deck_size_matches_the_core_shoe` calls UniFFI `Game::get_deck_size` through that same `push_core` shoe.
+
+Human check 2026-10-09 **PASS**. Device Hub, booted iPhone 16. White screen, text **Deck size 108**. PASS if that text. FAIL if another number or no screen. No runtime log. The version marker is workspace **0.3.1**. The screen shows the deck size.
 
 ---
 
@@ -101,7 +109,7 @@ cargo test -p push_sim
 | Surface | When | Command / check |
 |---------|------|-----------------|
 | WASM viewer | Phase 1b | Build with `wasm-pack`, serve `viewer/`, smoke Load WASM + bot play |
-| iOS | Phase 3 | Xcode + UniFFI smoke |
+| iOS | Phase 3 | `script/Build-Xcframework.sh`, then Device Hub on a booted iPhone. Story 3.1 PASS: Deck size 108 |
 | Multiplayer | Phase 4 | WS handshake + room round-trip |
 
 ```bash

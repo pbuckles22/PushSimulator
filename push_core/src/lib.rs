@@ -7,6 +7,7 @@
 pub mod actions;
 pub mod card;
 pub mod deck;
+pub mod game;
 pub mod game_state;
 pub mod latency;
 pub mod legal_moves;

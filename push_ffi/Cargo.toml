@@ -1,0 +1,22 @@
+[package]
+name = "push_ffi"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "UniFFI bridge from the Push engine to Swift"
+
+[lib]
+name = "push_ffi"
+crate-type = ["lib", "staticlib", "cdylib"]
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+
+[dependencies]
+push_core = { workspace = true }
+uniffi = { version = "0.29", features = ["cli"] }
+
+[dev-dependencies]
+push_core = { workspace = true }

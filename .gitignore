@@ -36,6 +36,13 @@ Cargo.lock.bak
 viewer/pkg/
 viewer/test_status.json
 
+# UniFFI products. script/Build-Xcframework.sh writes these.
+ios/PushApp/Generated/
+ios/generated/
+ios/PushCore.xcframework/
+ios/.swiftpm/
+ios/.build/
+
 # Full-repo Gemini XML dump (script/Export-GeminiSnapshot.ps1)
 Gemini_Snapshot.txt
 Gemini_Snapshot_*.txt

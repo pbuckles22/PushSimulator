@@ -14,3 +14,5 @@ jobs:
         run: cargo test -p push_core
       - name: cargo test -p push_sim
         run: cargo test -p push_sim
+      - name: cargo test -p push_ffi
+        run: cargo test -p push_ffi
