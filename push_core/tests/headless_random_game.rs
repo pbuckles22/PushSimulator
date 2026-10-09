@@ -3,9 +3,11 @@
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 
+use push_core::actions::Action;
 use push_core::card::{Card, Rank, Suit};
 use push_core::deck::{Deck, TurnDraw};
 use push_core::game_state::{GameState, TurnPhase};
+use push_core::legal_moves::generate_legal_moves;
 use push_core::player::Player;
 use push_core::random_bot::{new_two_seat_table, play_random_game, play_random_turn};
 
@@ -58,8 +60,8 @@ fn test_headless_random_game() {
         assert!(!player.is_on_board);
         assert_eq!(player.points, 0);
     }
-    assert_eq!(state.players[0].total_score, 340);
-    assert_eq!(state.players[1].total_score, 1025);
+    assert_eq!(state.players[0].total_score, 420);
+    assert_eq!(state.players[1].total_score, 40);
     assert_eq!(shoe_ids(&state), fresh_shoe_ids());
 }
 
@@ -157,6 +159,110 @@ fn test_random_turn_lays_down_two_sets() {
     assert!(laid.contains(&four_hearts));
     assert!(laid.contains(&five_clubs));
     assert!(!laid.contains(&king));
+}
+
+/// Chain: opening PlayMeld → free PlayMeld → generate_legal_moves lists the set →
+/// play_random_turn lays that set while the seat is already on the board.
+#[test]
+fn test_play_meld_generate_legal_moves_random_turn_free_meld_chain() {
+    let fours = vec![
+        card(1, Suit::Hearts, Rank::Four),
+        card(2, Suit::Spades, Rank::Four),
+        card(3, Suit::Clubs, Rank::Four),
+    ];
+    let fives = vec![
+        card(4, Suit::Hearts, Rank::Five),
+        card(5, Suit::Spades, Rank::Five),
+        card(6, Suit::Clubs, Rank::Five),
+    ];
+    let sixes = vec![
+        card(7, Suit::Hearts, Rank::Six),
+        card(8, Suit::Spades, Rank::Six),
+        card(9, Suit::Clubs, Rank::Six),
+    ];
+    let king = card(10, Suit::Diamonds, Rank::King);
+    let queen = card(11, Suit::Diamonds, Rank::Queen);
+    let ace = card(12, Suit::Clubs, Rank::Ace);
+    let three = card(13, Suit::Hearts, Rank::Three);
+    let other = card(14, Suit::Diamonds, Rank::Three);
+
+    let mut players = vec![Player::new(0, 0), Player::new(1, 1)];
+    players[0].hand = vec![
+        fours[0], fours[1], fours[2], fives[0], fives[1], fives[2], sixes[0], sixes[1],
+        sixes[2], king,
+    ];
+    players[1].hand = vec![other];
+    let mut deck = Deck::new();
+    deck.cards = vec![three, ace];
+    deck.discard = vec![queen];
+    let mut state = GameState::new(players, deck);
+
+    assert!(state.apply(Action::PlayMeld(vec![fours.clone(), fives.clone()]), 0));
+    assert!(state.players[0].is_on_board);
+    assert_eq!(state.board, vec![fours.clone(), fives.clone()]);
+    assert!(state.players[0].hand.contains(&sixes[0]));
+
+    let moves = generate_legal_moves(&state, 0);
+    assert!(moves
+        .iter()
+        .any(|action| matches!(action, Action::PlayMeld(melds) if melds == &vec![sixes.clone()])));
+
+    let mut rng = StdRng::seed_from_u64(1);
+    play_random_turn(&mut state, 0, &mut rng);
+
+    assert!(state
+        .board
+        .iter()
+        .any(|meld| meld.iter().any(|card| card.id == sixes[0].id)
+            && meld.iter().any(|card| card.id == sixes[1].id)
+            && meld.iter().any(|card| card.id == sixes[2].id)));
+    assert!(!state.players[0].hand.iter().any(|card| {
+        card.id == sixes[0].id || card.id == sixes[1].id || card.id == sixes[2].id
+    }));
+}
+
+/// On the board, a valid set in the hand is laid down during the turn.
+#[test]
+fn test_random_turn_lays_down_additional_melds() {
+    let fours = vec![
+        card(1, Suit::Hearts, Rank::Four),
+        card(2, Suit::Spades, Rank::Four),
+        card(3, Suit::Clubs, Rank::Four),
+    ];
+    let king = card(4, Suit::Spades, Rank::King);
+    let queen = card(5, Suit::Diamonds, Rank::Queen);
+    let ace = card(6, Suit::Clubs, Rank::Ace);
+    let three = card(7, Suit::Hearts, Rank::Three);
+    let other = card(8, Suit::Diamonds, Rank::Three);
+
+    let mut players = vec![Player::new(0, 0), Player::new(1, 1)];
+    players[0].hand = vec![fours[0], fours[1], fours[2], king];
+    players[0].is_on_board = true;
+    players[1].hand = vec![other];
+    let mut deck = Deck::new();
+    deck.cards = vec![three, ace];
+    deck.discard = vec![queen];
+    let mut state = GameState::new(players, deck);
+    state.board = vec![vec![
+        card(10, Suit::Hearts, Rank::Eight),
+        card(11, Suit::Spades, Rank::Eight),
+        card(12, Suit::Clubs, Rank::Eight),
+    ]];
+    let mut rng = StdRng::seed_from_u64(1);
+
+    play_random_turn(&mut state, 0, &mut rng);
+
+    assert!(state.players[0].is_on_board);
+    assert!(state
+        .board
+        .iter()
+        .any(|meld| meld.iter().any(|card| card.id == fours[0].id)
+            && meld.iter().any(|card| card.id == fours[1].id)
+            && meld.iter().any(|card| card.id == fours[2].id)));
+    assert!(!state.players[0].hand.iter().any(|card| {
+        card.id == fours[0].id || card.id == fours[1].id || card.id == fours[2].id
+    }));
+    assert!(!state.round_over);
 }
 
 /// Off the board, the seat pushes. The next hand gains the queen and the ace.

@@ -19,7 +19,9 @@ This is the durable home for technical debt across sessions. Handoff notes can m
 
 (High ROI; frequent pain; not blocking.)
 
-- (none). **1.2.4.2** closed the seeded shuffle, the card-id property test, the uncalled reshuffle arms, the extra `Player::new` chains, CI for `cargo test -p push_core`, and the unused `serde` dependency. The Epic 1.4 close added no new Do-first item. The Epic 1.5 close added no new Do-first item. The Epic 1.6 close added no new Do-first item. The Epic 1.7 close added no new Do-first item. The Epic 1.8 close added no new Do-first item.
+- **Liveness / High:** After free melding, seeds 1..=1000 finish 966 games and still hit the 8,000-turn limit on 34 seeds (3.4%). Seeds 2, 3, 10, and 11 finish. Probe from seed 16 (and the other stalled seeds) on `fix/residual-turn-limit-stalemates`. Do not treat Stage 3 throughput as green until finish rate is known.
+
+- Older closes: **1.2.4.2** closed the seeded shuffle, the card-id property test, the uncalled reshuffle arms, the extra `Player::new` chains, CI for `cargo test -p push_core`, and the unused `serde` dependency. Epics 1.4–1.8 added no new Do-first item.
 
 ## Accept for now
 

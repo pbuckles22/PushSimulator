@@ -1,6 +1,6 @@
 //! Every action the engine would accept for one seat.
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 
 use crate::actions::{validate_action, Action, MeldHit, WildSteal};
 use crate::card::{Card, Rank, Suit};
@@ -171,6 +171,7 @@ fn playable_hand(state: &GameState, actor_index: usize) -> Vec<Card> {
 
 fn visit_plays(state: &GameState, actor: usize, visit: &mut impl FnMut(Action)) {
     if state.players[actor].is_on_board {
+        visit_free_plays(state, actor, visit);
         return;
     }
     let groups = match state.round_number {
@@ -189,6 +190,200 @@ fn visit_plays(state: &GameState, actor: usize, visit: &mut impl FnMut(Action)) 
         &mut built,
         visit,
     );
+}
+
+/// On the board, any valid set or run may be laid. Candidates are maximal sets
+/// and runs from the playable hand. Each candidate is yielded alone. When there
+/// are at most six, disjoint combinations are yielded too.
+fn visit_free_plays(state: &GameState, actor: usize, visit: &mut impl FnMut(Action)) {
+    let cards = playable_hand(state, actor);
+    let candidates = free_meld_candidates(&cards);
+    for meld in &candidates {
+        let action = Action::PlayMeld(vec![meld.clone()]);
+        if accepts(state, actor, action.clone()) {
+            visit(action);
+        }
+    }
+    if candidates.len() > 6 {
+        return;
+    }
+    let mut chosen = Vec::new();
+    visit_disjoint_free_melds(state, actor, &candidates, 0, &mut chosen, visit);
+}
+
+fn visit_disjoint_free_melds(
+    state: &GameState,
+    actor: usize,
+    candidates: &[Vec<Card>],
+    index: usize,
+    chosen: &mut Vec<Vec<Card>>,
+    visit: &mut impl FnMut(Action),
+) {
+    if index == candidates.len() {
+        if chosen.len() >= 2 {
+            let action = Action::PlayMeld(chosen.clone());
+            if accepts(state, actor, action.clone()) {
+                visit(action);
+            }
+        }
+        return;
+    }
+    visit_disjoint_free_melds(state, actor, candidates, index + 1, chosen, visit);
+    if chosen
+        .iter()
+        .any(|held| shares_a_card(held, &candidates[index]))
+    {
+        return;
+    }
+    chosen.push(candidates[index].clone());
+    visit_disjoint_free_melds(state, actor, candidates, index + 1, chosen, visit);
+    chosen.pop();
+}
+
+fn shares_a_card(left: &[Card], right: &[Card]) -> bool {
+    left.iter()
+        .any(|card| right.iter().any(|other| other.id == card.id))
+}
+
+fn free_meld_candidates(cards: &[Card]) -> Vec<Vec<Card>> {
+    let mut found = Vec::new();
+    found.extend(maximal_sets(cards));
+    found.extend(maximal_runs(cards));
+    found
+}
+
+fn maximal_sets(cards: &[Card]) -> Vec<Vec<Card>> {
+    let wilds: Vec<Card> = cards
+        .iter()
+        .copied()
+        .filter(|card| card.is_wild())
+        .collect();
+    let mut by_rank: Vec<(Rank, Vec<Card>)> = Vec::new();
+    for card in cards {
+        if card.is_wild() {
+            continue;
+        }
+        if let Some((_, group)) = by_rank.iter_mut().find(|(rank, _)| *rank == card.rank) {
+            group.push(*card);
+        } else {
+            by_rank.push((card.rank, vec![*card]));
+        }
+    }
+    let mut found = Vec::new();
+    for (_, group) in &by_rank {
+        if group.len() >= 3 {
+            if validate_set(group) {
+                found.push(group.clone());
+            }
+            continue;
+        }
+        let need = 3 - group.len();
+        if need <= wilds.len() {
+            let mut meld = group.clone();
+            meld.extend(wilds[..need].iter().copied());
+            if validate_set(&meld) {
+                found.push(meld);
+            }
+        }
+    }
+    if wilds.len() >= 3 {
+        let meld = wilds[..3].to_vec();
+        if validate_set(&meld) {
+            found.push(meld);
+        }
+    }
+    found
+}
+
+fn maximal_runs(cards: &[Card]) -> Vec<Vec<Card>> {
+    let wilds: Vec<Card> = cards
+        .iter()
+        .copied()
+        .filter(|card| card.is_wild())
+        .collect();
+    let mut found = Vec::new();
+    for suit in [Suit::Hearts, Suit::Diamonds, Suit::Clubs, Suit::Spades] {
+        for ace_high in [false, true] {
+            let mut by_rank: BTreeMap<u8, Card> = BTreeMap::new();
+            for card in cards {
+                if card.suit != suit || card.is_wild() {
+                    continue;
+                }
+                let Some(value) = run_rank_value(card.rank, ace_high) else {
+                    continue;
+                };
+                by_rank.entry(value).or_insert(*card);
+            }
+            if by_rank.is_empty() {
+                continue;
+            }
+            let values: Vec<u8> = by_rank.keys().copied().collect();
+            let mut start = 0;
+            while start < values.len() {
+                let mut end = start;
+                let mut holes = 0usize;
+                while end + 1 < values.len() {
+                    let gap = usize::from(values[end + 1] - values[end] - 1);
+                    if holes + gap > wilds.len() {
+                        break;
+                    }
+                    holes += gap;
+                    end += 1;
+                }
+                let span = usize::from(values[end] - values[start] + 1);
+                let naturals = end - start + 1;
+                let holes = span - naturals;
+                if span >= 4 && holes <= wilds.len() {
+                    let mut meld: Vec<Card> = values[start..=end]
+                        .iter()
+                        .map(|value| by_rank[value])
+                        .collect();
+                    meld.extend(wilds[..holes].iter().copied());
+                    if validate_run(&meld) {
+                        found.push(meld);
+                    }
+                } else if naturals + wilds.len() >= 4 {
+                    let need = 4 - naturals;
+                    if need > holes && need <= wilds.len() {
+                        let mut meld: Vec<Card> = values[start..=end]
+                            .iter()
+                            .map(|value| by_rank[value])
+                            .collect();
+                        meld.extend(wilds[..need].iter().copied());
+                        if validate_run(&meld) {
+                            found.push(meld);
+                        }
+                    }
+                }
+                start = end + 1;
+            }
+        }
+    }
+    found
+}
+
+fn run_rank_value(rank: Rank, ace_high: bool) -> Option<u8> {
+    Some(match rank {
+        Rank::Ace => {
+            if ace_high {
+                14
+            } else {
+                1
+            }
+        }
+        Rank::Three => 3,
+        Rank::Four => 4,
+        Rank::Five => 5,
+        Rank::Six => 6,
+        Rank::Seven => 7,
+        Rank::Eight => 8,
+        Rank::Nine => 9,
+        Rank::Ten => 10,
+        Rank::Jack => 11,
+        Rank::Queen => 12,
+        Rank::King => 13,
+        Rank::Two | Rank::Joker => return None,
+    })
 }
 
 fn assign_plays(
@@ -855,6 +1050,36 @@ mod tests {
         let other = listed(&state, 1);
         assert!(!other.contains(&Action::DrawFromDeck));
         assert!(has_discard(&other, card(3, Suit::Clubs, Rank::Three)));
+    }
+
+    /// On the board, a run of 4 in the hand is offered as PlayMeld.
+    #[test]
+    fn test_generate_legal_moves_includes_free_melds() {
+        let run = vec![
+            card(1, Suit::Hearts, Rank::Four),
+            card(2, Suit::Hearts, Rank::Five),
+            card(3, Suit::Hearts, Rank::Six),
+            card(4, Suit::Hearts, Rank::Seven),
+        ];
+        let king = card(5, Suit::Spades, Rank::King);
+        let mut state = table(
+            vec![run[0], run[1], run[2], run[3], king],
+            vec![card(6, Suit::Clubs, Rank::Three)],
+            vec![
+                card(7, Suit::Diamonds, Rank::Jack),
+                card(8, Suit::Clubs, Rank::Ace),
+            ],
+        );
+        state.players[0].is_on_board = true;
+        state.board = vec![vec![
+            card(10, Suit::Spades, Rank::Eight),
+            card(11, Suit::Clubs, Rank::Eight),
+            card(12, Suit::Hearts, Rank::Eight),
+        ]];
+
+        let moves = listed(&state, 0);
+
+        assert!(has_play(&moves, &[run]));
     }
 
     /// A closed round lists nothing. An empty discard lists no take and no push.

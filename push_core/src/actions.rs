@@ -16,7 +16,8 @@ pub enum Action {
     TakeDiscard,
     /// Move the discard top to the next player, who also draws a penalty. The actor then draws.
     PushDiscard,
-    /// Lay these melds down to get on the board for the current round.
+    /// Lay these melds down. Off the board, they must meet the round minimum.
+    /// On the board, each group must be a valid set or run.
     PlayMeld(Vec<Vec<Card>>),
     /// Add cards from the actor's hand onto melds already on the board.
     ///
@@ -83,8 +84,8 @@ impl GameState {
     /// Runs `action` for the player at `actor_index`.
     ///
     /// Take and push behave as [`Action::apply`]. A meld play returns false, and leaves
-    /// the table as it was, when the round rejects the melds, a card is not in that hand,
-    /// or that player is already on the board. A successful play appends the melds to
+    /// the table as it was, when the round rejects an opening play, a free meld is not a
+    /// set or a run, or a card is not in that hand. A successful play appends the melds to
     /// `board`, removes those cards from the hand, and sets `is_on_board`.
     /// A steal returns false, and leaves the table as it was, when that player is off
     /// the board, the natural is still locked, or the natural is not the card the wild
@@ -164,7 +165,7 @@ fn unchanged() -> ActionResolution {
 }
 
 fn validate_play(state: &GameState, actor: usize, melds: &[Vec<Card>]) -> ActionResolution {
-    if state.players[actor].is_on_board {
+    if melds.is_empty() {
         return unchanged();
     }
     if melds
@@ -174,7 +175,14 @@ fn validate_play(state: &GameState, actor: usize, melds: &[Vec<Card>]) -> Action
     {
         return unchanged();
     }
-    if !check_round_requirements(state.round_number, melds) {
+    if state.players[actor].is_on_board {
+        if !melds
+            .iter()
+            .all(|meld| validate_set(meld) || validate_run(meld))
+        {
+            return unchanged();
+        }
+    } else if !check_round_requirements(state.round_number, melds) {
         return unchanged();
     }
     if hand_without(&state.players[actor].hand, melds).is_none() {
@@ -624,7 +632,7 @@ fn rank_value(rank: Rank, ace_high: bool) -> u8 {
 
 /// Moves verified melds from the actor's hand onto the board.
 fn play_meld(state: &mut GameState, actor_index: usize, melds: &[Vec<Card>]) -> bool {
-    if state.players[actor_index].is_on_board {
+    if melds.is_empty() {
         return false;
     }
     if melds
@@ -634,7 +642,14 @@ fn play_meld(state: &mut GameState, actor_index: usize, melds: &[Vec<Card>]) -> 
     {
         return false;
     }
-    if !check_round_requirements(state.round_number, melds) {
+    if state.players[actor_index].is_on_board {
+        if !melds
+            .iter()
+            .all(|meld| validate_set(meld) || validate_run(meld))
+        {
+            return false;
+        }
+    } else if !check_round_requirements(state.round_number, melds) {
         return false;
     }
     let Some(hand) = hand_without(&state.players[actor_index].hand, melds) else {
@@ -949,6 +964,60 @@ mod tests {
         refuse(&state, 0, melds);
     }
 
+    /// On the board in round 5, a single set of 3 may be laid. The round minimum is ignored.
+    #[test]
+    fn test_play_meld_after_on_board_ignores_round_requirements() {
+        let fours = vec![
+            card(1, Suit::Hearts, Rank::Four),
+            card(2, Suit::Spades, Rank::Four),
+            card(3, Suit::Clubs, Rank::Four),
+        ];
+        let king = card(4, Suit::Diamonds, Rank::King);
+        let mut state = table(
+            vec![fours[0], fours[1], fours[2], king],
+            vec![card(5, Suit::Hearts, Rank::Three)],
+            vec![card(6, Suit::Clubs, Rank::Jack)],
+        );
+        state.round_number = 5;
+        state.players[0].is_on_board = true;
+        state.board = vec![vec![
+            card(10, Suit::Hearts, Rank::Eight),
+            card(11, Suit::Spades, Rank::Eight),
+            card(12, Suit::Clubs, Rank::Eight),
+        ]];
+        let board_before = state.board.clone();
+
+        assert!(state.apply(Action::PlayMeld(vec![fours.clone()]), 0));
+
+        assert_eq!(state.players[0].hand, vec![king]);
+        assert_eq!(state.board.len(), board_before.len() + 1);
+        assert_eq!(state.board.last(), Some(&fours));
+        assert!(state.players[0].is_on_board);
+        assert!(!state.round_over);
+    }
+
+    /// On the board, two cards that are not a set or a run leave the table unchanged.
+    #[test]
+    fn test_play_meld_after_on_board_rejects_invalid_melds() {
+        let king = card(1, Suit::Diamonds, Rank::King);
+        let three = card(2, Suit::Hearts, Rank::Three);
+        let mut state = table(
+            vec![king, three],
+            vec![card(3, Suit::Clubs, Rank::Ace)],
+            vec![card(4, Suit::Spades, Rank::Jack)],
+        );
+        state.players[0].is_on_board = true;
+        state.board = vec![vec![
+            card(10, Suit::Hearts, Rank::Eight),
+            card(11, Suit::Spades, Rank::Eight),
+            card(12, Suit::Clubs, Rank::Eight),
+        ]];
+        let before = state.clone();
+
+        assert!(!state.apply(Action::PlayMeld(vec![vec![king, three]]), 0));
+        assert_still(&before, &state);
+    }
+
     #[test]
     fn test_play_meld_refuses_and_leaves_the_table() {
         let keep_four = locked(1, Suit::Hearts, Rank::Four, 2);
@@ -1053,10 +1122,11 @@ mod tests {
         state.round_number = 6;
         refuse(&state, 0, vec![fours.clone(), fives.clone()]);
         state.round_number = 1;
+        state.turn_counter = 3;
         state.players[0].is_on_board = true;
-        refuse(&state, 0, vec![fours, fives]);
+        assert!(state.apply(Action::PlayMeld(vec![fours.clone(), fives.clone()]), 0));
         assert!(state.players[0].is_on_board);
-        assert!(state.board.is_empty());
+        assert_eq!(state.board, vec![fours, fives]);
     }
 
     fn run_of(id: u32, suit: Suit, ranks: &[Rank]) -> Vec<Card> {

@@ -315,7 +315,7 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 *As the simulator, I need clone-free validation and bounded move-search costs so large Monte Carlo batches are practical without changing legal behavior.*
 
-* \[ \] Execute the deterministic validation, differential-oracle, lazy-generation, and benchmark plan in [REFACTOR_2_2_1.md](REFACTOR_2_2_1.md). Phases 0–3 and Phase 4 stages 1–2 are on `main` at `90ab20b`. Stage 3 (five batches of 1,000 games, then the large-hand fallback) is still open.
+* \[ \] Execute the deterministic validation, differential-oracle, lazy-generation, and benchmark plan in [REFACTOR_2_2_1.md](REFACTOR_2_2_1.md). Phases 0–3 and Phase 4 stages 1–2 are on `main` at `90ab20b`. Free melding is on `main`; seed 1 scores 420 and 40. Stage 3 (five batches of 1,000 games, then the large-hand fallback) is still open. Clear residual 8k-turn stalls first (`fix/residual-turn-limit-stalemates`).
 * \[ \] Remove the large-hand fallback only after the profiled throughput gate passes.
 
 **User Story 2.3: Parallelization & Metric Logging**

@@ -70,11 +70,11 @@ pub fn new_two_seat_table(rng: &mut impl Rng) -> GameState {
 /// Plays one turn for `actor`.
 ///
 /// The seat pushes when the deck can give the next seat a card and this seat a
-/// card. Otherwise the seat takes the discard. It lays down when the round allows it,
-/// hits until nothing else fits, and sometimes steals. The turn ends with a
-/// discard, or with a draw until a safe card. That draw, and a push that recycles
-/// the discard, use `rng`. A hand above 11 cards is played
-/// one card at a time.
+/// card. Otherwise the seat takes the discard. It lays down when the round allows
+/// it, then lays additional valid sets or runs while on the board, hits until
+/// nothing else fits, and sometimes steals. The turn ends with a discard, or with
+/// a draw until a safe card. That draw, and a push that recycles the discard, use
+/// `rng`. A hand above 11 cards is played one card at a time.
 pub fn play_random_turn(state: &mut GameState, actor: usize, rng: &mut impl Rng) {
     if state.round_over || actor >= state.players.len() {
         return;
@@ -106,6 +106,21 @@ pub fn play_random_turn(state: &mut GameState, actor: usize, rng: &mut impl Rng)
         return;
     }
     if state.players[actor].is_on_board {
+        let mut guard = state.players[actor].hand.len();
+        while guard > 0 {
+            guard -= 1;
+            if state.round_over {
+                return;
+            }
+            let before = state.players[actor].hand.len();
+            lay_down(state, actor, rng);
+            if state.players[actor].hand.len() >= before {
+                break;
+            }
+        }
+        if state.round_over {
+            return;
+        }
         for _ in 0..12 {
             if state.round_over || !apply_widest_hit(state, actor, rng) {
                 break;
@@ -271,7 +286,11 @@ fn draw_until_a_safe_card(state: &mut GameState, actor: usize, rng: &mut impl Rn
 }
 
 fn lay_down(state: &mut GameState, actor: usize, rng: &mut impl Rng) {
-    if state.players[actor].is_on_board || state.round_over {
+    if state.round_over {
+        return;
+    }
+    if state.players[actor].is_on_board {
+        lay_free_meld(state, actor, rng);
         return;
     }
     let cards: Vec<Card> = state.players[actor]
@@ -287,6 +306,38 @@ fn lay_down(state: &mut GameState, actor: usize, rng: &mut impl Rng) {
     let mut trial = state.clone();
     if trial.apply(action.clone(), actor) {
         apply_listed(state, actor, action, rng);
+    }
+}
+
+fn lay_free_meld(state: &mut GameState, actor: usize, rng: &mut impl Rng) {
+    if state.players[actor].hand.len() > 11 {
+        lay_free_meld_large(state, actor, rng);
+        return;
+    }
+    apply_kind(state, actor, rng, LegalKind::Play);
+}
+
+fn lay_free_meld_large(state: &mut GameState, actor: usize, rng: &mut impl Rng) {
+    let cards: Vec<Card> = state.players[actor]
+        .hand
+        .iter()
+        .copied()
+        .filter(|card| card_can_be_played(card, state.turn_counter))
+        .collect();
+    let mut candidates = set_groups(&cards);
+    candidates.extend(run_groups(&cards, 4));
+    if candidates.is_empty() {
+        return;
+    }
+    let start = rng.gen_range(0..candidates.len());
+    for offset in 0..candidates.len() {
+        let meld = &candidates[(start + offset) % candidates.len()];
+        let action = Action::PlayMeld(vec![meld.clone()]);
+        let mut trial = state.clone();
+        if trial.apply(action.clone(), actor) {
+            apply_listed(state, actor, action, rng);
+            return;
+        }
     }
 }
 
