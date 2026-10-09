@@ -62,4 +62,15 @@ Phase 1b (WASM viewer) can start once Epic 1.2+ is playable headless; full bot-v
 
 ## Next concrete step
 
-Epic 1.8 is complete — 2026-10-07. Content is `b2303b9`. 2.2 is on `main` at `d815423`. Two random seats finish five rounds. Seed 1 leaves round 6 dealt and unplayed. Totals are 340 and 1025. 2.2.1 Phases 0–3 are on `feature/2.2.1-performance-plan`, not merged. Next is Phase 4 in that plan. 2.3 waits until 2.2.1 is done.
+Phase 1b is in [BACKLOG.md](BACKLOG.md) as stories 1b.1–1b.5. It is parallel to Phase 3 and does not block 3.3.1. The iOS thread starts at 3.3.1. The viewer thread starts at 1b.1 from current `main`. `feature/1b-wasm-tick` stays a two-seat sketch.
+
+## Phase 3 and later: mini-wins (2026-10-09)
+
+The old 3.3 story was three bullets and never named the Swift drop API. That hid a ship of the same size as 3.1 and 3.2. Open work is now:
+
+- **3.3.1** Drop API (`Transferable`, `PlayMeld` / `HitMeld`, snap-back). Screen unchanged; version stays 0.3.2.
+- **3.3.2** Hand row on screen. No drag yet.
+- **3.3.3** On-screen drag through 3.3.1. Stand-in engine.
+- **3.3.4** UniFFI applies the drop. Rust returns `GameError` and refusals.
+
+Phase 4 is the same split: 4.1.1–4.1.3 (listen, headless handshake, iOS handshake), 4.2.1–4.2.2 (room code, room engine), 4.3.1–4.3.3 (JSON, server apply, opponent snapshot). Story 5.1’s Rust workflow box is done; **5.1.1** is `swift test --package-path ios/PushUI` in CI.

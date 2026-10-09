@@ -106,14 +106,16 @@ Story 3.2 continues from that shoe. `Game::table_snapshot` is round 1 and an emp
 
 Human check 2026-10-09 **PASS**. iPhone 16 simulator. The screen showed **0.3.2**, **Deck size 108**, **Round 2**, 4♥ 4♠ 4♣, then 4♥ 5♥ 6♥ 7♥. Prior run was version 0.3.1 and only Deck size 108. PASS if that version, that shoe, and those two rows. FAIL if the shoe is not 108, the rows are missing, or the screen is blank. No runtime log. The version on screen is the marker.
 
+Story 3.3.1 keeps that screen. `CardDrag` is `Transferable` and round-trips as JSON. A new-meld drop is one `PlayMeld` group. A meld drop is one `HitMeld`. `settleDrop` returns the same hand and board on `GameError` and on a refusal. An accept returns the engine table. The published picture has no hand. `swift test --package-path ios/PushUI` runs those drops with the board tests. `ios/board_ui_check.swift` runs the drop on the exhibit. The shoe stays 108. There is no new phone screen.
+
 ---
 
 ## Tier 2: Integration / E2E
 
 | Surface | When | Command / check |
 |---------|------|-----------------|
-| WASM viewer | Phase 1b | Build with `wasm-pack`, serve `viewer/`, smoke Load WASM + bot play |
-| iOS | Phase 3 | `script/Build-Xcframework.sh`, then Device Hub on a booted iPhone. Story 3.1 PASS: Deck size 108. Story 3.2: version 0.3.2, Deck size 108, Round 2, fours then the heart run |
+| WASM viewer | Phase 1b, not started | Stories 1b.1–1b.5 in `doc/BACKLOG.md`. Build with `wasm-pack`, serve `viewer/`. 1b.1 shows four dealt hands. 1b.5 plays five rounds |
+| iOS | Phase 3 | `script/Build-Xcframework.sh`, then Device Hub on a booted iPhone. Story 3.1 PASS: Deck size 108. Story 3.2: version 0.3.2, Deck size 108, Round 2, fours then the heart run. Story 3.3.1 does not change that screen |
 | Multiplayer | Phase 4 | WS handshake + room round-trip |
 
 ```bash

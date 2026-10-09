@@ -336,6 +336,52 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 * \[x\] Implement "Hoarder Bot" (Holds Wilds until late rounds).  
 * \[x\] Run 100,000 iterations to compare profiles.
 
+## **Phase 1b: Watch a four-person game**
+
+**Status:** open. Not started. This track is parallel to Phase 3. It does not sit in front of 3.3.1. An iOS thread starts at 3.3.1. A viewer thread starts at 1b.1 and stays in this order. Rules stay in `push_core`. The page only shows them. A mismatch with the rule book becomes a `push_core` test. `feature/1b-wasm-tick` is a two-seat sketch from `6d52fbd`. Do not branch from it. Branch each story from current `main`.
+
+The page is `viewer/`. The bridge is `push_wasm`. Four seats come from `finish_profile_game` / `play_profile_turn` and the profiles `push_sim` already has. One seed and one lineup stay fixed so the same game can be replayed. Each story is done when that page is what you see.
+
+**User Story 1b.1: Four dealt hands**
+
+*As a reviewer, I want a dealt four-person table on the page before anyone plays.*
+
+* \[ \] Deal four seats from the fixed seed through `push_wasm`.  
+* \[ \] Show four hands, the draw pile, the discard, and Round 1.  
+* \[ \] Leave the board empty. No action has been applied.
+
+**User Story 1b.2: One step, one log line**
+
+*As a reviewer, I want one click to play one seat and say what it did.*
+
+* \[ \] Step calls `play_profile_turn` for the seat whose turn it is.  
+* \[ \] The felt updates to that table.  
+* \[ \] The log names the seat, the action (push, take, meld, hit, steal, or discard), and the cards.
+
+**User Story 1b.3: First meld on the felt**
+
+*As a reviewer, I want to see the first lay-down as cards.*
+
+* \[ \] Stepping continues until a seat is on the board.  
+* \[ \] That meld is cards on the felt.  
+* \[ \] The log shows the lay-down.
+
+**User Story 1b.4: Round 1 ends**
+
+*As a reviewer, I want to see a round finish and the next deal.*
+
+* \[ \] Play continues until round 1 is over.  
+* \[ \] The four scores are on the page.  
+* \[ \] The next picture is round 2 dealt: the board is empty and the hands are dealt.
+
+**User Story 1b.5: Full match**
+
+*As a reviewer, I want to watch all five rounds and compare the flow to the rule book.*
+
+* \[ \] Play runs the five rounds. Round 6 is dealt and unplayed.  
+* \[ \] The log is still on the page.  
+* \[ \] A rule-book mismatch is recorded as a `push_core` test, not a rule inside the page.
+
 ## **Phase 3: iOS SwiftUI App (Local Play)**
 
 **User Story 3.1: Rust/Swift Bridge**
@@ -357,36 +403,93 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 * \[x\] Build SwiftUI CardView changing dynamically based on Suit/Rank.  
 * \[x\] Build SwiftUI BoardView laying out Sets and Runs.
 
-**User Story 3.3: Drag-and-Drop Move Execution**
+**User Story 3.3.1: Drop API**
 
-*As a player, I want to interact with cards naturally.*
+**Status:** on `feature/3.3-drag-drop`. Not merged. `swift test --package-path ios/PushUI` is green (35 tests). Public version stays **0.3.2**. The screen is still 3.2.
 
-* \[ \] Implement SwiftUI .transferable for dragging cards.  
-* \[ \] Map drop intents back to Action::PlayMeld or Action::HitMeld.  
-* \[ \] Ensure UI snaps back gracefully if Rust engine returns GameError.
+*As a player, I want a drop to become a play or a hit before the screen animates.*
+
+* \[x\] `CardDrag` is `Transferable`.  
+* \[x\] A new-meld drop is one `PlayMeld` group. A meld drop is one `HitMeld`.  
+* \[x\] `settleDrop` returns the same hand and board on `GameError` and on a refusal. An accept returns the engine table.  
+* \[x\] The published picture still has no hand.
+
+**User Story 3.3.2: Hand row**
+
+*As a player, I want to see my hand on the screen so I know what I can drag.*
+
+* \[ \] The local seat’s hand is on the screen.  
+* \[ \] Opponent hands stay off the picture.  
+* \[ \] No drag yet.
+
+**User Story 3.3.3: On-screen drag**
+
+*As a player, I want to drag a hand card onto a meld or a new-meld zone.*
+
+* \[ \] A drop calls the 3.3.1 API.  
+* \[ \] A `GameError` or a refusal leaves the card in the hand.  
+* \[ \] The picture updates only on accept.  
+* \[ \] The engine is still a stand-in.
+
+**User Story 3.3.4: Engine drop**
+
+*As a player, I want that drop to go through Rust so the rules decide.*
+
+* \[ \] UniFFI applies `PlayMeld` or `HitMeld`.  
+* \[ \] `GameError` and a refusal come from Rust.  
+* \[ \] The shoe on the exhibit stays 108.
+
+Take, discard, steal, and scores stay out of 3.3.1–3.3.4.
 
 ## **Phase 4: Multiplayer Server**
 
-**User Story 4.1: Server Setup & Handshake**
+**User Story 4.1.1: Axum listens**
 
-*As a remote player, I want to connect to a cloud server so I can play with friends.*
+*As a remote player, I want a server process that accepts connections.*
 
-* \[ \] Setup Rust Axum (or Actix-Web) server on EC2.  
-* \[ \] Implement WebSocket endpoint and establish handshake from iOS client.
+* \[ \] Axum binds and serves a health or ready route.
 
-**User Story 4.2: Matchmaking & Game Instantiation**
+**User Story 4.1.2: Headless WebSocket handshake**
 
-*As a remote player, I want to join specific rooms.*
+*As a remote player, I want a test client to complete the handshake.*
 
-* \[ \] Implement 4-digit room code generation logic.  
-* \[ \] Implement lobby state allocating new instances of the GameState engine per room.
+* \[ \] A headless client opens the WebSocket and finishes the handshake.
 
-**User Story 4.3: State Broadcast**
+**User Story 4.1.3: iOS WebSocket handshake**
 
-*As a remote player, I want to see my opponent's moves instantly.*
+*As a remote player, I want the iOS client to complete that same handshake.*
 
-* \[ \] Serialize iOS drag-and-drop actions into JSON over WS.  
-* \[ \] Deserialize on Server, process via Rust Engine, and broadcast new serialized state to all clients in the room.
+* \[ \] The iOS client opens the WebSocket and finishes the handshake.
+
+**User Story 4.2.1: Room code**
+
+*As a remote player, I want a 4-digit code that names my room.*
+
+* \[ \] A room has a 4-digit code.
+
+**User Story 4.2.2: Room engine**
+
+*As a remote player, I want that room to hold one game.*
+
+* \[ \] That room holds one `GameState`.
+
+**User Story 4.3.1: Drop intent JSON**
+
+*As a remote player, I want my drag to travel as JSON.*
+
+* \[ \] A 3.3.1 drop intent serializes to JSON.
+
+**User Story 4.3.2: Server applies the drop**
+
+*As a remote player, I want the server to run that drop through the engine.*
+
+* \[ \] The server applies that JSON through `push_core` and returns the snapshot.
+
+**User Story 4.3.3: Opponent sees the snapshot**
+
+*As a remote player, I want the other client to show that snapshot.*
+
+* \[ \] The other client shows that snapshot.
 
 ## **Final Milestone: CI/CD Pipeline**
 
@@ -394,5 +497,12 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 *As the lead developer, I want to prevent bad code from reaching the main branch.*
 
-* \[ \] Create GitHub Actions YAML for Rust toolchain.  
-* \[ \] Configure branch protection rules requiring 100% test pass rate for merges.
+* \[x\] Create GitHub Actions YAML for Rust toolchain. `.github/workflows/push-core.yml` runs `cargo test` for `push_core`, `push_sim`, and `push_ffi`.
+
+**User Story 5.1.1: Swift UI tests in CI**
+
+*As the lead developer, I want the iOS package tests to run on every push.*
+
+* \[ \] Run `swift test --package-path ios/PushUI` in CI.
+
+Branch protection that requires a green suite stays a later checkbox. It does not jump ahead of 3.3.2.

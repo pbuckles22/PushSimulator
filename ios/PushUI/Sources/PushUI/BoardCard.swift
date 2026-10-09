@@ -1,7 +1,7 @@
 import Foundation
 
 /// Suit the card face draws. `none` has no pip suit.
-public enum BoardSuit: Equatable {
+public enum BoardSuit: Equatable, Codable {
     case hearts
     case diamonds
     case clubs
@@ -10,7 +10,7 @@ public enum BoardSuit: Equatable {
 }
 
 /// Rank the card face draws.
-public enum BoardRank: Equatable {
+public enum BoardRank: Equatable, Codable {
     case two
     case three
     case four
@@ -28,7 +28,7 @@ public enum BoardRank: Equatable {
 }
 
 /// One card the board lays out. `id` keeps two copies of the same face apart.
-public struct BoardCard: Equatable, Identifiable {
+public struct BoardCard: Equatable, Identifiable, Codable {
     public let id: UInt32
     public let suit: BoardSuit
     public let rank: BoardRank
