@@ -19,7 +19,7 @@ This is the durable home for technical debt across sessions. Handoff notes can m
 
 (High ROI; frequent pain; not blocking.)
 
-- **Liveness:** Closed on `fix/residual-turn-limit-stalemates`. Seeds 1..=10000 finished in 213.42s with 0 stalls at 8,000 turns. Seed 1 scores 340 and 80.
+- **Liveness:** Closed on `main` at `a4708f2`. Seeds 1..=10000 finished in 213.42s with 0 stalls at 8,000 turns. Seed 1 scores 340 and 80.
 
 - Older closes: **1.2.4.2** closed the seeded shuffle, the card-id property test, the uncalled reshuffle arms, the extra `Player::new` chains, CI for `cargo test -p push_core`, and the unused `serde` dependency. Epics 1.4–1.8 added no new Do-first item.
 
