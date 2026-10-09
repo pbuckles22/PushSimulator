@@ -6,7 +6,7 @@
 use std::process::Command;
 
 use push_core::latency::{
-    profile_fourteen_card, HIT_GATE, PLAY_GATE, VALIDATE_GATE, LatencyGate, TimedComponent,
+    profile_fourteen_card, LatencyGate, TimedComponent, HIT_GATE, PLAY_GATE, VALIDATE_GATE,
 };
 
 fn main() {

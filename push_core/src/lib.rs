@@ -12,6 +12,7 @@ pub mod latency;
 pub mod legal_moves;
 pub mod metrics;
 pub mod player;
+pub mod profiles;
 pub mod random_bot;
 pub mod resolution;
 pub mod validation;

@@ -9,10 +9,21 @@ use std::path::Path;
 fn main() {
     let args = push_sim::parse_sim_args(std::env::args().skip(1));
     if let Some((games, csv)) = args.batch() {
-        let (_batch, metrics) =
-            push_sim::run_parallel_batch(1, games, Path::new(&csv)).expect("write metrics csv");
+        let seats = args.seats();
+        let (_batch, metrics) = if seats
+            == [
+                push_core::profiles::BotProfile::Random,
+                push_core::profiles::BotProfile::Random,
+            ] {
+            push_sim::run_parallel_batch(1, games, Path::new(&csv)).expect("write metrics csv")
+        } else {
+            push_sim::run_profile_batch(1, games, seats, Path::new(&csv))
+                .expect("write metrics csv")
+        };
         println!(
-            "push_sim parallel games={games} csv={} ties={} average_turns={}",
+            "push_sim parallel games={games} seats={},{} csv={} ties={} average_turns={}",
+            seats[0].label(),
+            seats[1].label(),
             csv.display(),
             metrics.ties,
             metrics.average_turns

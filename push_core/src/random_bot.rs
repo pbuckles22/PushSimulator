@@ -17,7 +17,7 @@ use crate::resolution::ActionResolution;
 use crate::validation::{card_can_be_played, check_round_requirements, validate_run, validate_set};
 
 /// Stop after this many turns so a stuck table fails instead of running on.
-const TURN_LIMIT: u32 = 8_000;
+pub(crate) const TURN_LIMIT: u32 = 8_000;
 
 /// Games in one Stage 3 throughput batch.
 pub const THROUGHPUT_BATCH_GAMES: u64 = 1_000;
@@ -33,13 +33,13 @@ pub const THROUGHPUT_BATCH_COUNT: usize = 5;
 pub const THROUGHPUT_BATCH_GATE: Duration = Duration::from_secs(60);
 
 /// Actions kept from one play or hit walk. A longer list stops there.
-const ACTION_SAMPLE_CAP: usize = 100;
+pub(crate) const ACTION_SAMPLE_CAP: usize = 100;
 
 /// Search steps for a hand above 11 cards.
 ///
 /// A walk that emits nothing never calls the visitor, so the step ceiling
 /// stops that search. Hands of 11 or fewer still walk until the visitor stops.
-const LARGE_HAND_WALK_NODES: u32 = 10_000;
+pub(crate) const LARGE_HAND_WALK_NODES: u32 = 10_000;
 
 /// A finished headless game and the turns it took.
 ///
@@ -280,7 +280,7 @@ fn can_play_or_hit(state: &GameState, actor: usize) -> bool {
     found
 }
 
-fn walk_nodes(state: &GameState, actor: usize) -> u32 {
+pub(crate) fn walk_nodes(state: &GameState, actor: usize) -> u32 {
     if state.players[actor].hand.len() > 11 {
         LARGE_HAND_WALK_NODES
     } else {
@@ -435,16 +435,30 @@ fn lay_free_meld(state: &mut GameState, actor: usize, rng: &mut impl Rng) {
     apply_kind(state, actor, rng, LegalKind::Play);
 }
 
-fn melds_for_round(round: u8, cards: &[Card]) -> Option<Vec<Vec<Card>>> {
-    let sets = set_groups(cards);
-    let runs_of_four = run_groups(cards, 4);
-    let runs_of_seven = run_groups(cards, 7);
+pub(crate) fn melds_for_round(round: u8, cards: &[Card]) -> Option<Vec<Vec<Card>>> {
     let melds = match round {
-        1 => disjoint_groups(&[&sets, &sets]),
-        2 => disjoint_groups(&[&sets, &runs_of_four]),
-        3 => disjoint_groups(&[&runs_of_four, &runs_of_four]),
-        4 => disjoint_groups(&[&sets, &sets, &sets]),
-        5 => disjoint_groups(&[&sets, &runs_of_seven]),
+        1 | 4 => {
+            let sets = set_groups(cards);
+            if round == 1 {
+                disjoint_groups(&[&sets, &sets])
+            } else {
+                disjoint_groups(&[&sets, &sets, &sets])
+            }
+        }
+        2 => {
+            let sets = set_groups(cards);
+            let runs = run_groups(cards, 4);
+            disjoint_groups(&[&sets, &runs])
+        }
+        3 => {
+            let runs = run_groups(cards, 4);
+            disjoint_groups(&[&runs, &runs])
+        }
+        5 => {
+            let sets = set_groups(cards);
+            let runs = run_groups(cards, 7);
+            disjoint_groups(&[&sets, &runs])
+        }
         _ => None,
     }?;
     check_round_requirements(round, &melds).then_some(melds)

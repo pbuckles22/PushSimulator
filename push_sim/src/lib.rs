@@ -11,6 +11,7 @@ use std::sync::Mutex;
 use std::thread::ThreadId;
 
 use push_core::metrics::{batch_metrics, BatchMetrics};
+use push_core::profiles::{finish_profile_game, BotProfile};
 use push_core::random_bot::{finish_random_game, FinishedGame};
 use rayon::prelude::*;
 
@@ -31,6 +32,7 @@ pub struct ParallelBatch {
 pub struct SimArgs {
     games: Option<u64>,
     csv: Option<PathBuf>,
+    seats: [BotProfile; 2],
 }
 
 impl SimArgs {
@@ -44,12 +46,18 @@ impl SimArgs {
             (games, path)
         })
     }
+
+    /// Seat 0 then seat 1. Both are [`BotProfile::Random`] when the flags are omitted.
+    pub fn seats(&self) -> [BotProfile; 2] {
+        self.seats
+    }
 }
 
-/// Reads `--games <count>` and `--csv <path>`.
+/// Reads `--games <count>`, `--csv <path>`, `--seat0`, and `--seat1`.
 ///
 /// An empty list leaves the one-game print in place. `--csv` without `--games`
-/// is refused. An unknown flag is refused.
+/// is refused. An unknown flag is refused. A seat is `random`, `point-averse`,
+/// `hoarder`, or `keep-<count>`. Omitting a seat leaves it random.
 pub fn parse_sim_args<I, S>(args: I) -> SimArgs
 where
     I: IntoIterator<Item = S>,
@@ -57,6 +65,7 @@ where
 {
     let mut games = None;
     let mut csv = None;
+    let mut seats = [BotProfile::Random, BotProfile::Random];
     let mut iter = args.into_iter();
     while let Some(arg) = iter.next() {
         match arg.as_ref() {
@@ -78,13 +87,27 @@ where
                     .expect("--csv needs a path");
                 csv = Some(PathBuf::from(value));
             }
+            "--seat0" => seats[0] = parse_profile("--seat0", &mut iter),
+            "--seat1" => seats[1] = parse_profile("--seat1", &mut iter),
             other => panic!("unknown argument {other}"),
         }
     }
     if csv.is_some() && games.is_none() {
         panic!("--csv needs --games");
     }
-    SimArgs { games, csv }
+    SimArgs { games, csv, seats }
+}
+
+fn parse_profile<I, S>(flag: &str, iter: &mut I) -> BotProfile
+where
+    I: Iterator<Item = S>,
+    S: AsRef<str>,
+{
+    let value = iter
+        .next()
+        .map(|item| item.as_ref().to_string())
+        .unwrap_or_else(|| panic!("{flag} needs a profile"));
+    BotProfile::parse(&value).unwrap_or_else(|| panic!("unknown profile {value}"))
 }
 
 /// Plays `games` five-round matches, seeds `first_seed .. first_seed + games`.
@@ -144,6 +167,34 @@ pub fn write_metrics_csv(path: &Path, metrics: &BatchMetrics) -> Result<(), csv:
     Ok(())
 }
 
+/// Plays `games` five-round matches on the Rayon pool.
+///
+/// Seat 0 uses `seats[0]`. Seat 1 uses `seats[1]`. Result order matches seed order.
+pub fn play_profile_games_parallel(
+    first_seed: u64,
+    games: u64,
+    seats: [BotProfile; 2],
+) -> ParallelBatch {
+    let seen = Mutex::new(HashSet::<ThreadId>::new());
+    let pool_threads = AtomicUsize::new(0);
+    let played = (0..games)
+        .into_par_iter()
+        .map(|offset| {
+            seen.lock()
+                .expect("worker set")
+                .insert(std::thread::current().id());
+            pool_threads.fetch_max(rayon::current_num_threads(), Ordering::Relaxed);
+            finish_profile_game(first_seed + offset, seats)
+        })
+        .collect();
+    let worker_threads = seen.lock().expect("worker set").len();
+    ParallelBatch {
+        games: played,
+        worker_threads,
+        pool_threads: pool_threads.load(Ordering::Relaxed),
+    }
+}
+
 /// Plays the batch and writes its metrics to `csv_path`.
 pub fn run_parallel_batch(
     first_seed: u64,
@@ -151,6 +202,22 @@ pub fn run_parallel_batch(
     csv_path: &Path,
 ) -> Result<(ParallelBatch, BatchMetrics), csv::Error> {
     let batch = play_games_parallel(first_seed, games);
+    let samples: Vec<_> = batch.games.iter().map(FinishedGame::sample).collect();
+    let metrics = batch_metrics(&samples);
+    write_metrics_csv(csv_path, &metrics)?;
+    Ok((batch, metrics))
+}
+
+/// Plays a profile matchup and writes its metrics to `csv_path`.
+///
+/// The columns match [`write_metrics_csv`].
+pub fn run_profile_batch(
+    first_seed: u64,
+    games: u64,
+    seats: [BotProfile; 2],
+    csv_path: &Path,
+) -> Result<(ParallelBatch, BatchMetrics), csv::Error> {
+    let batch = play_profile_games_parallel(first_seed, games, seats);
     let samples: Vec<_> = batch.games.iter().map(FinishedGame::sample).collect();
     let metrics = batch_metrics(&samples);
     write_metrics_csv(csv_path, &metrics)?;
