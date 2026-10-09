@@ -28,6 +28,7 @@ This is the durable home for technical debt across sessions. Handoff notes can m
 (Isolated + workaround + revisit trigger.)
 
 - **Docs / Low:** `docs/` is the original Google export and still says an empty draw pile always leaves the discard top. The living rule is `doc/requirements/GAME_RULES.md`. Leave the export as the snapshot.
+- **Sim / Low:** `--players` copies seat 1 into every later seat. A table cannot give three seats three different profiles. Revisit when a match needs a mixed field.
 
 ---
 

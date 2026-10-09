@@ -328,11 +328,13 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 **User Story 2.4: Strategic Bots**
 
+**Status:** complete — 2026-10-09. Content is `f5868db`. A point-averse seat never holds a wild. A hoarder holds every wild through round 3. Keep(n) holds at most n wilds. A match deals 2 to 10 seats. `feature/2.4-strategic-bots` is kept. Phase 2 is complete.
+
 *As the simulator, I want different AI profiles to discover optimal meta-strategies.*
 
-* \[ \] Implement "Point-Averse Bot" (Aggressively pushes/discards high cards).  
-* \[ \] Implement "Hoarder Bot" (Holds Wilds until late rounds).  
-* \[ \] Run 100,000 iterations to compare profiles.
+* \[x\] Implement "Point-Averse Bot" (Aggressively pushes/discards high cards).  
+* \[x\] Implement "Hoarder Bot" (Holds Wilds until late rounds).  
+* \[x\] Run 100,000 iterations to compare profiles.
 
 ## **Phase 3: iOS SwiftUI App (Local Play)**
 

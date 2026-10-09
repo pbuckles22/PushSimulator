@@ -1,6 +1,6 @@
 # PushSimulator
 
-Rust-centric engine and simulator for the card game **Push**. Agentic Cursor foundation from AgenticTemplate. Epics 1.1 through 1.8 are complete: a deck, a deal, scoring, take and push, checks for a set and a run, and getting on the board. A player on the board can add cards onto melds already there, and can swap a natural card for a wild. That wild cannot be played until the turn counter catches up. An off-board player cannot discard a card that fits a meld. The card just taken or drawn can. An empty hand ends the round. The next round scores the hands that remain and deals again. A joker drawn during a penalty stays in the hand.
+Rust-centric engine and simulator for the card game **Push**. Agentic Cursor foundation from AgenticTemplate. Phase 2 is complete: headless matches, Rayon batches, and strategic seats (point-averse, hoarder, keep-N) for 2 to 10 players. Epics 1.1 through 1.8 are complete: a deck, a deal, scoring, take and push, checks for a set and a run, and getting on the board. A player on the board can add cards onto melds already there, and can swap a natural card for a wild. That wild cannot be played until the turn counter catches up. An off-board player cannot discard a card that fits a meld. The card just taken or drawn can. An empty hand ends the round. The next round scores the hands that remain and deals again. A joker drawn during a penalty stays in the hand.
 
 **Repository:** https://github.com/pbuckles22/PushSimulator
 
@@ -16,7 +16,7 @@ Architecture and commentary: [doc/ARCHITECTURE.md](doc/ARCHITECTURE.md), [doc/PL
 |-------|------|
 | Core | `push_core` (Rust) |
 | Debug viewer | `push_wasm` + `viewer/` (WASM / HTML) |
-| Monte Carlo | `push_sim` (Rayon) — Phase 2 |
+| Monte Carlo | `push_sim` (Rayon) — Phase 2 complete |
 | iOS | SwiftUI + UniFFI — Phase 3 |
 | Multiplayer | Axum — Phase 4 |
 

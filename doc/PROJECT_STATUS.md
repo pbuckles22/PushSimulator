@@ -1,10 +1,12 @@
 # Project status — PushSimulator
 
-**Last updated:** 2026-10-08
+**Last updated:** 2026-10-09
 
 ---
 
 ## Summary
+
+Phase 2 is complete — 2026-10-09. 2.4 content is `f5868db`. A point-averse seat never holds a wild. A hoarder holds every wild through round 3. Keep(n) holds at most n wilds. A match deals 2 to 10 seats. `--players` copies seat 1 into every later seat. Two random seats still use `finish_random_game`. Seed 1 scores 5 and 85. Release keep-N versus point-averse, 100,000 games, 5 Mac threads: 3 seats keep-4 won 94,133 (mean 82.83); 4 seats keep-5 won 79,222 (mean 144.32); 5 seats keep-5 won 64,653 (mean 191.59). Pooled keep-5 won 237,927 of 300,000 (mean 139.37). `feature/2.4-strategic-bots` is kept. Next is 3.1.
 
 2.3 is on `main` at `69534dd`. One thousand games run through `rayon::par_iter`. The lowest total wins. A tie is not a win. The CSV records seat win rates, average turns, and population score variance. Debug `test_rayon_parallelization` finished 1000 of 1000 in 12.77s. Seed 1 scores 5 and 85. `feature/2.3-parallel-csv` is kept. Next is 2.4.
 
@@ -18,7 +20,8 @@
 
 | Branch | Role |
 |--------|------|
-| **`main`** | 2.3 parallel CSV at `69534dd`. Seed 1 is 5 and 85. 2.2.1 visit-stop at `faa63d4` |
+| **`main`** | Phase 2 complete — 2026-10-09. 2.4 content `f5868db`. 2.3 parallel CSV at `69534dd` |
+| **`feature/2.4-strategic-bots`** | Kept. Point-averse, hoarder, keep-N, and 2 to 10 seats. Do not merge again |
 | **`feature/2.3-parallel-csv`** | Kept. Rayon batches and CSV metrics. Do not merge again |
 | **`fix/free-melding-post-board`** | Kept. Free melding breakfix. Do not merge again |
 | **`fix/residual-turn-limit-stalemates`** | Kept. Empty penalty draw used to return to playing. On-board shed. Seed 1 is 340 and 80 |
@@ -67,6 +70,8 @@
 
 ## Completed
 
+- **Phase 2** complete — 2026-10-09. Content is `f5868db`. Point-averse, hoarder, and keep-N seats. A match deals 2 to 10 seats. `feature/2.4-strategic-bots` is kept
+- **2.4** on `main`. Content is `f5868db`. A point-averse seat never holds a wild. A hoarder holds every wild through round 3. Keep(n) holds at most n wilds and sheds the surplus. Two random seats still score 5 and 85 on seed 1
 - **2.3** on `main` at `69534dd`. One thousand games run through `rayon::par_iter`. The lowest total wins. A tie is not a win. The CSV records seat win rates, average turns, and population score variance. Debug `test_rayon_parallelization` finished 1000 of 1000 in 12.77s. Seed 1 scores 5 and 85. `feature/2.3-parallel-csv` is kept
 - **2.2** on `main` at `d815423`. Two random seats finish five rounds. Seed 1 leaves round 6 dealt and unplayed. `points` stay 0. Totals are 340 and 1025. Every card id stays on the table. `feature/2.2-random-bot` is kept
 - **2.1** on `main` at `e0e6b42`. `generate_legal_moves` lists every action `apply` would accept for one seat. The table stays as it was. The 8♦ hits the eights. The 9♥ hits the heart run. The joker hits either. The 4♦ and the king are discards only. The 3♠ joins 5♠–8♠ only with the 4♠. Off the board, two sets of three can be laid down. The 8♦ that fits cannot be discarded. Six fours are two sets of three. A locked card can be discarded and cannot be hit. The 5♦ steals the joker. The card just taken can be discarded. `DrawFromDeck` is listed only for the penalty seat. A closed round lists nothing. `points` and `total_score` stay as they were. `feature/2.1-legal-moves` is kept
@@ -116,7 +121,7 @@
 
 | Item | Detail |
 |------|--------|
-| **2.4** | A point-averse bot, a hoarder bot, then 100,000 games to compare profiles. |
+| **3.1** | Generate an xcframework with UniFFI and a SwiftUI view that calls `Game.get_deck_size()`. |
 
 ---
 
