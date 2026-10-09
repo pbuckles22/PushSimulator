@@ -4,9 +4,10 @@
 
 ```bash
 cargo test -p push_core
+cargo test -p push_sim
 ```
 
-GitHub Actions runs that same command (`.github/workflows/push-core.yml`) on push and pull request.
+GitHub Actions runs both commands (`.github/workflows/push-core.yml`) on push and pull request.
 
 Optional full workspace:
 
@@ -78,6 +79,8 @@ Empty-draw reshuffle continues that chain in the same file. Three or more discar
 
 Move generation performance continues that chain. A 14-card play walk stays inside 16 allocations per emitted action, plus 64. The mixed hand emits no lay-down. The round-4 set hand emits 750 plays. A heart-run hit emits 27. `test_fourteen_card_mixed_play_walk_stays_within_the_allocation_budget` and `test_fourteen_card_hit_walk_stays_within_the_allocation_budget` lock those walks. `test_suit_rank_card_deck_new_has_draw_capacity_validate_action_fourteen_card_visit_random_turn_allocation` deals that set hand, accepts a take, walks play and hit, and still plays that large hand. Percentiles use nearest rank. Samples 1 through 100 land on 50, 95, and 99. `test_suit_rank_card_deck_new_has_draw_capacity_validate_action_visit_play_hit_fourteen_card_latency` times one take, the 750-play walk, and the 15-hit walk. Debug checks the shape. Release checks `VALIDATE_GATE`, `PLAY_GATE`, and `HIT_GATE`. `cargo run -p push_sim --bin bench --release` prints the same profile. `Deck::has_draw_capacity` counts sequential one-card draws. A last card counts. Two leftover discards do not. Three or more discards count as a reshuffle. The piles stay put. `validate_action` accepts a take, marks an empty discard invalid, and starts the penalty when a fitting card is discarded. An invalid move leaves the table. `visit_legal_moves` matches `generate_legal_moves` as a multiset. A wild set, an ace-low run, an ace-high run, both copies of one card, an all-wild meld, and two runs in round 3 stay. A king, ace, two, and three is not a play. `test_suit_rank_card_deck_new_is_wild_shuffle_deal_visit_legal_moves_matches_generate` shuffles, deals, and checks that visit. `test_suit_rank_card_deck_new_is_wild_shuffle_deal_validate_action_apply_with_rng` deals, then takes, pushes, and discards through that path. A visitor that returns `false` or `ControlFlow::Break` stops a play, hit, steal, or discard walk. The bot keeps 100 plays or hits. A hand above 11 stops after 10,000 search steps. Release batch 0 finished 1000 of 1000 in 13.305s.
 
+Parallel games continue that chain. `test_batch_metrics_seat_win_rates_average_turns_and_score_variance` records seat win rates, average turns, and population score variance. The lowest total wins. A shared lowest score is a tie and is not a win. An empty batch does not divide by zero. A sample with no scores, or a different seat count, is refused. `test_play_random_game_finish_batch_metrics_seed_one_wins_on_five` plays seed 1 through `finish_random_game` and `play_random_game`. Seed 1 scores 5 and 85, so seat 0 wins that game. `test_rayon_parallelization` plays seeds 1..=1000 through `rayon::par_iter`. Every game finishes five rounds. Seed 1 still scores 5 and 85. `test_play_random_game_par_iter_batch_metrics_csv_win_rate_turns_variance` plays two games on that same loop and writes `seat`, `wins`, `games`, `win_rate`, `mean_score`, `score_variance`, `average_turns`, and `ties`. `cargo test -p push_sim` runs that file. `cargo run -p push_sim -- --games 1000 --csv metrics.csv` writes the same columns. With no arguments, `cargo run -p push_sim` still prints one game.
+
 The legacy oracle continues that chain inside the crate, because the module is test-only. `legacy_apply_with_rng` matches `apply_with_rng` on a seeded push, a penalty draw, a refused fitting discard, and a wild steal. `assign_plays`, `hit_moves`, and `additions` match the live generator on a bounded hand. `test_suit_rank_card_deck_new_is_wild_seeded_shuffle_deal_legacy_oracle_matches_apply` shuffles, deals, pushes through both paths, then penalty-draws through both paths. The tables match. Every card id stays in play.
 
 A seeded bot turn continues that chain. `play_random_turn` commits through `apply_with_rng`, so a push or a penalty draw that shuffles follows the bot seed. `test_random_turn_push_reshuffle_follows_the_bot_seed` gives the next seat the discard top and the first seeded draw. `test_random_turn_penalty_reshuffle_follows_the_bot_seed` keeps the three cards that fit, in seed order, and discards the king. `test_suit_rank_card_deck_new_is_wild_seeded_shuffle_deal_random_turn_push_follows_the_seed` deals, then plays that push. `test_suit_rank_card_deck_new_is_wild_seeded_shuffle_deal_random_turn_penalty_follows_the_seed` deals, then starts the turn in penalty drawing. The same seed repeats the table. A seed that shuffles differently does not. `points` and `total_score` stay 0. Every card id stays on the table.
@@ -88,6 +91,7 @@ Suggested after Epic 1.8: Epic 1.9 chains (see [doc/PLAN_COMMENTARY.md](doc/PLAN
 
 ```bash
 cargo test -p push_core
+cargo test -p push_sim
 ```
 
 ---

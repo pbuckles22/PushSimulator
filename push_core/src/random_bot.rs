@@ -11,6 +11,7 @@ use crate::card::{Card, Rank, Suit};
 use crate::deck::Deck;
 use crate::game_state::{GameState, TurnPhase};
 use crate::legal_moves::{push_is_legal, visit_legal_kind, visit_legal_kind_within, LegalKind};
+use crate::metrics::GameSample;
 use crate::player::{deal_initial_hands, Player};
 use crate::resolution::ActionResolution;
 use crate::validation::{card_can_be_played, check_round_requirements, validate_run, validate_set};
@@ -40,6 +41,32 @@ const ACTION_SAMPLE_CAP: usize = 100;
 /// stops that search. Hands of 11 or fewer still walk until the visitor stops.
 const LARGE_HAND_WALK_NODES: u32 = 10_000;
 
+/// A finished headless game and the turns it took.
+///
+/// `turns` counts each call that plays a seat, including a penalty draw that
+/// stays on that seat. Five rounds finished means `round_number` is 6.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FinishedGame {
+    pub seed: u64,
+    pub turns: u32,
+    pub state: GameState,
+}
+
+impl FinishedGame {
+    /// Scores and turn count for [`crate::metrics::batch_metrics`].
+    pub fn sample(&self) -> GameSample {
+        GameSample {
+            turns: self.turns,
+            scores: self
+                .state
+                .players
+                .iter()
+                .map(|player| player.total_score)
+                .collect(),
+        }
+    }
+}
+
 /// Two seats play five rounds.
 ///
 /// `seed` shuffles the shoe, chooses each action, and shuffles a push or a penalty
@@ -50,6 +77,11 @@ const LARGE_HAND_WALK_NODES: u32 = 10_000;
 /// ends, the hands are scored and the next round is dealt. After the fifth
 /// round, `round_number` is 6 and that round has not been played.
 pub fn play_random_game(seed: u64) -> GameState {
+    finish_random_game(seed).state
+}
+
+/// Plays [`play_random_game`] and keeps the seed and the turn count.
+pub fn finish_random_game(seed: u64) -> FinishedGame {
     let mut rng = StdRng::seed_from_u64(seed);
     let mut state = new_two_seat_table(&mut rng);
     let mut seat = 0usize;
@@ -74,7 +106,7 @@ pub fn play_random_game(seed: u64) -> GameState {
         state.advance_turn();
         seat = (seat + 1) % state.players.len();
     }
-    state
+    FinishedGame { seed, turns, state }
 }
 
 /// Shuffles a fresh shoe, deals two seats, and flips one discard.
@@ -128,7 +160,8 @@ pub fn play_game_batch(first_seed: u64, games: u64) -> GameBatch {
     }
 }
 
-fn game_finished_five_rounds(state: &GameState) -> bool {
+/// Round 6 is dealt and unplayed, the phase is playing, and neither seat is in a penalty.
+pub fn game_finished_five_rounds(state: &GameState) -> bool {
     state.round_number == 6
         && !state.round_over
         && state.turn_phase == TurnPhase::Playing

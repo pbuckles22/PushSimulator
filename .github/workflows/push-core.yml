@@ -12,3 +12,5 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo test -p push_core
         run: cargo test -p push_core
+      - name: cargo test -p push_sim
+        run: cargo test -p push_sim

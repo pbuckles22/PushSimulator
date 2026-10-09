@@ -31,7 +31,7 @@ pub enum TurnPhase {
 /// discard does not close it, and only that seat may draw. `round_over` starts false.
 /// A play, a hit, or a discard that leaves the actor's hand empty sets it.
 /// `advance_to_next_round` then adds each remaining hand onto `total_score` and deals again.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GameState {
     pub players: Vec<Player>,
     pub deck: Deck,

@@ -6,6 +6,10 @@ license.workspace = true
 authors.workspace = true
 description = "Monte Carlo simulation CLI for Push (Phase 2)"
 
+[lib]
+name = "push_sim"
+path = "src/lib.rs"
+
 [[bin]]
 name = "push_sim"
 path = "src/main.rs"

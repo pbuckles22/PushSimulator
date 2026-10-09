@@ -322,9 +322,9 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 *As the simulator, I want to run millions of games fast so I get valid data.*
 
-* \[ \] Write test test\_rayon\_parallelization wrapping 1,000 games in rayon::par\_iter().  
-* \[ \] Implement concurrent game loop.  
-* \[ \] Implement CSV logging (Seat win rates, average turns, score variance).
+* \[x\] Write test test\_rayon\_parallelization wrapping 1,000 games in rayon::par\_iter().  
+* \[x\] Implement concurrent game loop.  
+* \[x\] Implement CSV logging (Seat win rates, average turns, score variance).
 
 **User Story 2.4: Strategic Bots**
 

@@ -34,15 +34,17 @@ Requires Rust (`rustup`). Add `%USERPROFILE%\.cargo\bin` to PATH on Windows if `
 
 ```bash
 cargo test -p push_core
+cargo test -p push_sim
 cargo test
 wasm-pack build push_wasm --target web --out-dir ../viewer/pkg
 cargo run -p push_sim
+cargo run -p push_sim -- --games 1000 --csv metrics.csv
 cargo run -p push_sim --bin bench --release
 ```
 
 Viewer: `cd viewer && npx --yes serve .`
 
-**Merge-ready gate:** `cargo test -p push_core`
+**Merge-ready gate:** `cargo test -p push_core` and `cargo test -p push_sim`
 
 ## Conventions
 
@@ -54,7 +56,7 @@ Viewer: `cd viewer && npx --yes serve .`
 
 1. Integration branch: **`main`**
 2. Feature branches: `feature/<story-id>-short-topic` — merge only after **CMPH**
-3. Gate before push: `cargo test -p push_core`
+3. Gate before push: `cargo test -p push_core` and `cargo test -p push_sim`
 4. **UCPH** pushes feature branch only; **CMPH** merges to `main`
 
 ## Handoff protocol
