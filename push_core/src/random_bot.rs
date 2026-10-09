@@ -1,6 +1,7 @@
 //! A seat that plays by choosing among the actions the engine would accept.
 
 use std::collections::BTreeMap;
+use std::time::{Duration, Instant};
 
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
@@ -16,6 +17,19 @@ use crate::validation::{card_can_be_played, check_round_requirements, validate_r
 
 /// Stop after this many turns so a stuck table fails instead of running on.
 const TURN_LIMIT: u32 = 8_000;
+
+/// Games in one Stage 3 throughput batch.
+pub const THROUGHPUT_BATCH_GAMES: u64 = 1_000;
+
+/// Disjoint batches Stage 3 runs. Seeds are `1..=1000`, then `1001..=2000`, and so on.
+pub const THROUGHPUT_BATCH_COUNT: usize = 5;
+
+/// Release ceiling for one batch of [`THROUGHPUT_BATCH_GAMES`] five-round games.
+///
+/// Five release batches on this machine, with the large-hand fallback still in
+/// place, finished in 20.350s, 24.099s, 21.034s, 20.484s, and 19.539s.
+/// A batch at the ceiling still passes. Debug runs do not apply this ceiling.
+pub const THROUGHPUT_BATCH_GATE: Duration = Duration::from_secs(60);
 
 /// Two seats play five rounds.
 ///
@@ -66,6 +80,51 @@ pub fn new_two_seat_table(rng: &mut impl Rng) -> GameState {
         .expect("the first round starts a discard pile");
     deck.discard.push(starter);
     GameState::new(players, deck)
+}
+
+/// First seed of throughput batch `index`. Batch 0 starts at seed 1.
+pub fn throughput_batch_first_seed(index: usize) -> u64 {
+    assert!(index < THROUGHPUT_BATCH_COUNT);
+    1 + index as u64 * THROUGHPUT_BATCH_GAMES
+}
+
+/// One headless batch. Every game is a full five-round match.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct GameBatch {
+    pub first_seed: u64,
+    pub games: u64,
+    pub finished: u64,
+    pub elapsed: Duration,
+}
+
+/// Plays seeds `first_seed .. first_seed + games`.
+///
+/// A game counts as finished when round 6 is dealt and unplayed, the phase is
+/// playing, and neither seat is in a penalty. A seed that stalls still panics
+/// inside [`play_random_game`].
+pub fn play_game_batch(first_seed: u64, games: u64) -> GameBatch {
+    let started = Instant::now();
+    let mut finished = 0u64;
+    for offset in 0..games {
+        let state = play_random_game(first_seed + offset);
+        if game_finished_five_rounds(&state) {
+            finished += 1;
+        }
+    }
+    GameBatch {
+        first_seed,
+        games,
+        finished,
+        elapsed: started.elapsed(),
+    }
+}
+
+fn game_finished_five_rounds(state: &GameState) -> bool {
+    state.round_number == 6
+        && !state.round_over
+        && state.turn_phase == TurnPhase::Playing
+        && state.penalty_seat.is_none()
+        && state.players.iter().all(|player| player.points == 0)
 }
 
 /// Plays one turn for `actor`.

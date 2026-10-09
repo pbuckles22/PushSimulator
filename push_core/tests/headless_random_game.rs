@@ -267,6 +267,63 @@ fn test_random_turn_lays_down_additional_melds() {
     assert!(!state.round_over);
 }
 
+/// On the board, a hand above 11 still lays the free set.
+#[test]
+fn test_random_turn_lays_a_free_set_from_a_hand_above_eleven() {
+    let fours = vec![
+        card(1, Suit::Hearts, Rank::Four),
+        card(2, Suit::Spades, Rank::Four),
+        card(3, Suit::Clubs, Rank::Four),
+    ];
+    let gaps = [
+        (30, Suit::Diamonds, Rank::Three),
+        (31, Suit::Diamonds, Rank::Five),
+        (32, Suit::Diamonds, Rank::Seven),
+        (33, Suit::Diamonds, Rank::Nine),
+        (34, Suit::Diamonds, Rank::Jack),
+        (35, Suit::Diamonds, Rank::King),
+        (36, Suit::Spades, Rank::Six),
+        (37, Suit::Spades, Rank::Eight),
+        (38, Suit::Spades, Rank::Ten),
+    ];
+    let mut held = fours.clone();
+    held.extend(gaps.map(|(id, suit, rank)| card(id, suit, rank)));
+    assert!(held.len() > 11);
+    let queen = card(5, Suit::Hearts, Rank::Queen);
+    let ace = card(6, Suit::Clubs, Rank::Ace);
+    let three = card(7, Suit::Hearts, Rank::Three);
+    let other = card(8, Suit::Diamonds, Rank::Three);
+    let mut players = vec![Player::new(0, 0), Player::new(1, 1)];
+    players[0].hand = held;
+    players[0].is_on_board = true;
+    players[1].hand = vec![other];
+    let mut deck = Deck::new();
+    deck.cards = vec![three, ace];
+    deck.discard = vec![queen];
+    let mut state = GameState::new(players, deck);
+    state.board = vec![vec![
+        card(10, Suit::Hearts, Rank::Eight),
+        card(11, Suit::Spades, Rank::Eight),
+        card(12, Suit::Clubs, Rank::Eight),
+    ]];
+    let ids = shoe_ids(&state);
+
+    play_random_turn(&mut state, 0, &mut StdRng::seed_from_u64(1));
+
+    assert!(state.board.iter().any(|meld| {
+        meld.iter().any(|card| card.id == fours[0].id)
+            && meld.iter().any(|card| card.id == fours[1].id)
+            && meld.iter().any(|card| card.id == fours[2].id)
+    }));
+    assert!(!state.players[0].hand.iter().any(|card| {
+        card.id == fours[0].id || card.id == fours[1].id || card.id == fours[2].id
+    }));
+    assert_eq!(shoe_ids(&state), ids);
+    assert!(!state.round_over);
+    assert_eq!(state.players[0].points, 0);
+    assert_eq!(state.players[1].points, 0);
+}
+
 /// Off the board, the seat pushes. The next hand gains the queen and the ace.
 #[test]
 fn test_random_turn_pushes_while_off_the_board() {

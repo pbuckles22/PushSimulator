@@ -315,8 +315,8 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 *As the simulator, I need clone-free validation and bounded move-search costs so large Monte Carlo batches are practical without changing legal behavior.*
 
-* \[ \] Execute the deterministic validation, differential-oracle, lazy-generation, and benchmark plan in [REFACTOR_2_2_1.md](REFACTOR_2_2_1.md). Phases 0–3 and Phase 4 stages 1–2 are on `main` at `90ab20b`. Deck-out sudden death is on `main` at `9de67aa`. The stall fix is on `main` at `a4708f2`; seed 1 scores 340 and 80. Stage 3 (five batches of 1,000 games, then the large-hand fallback) is still open.
-* \[ \] Remove the large-hand fallback only after the profiled throughput gate passes.
+* \[ \] Execute the deterministic validation, differential-oracle, lazy-generation, and benchmark plan in [REFACTOR_2_2_1.md](REFACTOR_2_2_1.md). Phases 0–3 and Phase 4 stages 1–2 are on `main` at `90ab20b`. Deck-out sudden death is on `main` at `9de67aa`. The stall fix is on `main` at `a4708f2`; seed 1 scores 340 and 80. Stage 3's five batches passed on `feature/2.2.1-stage-3-throughput`. The large-hand fallback stays: removing it made the first 1,000-game batch run past 4.5 minutes.
+* \[ \] Remove the large-hand fallback only after the profiled throughput gate passes. The gate passed. Removal hung batch 0 on penalty-trap hands of 70 or more cards, so the fallback stays until `visit_legal_kind` can stop after a capped sample.
 
 **User Story 2.3: Parallelization & Metric Logging**
 
