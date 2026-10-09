@@ -52,12 +52,13 @@ Operating model: `.cursor/rules/` ship commands (UCPH, CMPH, SWAT), human check,
 - **2.4:** on `main`. Content is `f5868db`. A point-averse seat pushes and discards high cards and never holds a wild. A hoarder holds every wild through round 3. Keep(n) holds wilds while the hand has at most n, and sheds the surplus. A profile match deals 2 to 10 seats. `--players` copies seat 1 into every later seat. Two random seats still use `finish_random_game`. Seed 1 scores 5 and 85. `feature/2.4-strategic-bots` is kept.
 - **Phase 2:** complete — 2026-10-09. Legal moves, a random bot, bounded search, Rayon batches, CSV metrics, and strategic profiles. The lowest total wins. A tie is not a win. On this Mac, 5 threads, release keep-N versus point-averse: at 3 seats keep-4 won 94,133 of 100,000 (mean 82.83); at 4 seats keep-5 won 79,222 (mean 144.32); at 5 seats keep-5 won 64,653 (mean 191.59). Pooled, keep-5 won 237,927 of 300,000 (mean 139.37). Keep-6 did not add wins.
 - **3.1:** on `main`. Content is `398e20a`. Public version **0.3.1**. `Game::get_deck_size` is the undealt shoe, 108. UniFFI exports that call. The SwiftUI screen shows Deck size 108. Device Hub, iPhone 16, PASS. `feature/3.1-uniffi-deck-size` is kept.
-- **Next:** 3.2 when asked. `@Published` state wrapping the Rust `GameState`, and SwiftUI card and board views.
+- **3.2:** on `main`. Content is `adac445`. Public version **0.3.2**. `@Published` state wraps the Rust table. The screen shows 0.3.2, Deck size 108, Round 2, three fours, and 4♥ 5♥ 6♥ 7♥. iPhone 16 simulator, PASS. `feature/3.2-board-ui` is kept.
+- **Next:** 3.3 when asked. Drag-and-drop maps to `PlayMeld` or `HitMeld`.
 - **Full backlog:** [doc/BACKLOG.md](doc/BACKLOG.md)
 - **Commentary / deltas:** [doc/PLAN_COMMENTARY.md](doc/PLAN_COMMENTARY.md) (integration-chain Epic 1.9 suggested; Google export quirks)
 
 ## Version
 
-Plan coordinate starts at **0.1.0**. Phase 2 stayed there (headless sim). Story 3.1 is the first user-visible ship of epic 3: **0.3.1**. See [doc/VERSIONING.md](doc/VERSIONING.md).
+Plan coordinate starts at **0.1.0**. Phase 2 stayed there (headless sim). Story 3.1 is **0.3.1**. Story 3.2 is **0.3.2**. See [doc/VERSIONING.md](doc/VERSIONING.md).
 
 Keep in sync with AGENT_HANDOFF *Current state* and [doc/PROJECT_STATUS.md](doc/PROJECT_STATUS.md).

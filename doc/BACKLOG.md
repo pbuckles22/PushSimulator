@@ -349,11 +349,13 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 **User Story 3.2: Reactive UI & Board Rendering**
 
+**Status:** on `main`. Content is `adac445`. Public version **0.3.2**. The screen shows 0.3.2, Deck size 108, Round 2, three fours, and 4♥ 5♥ 6♥ 7♥. `feature/3.2-board-ui` is kept.
+
 *As a player, I want to see the state of the game natively on my screen.*
 
-* \[ \] Implement @Published state wrapping the Rust GameState.  
-* \[ \] Build SwiftUI CardView changing dynamically based on Suit/Rank.  
-* \[ \] Build SwiftUI BoardView laying out Sets and Runs.
+* \[x\] Implement @Published state wrapping the Rust GameState.  
+* \[x\] Build SwiftUI CardView changing dynamically based on Suit/Rank.  
+* \[x\] Build SwiftUI BoardView laying out Sets and Runs.
 
 **User Story 3.3: Drag-and-Drop Move Execution**
 

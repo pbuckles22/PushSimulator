@@ -6,7 +6,7 @@
 
 ## Summary
 
-**3.1** is on `main`. Content is `398e20a`. Public version **0.3.1**. `Game::get_deck_size` is the undealt shoe, 108. UniFFI exports that call. The SwiftUI screen shows Deck size 108. Device Hub, iPhone 16, PASS. `feature/3.1-uniffi-deck-size` is kept. Next is 3.2 when asked.
+**3.2** is on `main`. Content is `adac445`. Public version **0.3.2**. The screen shows 0.3.2, Deck size 108, Round 2, three fours, and 4♥ 5♥ 6♥ 7♥. iPhone 16 simulator, PASS. `feature/3.2-board-ui` is kept. Next is 3.3 when asked. **3.1** is on `main`. Content is `398e20a`. Public version **0.3.1**. `Game::get_deck_size` is the undealt shoe, 108. The SwiftUI screen shows Deck size 108. Device Hub, iPhone 16, PASS. `feature/3.1-uniffi-deck-size` is kept.
 
 Phase 2 is complete — 2026-10-09. 2.4 content is `f5868db`. A point-averse seat never holds a wild. A hoarder holds every wild through round 3. Keep(n) holds at most n wilds. A match deals 2 to 10 seats. `--players` copies seat 1 into every later seat. Two random seats still use `finish_random_game`. Seed 1 scores 5 and 85. Release keep-N versus point-averse, 100,000 games, 5 Mac threads: 3 seats keep-4 won 94,133 (mean 82.83); 4 seats keep-5 won 79,222 (mean 144.32); 5 seats keep-5 won 64,653 (mean 191.59). Pooled keep-5 won 237,927 of 300,000 (mean 139.37). `feature/2.4-strategic-bots` is kept. Next is 3.1.
 
@@ -22,7 +22,8 @@ Phase 2 is complete — 2026-10-09. 2.4 content is `f5868db`. A point-averse sea
 
 | Branch | Role |
 |--------|------|
-| **`main`** | 3.1 on main. Content `398e20a`. Public version 0.3.1. Phase 2 content `f5868db` |
+| **`main`** | 3.2 on main. Content `adac445`. Public version 0.3.2. 3.1 content `398e20a` |
+| **`feature/3.2-board-ui`** | Kept. Board shows a set and a run. Public version 0.3.2. Do not merge again |
 | **`feature/3.1-uniffi-deck-size`** | Kept. UniFFI deck size 108. Public version 0.3.1. Do not merge again |
 | **`feature/2.4-strategic-bots`** | Kept. Point-averse, hoarder, keep-N, and 2 to 10 seats. Do not merge again |
 | **`feature/2.3-parallel-csv`** | Kept. Rayon batches and CSV metrics. Do not merge again |
@@ -73,6 +74,7 @@ Phase 2 is complete — 2026-10-09. 2.4 content is `f5868db`. A point-averse sea
 
 ## Completed
 
+- **3.2** on `main`. Content is `adac445`. Public version **0.3.2**. `@Published` state wraps the Rust table. The screen shows 0.3.2, Deck size 108, Round 2, three fours, and 4♥ 5♥ 6♥ 7♥. `feature/3.2-board-ui` is kept
 - **3.1** on `main`. Content is `398e20a`. Public version **0.3.1**. `Game::get_deck_size` is the undealt shoe, 108. UniFFI exports that call. The SwiftUI screen shows Deck size 108. `feature/3.1-uniffi-deck-size` is kept
 - **Phase 2** complete — 2026-10-09. Content is `f5868db`. Point-averse, hoarder, and keep-N seats. A match deals 2 to 10 seats. `feature/2.4-strategic-bots` is kept
 - **2.4** on `main`. Content is `f5868db`. A point-averse seat never holds a wild. A hoarder holds every wild through round 3. Keep(n) holds at most n wilds and sheds the surplus. Two random seats still score 5 and 85 on seed 1
