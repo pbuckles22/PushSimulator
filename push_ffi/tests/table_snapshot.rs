@@ -1,5 +1,6 @@
 //! Chain: undealt shoe → `Game::get_deck_size` → `Game::table_snapshot`
 //! → `PlayMeld` of a set and a run → `snapshot_from_state` → exhibit board.
+//! The snapshot hand is the local seat. The opponent hand stays off.
 
 use push_core::actions::Action;
 use push_core::card::{Card, Rank, Suit};
@@ -13,10 +14,11 @@ fn test_deck_new_uniffi_game_get_deck_size_table_snapshot_empty_board() {
     let game = Game::new();
     let snap = game.table_snapshot();
     assert_eq!(game.get_deck_size(), 108);
-    assert_eq!(game.public_version(), "0.3.2");
+    assert_eq!(game.public_version(), "0.3.3");
     assert_eq!(snap.deck_size, 108);
     assert_eq!(snap.round_number, 1);
     assert!(snap.board.is_empty());
+    assert!(snap.hand.is_empty());
     assert_eq!(game.table_snapshot(), snap);
     assert_eq!(game.get_deck_size(), 108);
 
@@ -36,6 +38,7 @@ fn test_exhibit_set_and_run_keeps_the_shoe_and_lays_two_melds() {
     assert_eq!(snap.board.len(), 2);
     assert_eq!(snap.board[0].cards.len(), 3);
     assert_eq!(snap.board[1].cards.len(), 4);
+    assert_eq!(snap.hand.len(), 4);
     assert_face(
         &snap.board[0].cards[0],
         1,
@@ -85,6 +88,12 @@ fn test_exhibit_set_and_run_keeps_the_shoe_and_lays_two_melds() {
         CardRank::Seven,
         0,
     );
+    assert_face(&snap.hand[0], 21, CardSuit::Diamonds, CardRank::Eight, 0);
+    assert_face(&snap.hand[1], 22, CardSuit::Spades, CardRank::King, 0);
+    assert_face(&snap.hand[2], 23, CardSuit::None, CardRank::Joker, 2);
+    assert_face(&snap.hand[3], 24, CardSuit::Clubs, CardRank::Two, 0);
+    let board_ids = ids(&snap);
+    assert!(snap.hand.iter().all(|card| !board_ids.contains(&card.id)));
     assert_eq!(exhibit.table_snapshot(), snap);
     assert!(fresh.table_snapshot().board.is_empty());
     assert_ne!(fresh.table_snapshot(), snap);
@@ -106,14 +115,18 @@ fn test_deck_new_play_meld_set_and_run_snapshot_matches_the_exhibit_faces() {
         take(&mut deck, Suit::Hearts, Rank::Seven),
     ];
     let king = take(&mut deck, Suit::Spades, Rank::King);
+    let opponent_ace = take(&mut deck, Suit::Hearts, Rank::Ace);
     let mut state = table(deck, [&set[..], &run[..], &[king]].concat());
+    state.players[1].hand = vec![opponent_ace];
     state.round_number = 2;
     let before = snapshot_from_state(&state);
     assert!(before.board.is_empty());
-    assert_eq!(before.deck_size, 100);
+    assert_eq!(before.deck_size, 99);
+    assert_meld(&before.hand, &[&set[..], &run[..], &[king]].concat());
+    assert!(before.hand.iter().all(|card| card.id != opponent_ace.id));
     assert!(state.apply(Action::PlayMeld(vec![set.clone(), run.clone()]), 0));
     let snap = snapshot_from_state(&state);
-    assert_eq!(snap.deck_size, 100);
+    assert_eq!(snap.deck_size, 99);
     assert_eq!(snap.round_number, 2);
     assert_eq!(snap.board.len(), 2);
     assert_meld(&snap.board[0].cards, &set);
@@ -123,6 +136,13 @@ fn test_deck_new_play_meld_set_and_run_snapshot_matches_the_exhibit_faces() {
         .iter()
         .flat_map(|meld| &meld.cards)
         .all(|card| card.id != king.id));
+    assert_meld(&snap.hand, &[king]);
+    assert!(snap.hand.iter().all(|card| card.id != opponent_ace.id));
+    assert!(snap
+        .board
+        .iter()
+        .flat_map(|meld| &meld.cards)
+        .all(|card| card.id != opponent_ace.id));
     let exhibit = Game::exhibit_set_and_run().table_snapshot();
     assert_eq!(faces(&snap), faces(&exhibit));
     assert_ne!(ids(&snap), ids(&exhibit));
@@ -169,10 +189,13 @@ fn test_refused_play_leaves_the_snapshot_board_empty() {
         take(&mut deck, Suit::Hearts, Rank::Seven),
     ];
     let mut state = table(deck, [&set[..], &run[..]].concat());
+    let offered = [&set[..], &run[..]].concat();
     let before = snapshot_from_state(&state);
+    assert_meld(&before.hand, &offered);
     assert!(!state.apply(Action::PlayMeld(vec![set, run]), 0));
     assert_eq!(snapshot_from_state(&state), before);
     assert!(snapshot_from_state(&state).board.is_empty());
+    assert_meld(&snapshot_from_state(&state).hand, &offered);
     assert_eq!(before.round_number, 1);
 }
 
@@ -282,6 +305,50 @@ fn test_snapshot_keeps_an_empty_meld_and_maps_every_rank() {
         assert_eq!(card.rank, rank);
         assert_eq!(card.locked_until_turn, 0);
     }
+}
+
+/// Chain: take → local hand and an opponent hand → snapshot.
+/// The local cards stay in order. The opponent cards are not on the record.
+#[test]
+fn test_snapshot_copies_the_local_hand_and_leaves_the_opponent_hand_off() {
+    let mut deck = Deck::new();
+    let mut locked = take(&mut deck, Suit::Diamonds, Rank::Eight);
+    locked.locked_until_turn = 2;
+    let local = vec![
+        locked,
+        take(&mut deck, Suit::Spades, Rank::King),
+        take_joker(&mut deck),
+        take(&mut deck, Suit::Clubs, Rank::Two),
+    ];
+    let opponent = vec![
+        take(&mut deck, Suit::Hearts, Rank::Ace),
+        take(&mut deck, Suit::Clubs, Rank::Ace),
+    ];
+    let mut players = vec![Player::new(0, 0), Player::new(1, 1)];
+    players[0].hand = local.clone();
+    players[1].hand = opponent.clone();
+    let state = GameState::new(players, deck);
+    let snap = snapshot_from_state(&state);
+    assert!(snap.board.is_empty());
+    assert_eq!(snap.deck_size, 102);
+    assert_meld(&snap.hand, &local);
+    assert_eq!(snap.hand[0].locked_until_turn, 2);
+    assert_eq!(snap.hand[2].suit, CardSuit::None);
+    assert_eq!(snap.hand[2].rank, CardRank::Joker);
+    assert!(opponent
+        .iter()
+        .all(|card| !snap.hand.iter().any(|shown| shown.id == card.id)));
+    assert!(opponent.iter().all(|card| !ids(&snap).contains(&card.id)));
+
+    let mut only_opponent = Player::new(1, 1);
+    only_opponent.hand = opponent;
+    let hidden = snapshot_from_state(&GameState::new(vec![only_opponent], Deck::new()));
+    assert!(hidden.hand.is_empty());
+    assert_eq!(hidden.deck_size, 108);
+
+    let none = snapshot_from_state(&GameState::new(vec![], Deck::new()));
+    assert!(none.hand.is_empty());
+    assert_eq!(none.deck_size, 108);
 }
 
 fn table(deck: Deck, hand: Vec<Card>) -> GameState {

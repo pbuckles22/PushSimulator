@@ -108,6 +108,10 @@ Human check 2026-10-09 **PASS**. iPhone 16 simulator. The screen showed **0.3.2*
 
 Story 3.3.1 keeps that screen. `CardDrag` is `Transferable` and round-trips as JSON. A new-meld drop is one `PlayMeld` group. A meld drop is one `HitMeld`. `settleDrop` returns the same hand and board on `GameError` and on a refusal. An accept returns the engine table. The published picture has no hand. `swift test --package-path ios/PushUI` runs those drops with the board tests. `ios/board_ui_check.swift` runs the drop on the exhibit. The shoe stays 108. There is no new phone screen.
 
+Story 3.3.2 puts the local seat’s hand on that screen. Public version **0.3.3**. Seat 0’s hand is the picture’s hand. Opponent hands stay off the snapshot. The exhibit hand is 8♦, K♠, a joker locked until 2, and 2♣. The shoe stays 108. The set and the run stay. The hand row does not drag. `swift test --package-path ios/PushUI` runs the hand with the board and the drop. `ios/board_ui_check.swift` runs the shoe, the rows, and the hand together.
+
+Human check 2026-10-09 **PASS**. iPhone 16 simulator. The screen showed **0.3.3**, **Deck size 108**, **Round 2**, 4♥ 4♠ 4♣, then 4♥ 5♥ 6♥ 7♥, then a Hand row: 8♦, K♠, Joker with the word locked, 2♣. Prior run was version 0.3.2 with the set and the run and no hand. Grabbing the hand moves it left and right. That is the row scrolling. A card does not lift. PASS if that version, that shoe, those two board rows, and that hand, and a card stays put. FAIL if the version is 0.3.2, the hand is missing, another hand is on the screen, or a card lifts. No runtime log. The version on screen is the marker. This slice does not send a drop through Rust.
+
 ---
 
 ## Tier 2: Integration / E2E
@@ -115,7 +119,7 @@ Story 3.3.1 keeps that screen. `CardDrag` is `Transferable` and round-trips as J
 | Surface | When | Command / check |
 |---------|------|-----------------|
 | WASM viewer | Phase 1b, not started | Stories 1b.1–1b.5 in `doc/BACKLOG.md`. Build with `wasm-pack`, serve `viewer/`. 1b.1 shows four dealt hands. 1b.5 plays five rounds |
-| iOS | Phase 3 | `script/Build-Xcframework.sh`, then Device Hub on a booted iPhone. Story 3.1 PASS: Deck size 108. Story 3.2: version 0.3.2, Deck size 108, Round 2, fours then the heart run. Story 3.3.1 does not change that screen |
+| iOS | Phase 3 | `script/Build-Xcframework.sh`, then Device Hub on a booted iPhone. Story 3.1 PASS: Deck size 108. Story 3.2: version 0.3.2, Deck size 108, Round 2, fours then the heart run. Story 3.3.1 does not change that screen. Story 3.3.2: version 0.3.3, the same board, and a hand row 8♦ K♠ locked Joker 2♣. No drag |
 | Multiplayer | Phase 4 | WS handshake + room round-trip |
 
 ```bash

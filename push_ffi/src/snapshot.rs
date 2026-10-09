@@ -1,4 +1,4 @@
-//! Records the screen draws. The shoe size and the melds come from `push_core`.
+//! Records the screen draws. The shoe size, the melds, and the local hand come from `push_core`.
 
 use push_core::card::{Card, Rank, Suit};
 use push_core::game_state::GameState;
@@ -47,12 +47,14 @@ pub struct MeldSnapshot {
     pub cards: Vec<CardSnapshot>,
 }
 
-/// The shoe size, the round, and the melds. Hands stay off this record.
+/// The shoe size, the round, the melds, and the local seat's hand.
+/// Opponent hands stay off this record.
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct TableSnapshot {
     pub deck_size: u32,
     pub round_number: u32,
     pub board: Vec<MeldSnapshot>,
+    pub hand: Vec<CardSnapshot>,
 }
 
 /// A new table: the full shoe, round 1, and no melds.
@@ -61,6 +63,7 @@ pub fn empty_snapshot(deck_size: u32) -> TableSnapshot {
         deck_size,
         round_number: 1,
         board: Vec::new(),
+        hand: Vec::new(),
     }
 }
 
@@ -84,10 +87,11 @@ pub fn exhibit_snapshot(deck_size: u32) -> TableSnapshot {
                 card(13, Suit::Hearts, Rank::Seven),
             ]),
         ],
+        hand: exhibit_hand(),
     }
 }
 
-/// Copies the draw pile, the round, and `state.board` in the order they sit.
+/// Copies the draw pile, the round, `state.board`, and seat 0's hand.
 pub fn snapshot_from_state(state: &GameState) -> TableSnapshot {
     TableSnapshot {
         deck_size: state.deck.cards.len() as u32,
@@ -97,7 +101,33 @@ pub fn snapshot_from_state(state: &GameState) -> TableSnapshot {
             .iter()
             .map(|cards| meld(cards.clone()))
             .collect(),
+        hand: local_hand(state),
     }
+}
+
+/// Seat 0 is the local seat. Another seat's cards are not copied.
+fn local_hand(state: &GameState) -> Vec<CardSnapshot> {
+    state
+        .players
+        .iter()
+        .find(|player| player.seat_index == 0)
+        .map(|player| player.hand.iter().copied().map(card_snapshot).collect())
+        .unwrap_or_default()
+}
+
+/// 8♦, K♠, a locked joker, and 2♣. These cards are the hand, not a deal.
+fn exhibit_hand() -> Vec<CardSnapshot> {
+    vec![
+        card_snapshot(card(21, Suit::Diamonds, Rank::Eight)),
+        card_snapshot(card(22, Suit::Spades, Rank::King)),
+        card_snapshot(Card {
+            id: 23,
+            suit: Suit::None,
+            rank: Rank::Joker,
+            locked_until_turn: 2,
+        }),
+        card_snapshot(card(24, Suit::Clubs, Rank::Two)),
+    ]
 }
 
 fn meld(cards: Vec<Card>) -> MeldSnapshot {

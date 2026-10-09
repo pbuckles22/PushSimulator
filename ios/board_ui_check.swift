@@ -7,7 +7,7 @@ enum BoardUICheck {
     static func main() {
         let game = Game()
         precondition(game.getDeckSize() == 108, "shoe \(game.getDeckSize())")
-        precondition(game.publicVersion() == "0.3.2", "version \(game.publicVersion())")
+        precondition(game.publicVersion() == "0.3.3", "version \(game.publicVersion())")
         let opened = game.tableSnapshot()
         precondition(opened.deckSize == game.getDeckSize(), "snapshot shoe \(opened.deckSize)")
         precondition(opened.roundNumber == 1, "round \(opened.roundNumber)")
@@ -15,11 +15,15 @@ enum BoardUICheck {
 
         let table = PublishedTable { livePicture(from: game) }
         let screen = GameBoardScreen(table: table)
-        precondition(screen.versionLine == "0.3.2", screen.versionLine)
+        precondition(screen.versionLine == "0.3.3", screen.versionLine)
         precondition(screen.deckLine == "Deck size 108", screen.deckLine)
         precondition(screen.roundLine == "Round 1", screen.roundLine)
         precondition(screen.board.emptyTitle == "No melds", "empty title")
         precondition(screen.board.layout.rows.isEmpty, "empty rows")
+        precondition(screen.hand.emptyTitle == "No cards", "empty hand")
+        precondition(screen.hand.allowsDrag == false, "empty hand drags")
+        precondition(screen.hand.cards.isEmpty, "empty hand has cards")
+        precondition(table.picture.hand.isEmpty, "published hand")
         precondition(table.picture.deckSize == game.getDeckSize(), "published shoe")
         precondition(game.getDeckSize() == 108, "shoe changed")
 
@@ -37,8 +41,10 @@ enum BoardUICheck {
         let boardScreen = GameBoardScreen(table: shown)
         precondition(boardScreen.deckLine == "Deck size 108", boardScreen.deckLine)
         precondition(boardScreen.roundLine == "Round 2", boardScreen.roundLine)
-        precondition(boardScreen.versionLine == "0.3.2", boardScreen.versionLine)
+        precondition(boardScreen.versionLine == "0.3.3", boardScreen.versionLine)
         precondition(boardScreen.board.emptyTitle == nil, "exhibit looked empty")
+        precondition(boardScreen.hand.emptyTitle == nil, "exhibit hand looked empty")
+        precondition(boardScreen.hand.allowsDrag == false, "exhibit hand drags")
         let rows = boardScreen.board.layout.rows
         precondition(rows.count == 2, "rows \(rows.count)")
         precondition(rows[0].faces.map(\.pip) == ["4", "4", "4"], "set pips")
@@ -53,6 +59,20 @@ enum BoardUICheck {
             "run faces"
         )
         precondition(rows[1].faces[3].spoken == "Seven of Hearts", rows[1].faces[3].spoken)
+        let hand = boardScreen.hand
+        precondition(hand.cards.map(\.id) == [21, 22, 23, 24], "hand ids")
+        precondition(hand.layout.faces.map(\.spoken) == [
+            "Eight of Diamonds",
+            "King of Spades",
+            "Joker, locked",
+            "Two of Clubs",
+        ], "hand faces")
+        precondition(hand.layout.faces.map(\.isRed) == [true, false, false, false], "hand color")
+        precondition(CardView(card: hand.cards[0]).face == hand.layout.faces[0], "hand card view")
+        let handIds = Set(shown.picture.hand.map(\.id))
+        let boardIds = Set(shown.picture.board.flatMap { $0 }.map(\.id))
+        precondition(handIds.isDisjoint(with: boardIds), "hand card is on the board")
+        precondition(!handIds.contains(90), "opponent is on the hand")
         let first = shown.picture.board[0][0]
         precondition(first.id == 1, "id \(first.id)")
         precondition(shown.picture.board[1][3].id == 13, "run id")
@@ -70,9 +90,13 @@ enum BoardUICheck {
                     CardSnapshot(id: 12, suit: .hearts, rank: .six, lockedUntilTurn: 0),
                 ]),
                 MeldSnapshot(cards: []),
+            ],
+            hand: [
+                CardSnapshot(id: 21, suit: .diamonds, rank: .eight, lockedUntilTurn: 0),
+                CardSnapshot(id: 90, suit: .hearts, rank: .ace, lockedUntilTurn: 0),
             ]
         )
-        let mixedPicture = picture(from: mixed, version: "0.3.2")
+        let mixedPicture = picture(from: mixed, version: "0.3.3")
         let mixedBoard = BoardView(melds: mixedPicture.board)
         precondition(mixedPicture.deckSize == 0, "mapped shoe")
         precondition(mixedPicture.roundNumber == 6, "mapped round")
@@ -83,6 +107,11 @@ enum BoardUICheck {
         precondition(mixedBoard.layout.rows[0].faces[1].spoken == "Joker, locked", "lock")
         precondition(!mixedBoard.layout.rows[0].faces[1].isRed, "joker turned red")
         precondition(CardView(card: mixedPicture.board[0][1]).face.spoken == "Joker, locked", "card")
+        precondition(mixedPicture.hand.map(\.id) == [21, 90], "mapped hand")
+        precondition(CardFace(mixedPicture.hand[0]).spoken == "Eight of Diamonds", "mapped eight")
+        let pictured = handOnPicture(local: [mixedPicture.hand[0]], opponents: [[mixedPicture.hand[1]]])
+        precondition(pictured.map(\.id) == [21], "opponent stayed on the picture")
+        precondition(CardFace(pictured[0]).spoken == "Eight of Diamonds", "local face")
 
         // Chain: exhibit shoe → published rows → drag → PlayMeld or HitMeld
         // → GameError or refusal snaps the hand back. The live game stays the exhibit.
@@ -206,10 +235,12 @@ enum BoardUICheck {
         precondition(boardScreen.board.layout.rows[0].faces.map(\.pip) == ["4", "4", "4"], "accept published")
         precondition(boardScreen.board.layout.rows[1].faces.map(\.pip) == ["4", "5", "6", "7"], "accept moved the run")
         precondition(boardScreen.deckLine == "Deck size 108", boardScreen.deckLine)
-        precondition(boardScreen.versionLine == "0.3.2", boardScreen.versionLine)
-        let publishedIds = shown.picture.board.flatMap { $0 }.map(\.id)
+        precondition(boardScreen.versionLine == "0.3.3", boardScreen.versionLine)
+        precondition(boardScreen.hand.cards.map(\.id) == [21, 22, 23, 24], "accept rewrote the hand")
+        precondition(boardScreen.hand.allowsDrag == false, "accept turned drag on")
+        let publishedIds = shown.picture.board.flatMap { $0 }.map(\.id) + shown.picture.hand.map(\.id)
         for id in [UInt32(40), 41, 50, 60] {
-            precondition(!publishedIds.contains(id), "hand \(id) is on the picture")
+            precondition(!publishedIds.contains(id), "drag \(id) is on the picture")
         }
         precondition(dragSignals == 0, "accept published \(dragSignals)")
 

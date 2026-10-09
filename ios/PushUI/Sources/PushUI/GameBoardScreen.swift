@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Version, shoe size, round, and the board. The picture is the published table.
+/// Version, shoe size, round, the board, and the local hand. The picture is the published table.
 public struct GameBoardScreen: View {
     @ObservedObject public var table: PublishedTable
 
@@ -24,6 +24,10 @@ public struct GameBoardScreen: View {
         BoardView(melds: table.picture.board)
     }
 
+    public var hand: HandView {
+        HandView(cards: table.picture.hand)
+    }
+
     public var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(versionLine)
@@ -33,6 +37,8 @@ public struct GameBoardScreen: View {
             Text(roundLine)
                 .accessibilityIdentifier("round")
             board
+            Spacer(minLength: 16)
+            hand
         }
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

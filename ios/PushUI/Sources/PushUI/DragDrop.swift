@@ -45,7 +45,7 @@ public enum DropAnswer: Equatable {
     case refused
 }
 
-/// The hand plus the board a drop reads and returns. The published picture has no hand.
+/// The hand plus the board a drop reads and returns. The screen reads the picture's hand.
 public struct HeldCards: Equatable {
     public var hand: [BoardCard]
     public var board: [[BoardCard]]

@@ -1,4 +1,4 @@
-//! Swift calls this crate. The shoe size and the board come from `push_core`.
+//! Swift calls this crate. The shoe size, the board, and the local hand come from `push_core`.
 
 use std::sync::Arc;
 
@@ -52,7 +52,7 @@ impl Game {
         env!("CARGO_PKG_VERSION").to_string()
     }
 
-    /// The shoe size, the round, and the melds the screen draws.
+    /// The shoe size, the round, the melds, and the local hand the screen draws.
     pub fn table_snapshot(&self) -> TableSnapshot {
         let deck_size = self.get_deck_size();
         match self.kind {

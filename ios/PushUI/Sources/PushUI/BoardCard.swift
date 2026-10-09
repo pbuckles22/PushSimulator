@@ -44,16 +44,31 @@ public struct BoardCard: Equatable, Identifiable, Codable {
 }
 
 /// The table the published object holds. The board is melds in seat order.
+/// `hand` is the local seat. Opponent hands stay off this picture.
 public struct TablePicture: Equatable {
     public var version: String
     public var deckSize: UInt32
     public var roundNumber: UInt32
     public var board: [[BoardCard]]
+    public var hand: [BoardCard]
 
-    public init(version: String, deckSize: UInt32, roundNumber: UInt32, board: [[BoardCard]]) {
+    public init(
+        version: String,
+        deckSize: UInt32,
+        roundNumber: UInt32,
+        board: [[BoardCard]],
+        hand: [BoardCard] = []
+    ) {
         self.version = version
         self.deckSize = deckSize
         self.roundNumber = roundNumber
         self.board = board
+        self.hand = hand
     }
+}
+
+/// The picture shows the local seat. Opponent hands are not copied.
+public func handOnPicture(local: [BoardCard], opponents: [[BoardCard]]) -> [BoardCard] {
+    _ = opponents
+    return local
 }

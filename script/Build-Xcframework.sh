@@ -70,6 +70,7 @@ if [ -n "$UDID" ]; then
         "$UI/CardFace.swift" \
         "$UI/CardView.swift" \
         "$UI/BoardView.swift" \
+        "$UI/HandView.swift" \
         "$UI/PublishedTable.swift" \
         "$UI/GameBoardScreen.swift"
     swiftc -parse-as-library \
@@ -98,7 +99,7 @@ if [ -n "$UDID" ]; then
   <key>CFBundleIdentifier</key><string>com.pushsimulator.app</string>
   <key>CFBundleName</key><string>Push</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>0.3.2</string>
+  <key>CFBundleShortVersionString</key><string>0.3.3</string>
   <key>CFBundleVersion</key><string>1</string>
   <key>LSRequiresIPhoneOS</key><true/>
   <key>MinimumOSVersion</key><string>16.0</string>

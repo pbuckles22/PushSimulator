@@ -1,6 +1,6 @@
 import PushUI
 
-/// The picture SwiftUI publishes. The shoe size, the round, and the melds come from Rust.
+/// The picture SwiftUI publishes. The shoe, the round, the melds, and the local hand come from Rust.
 func livePicture(from game: Game) -> TablePicture {
     picture(from: game.tableSnapshot(), version: game.publicVersion())
 }
@@ -12,7 +12,8 @@ func picture(from snapshot: TableSnapshot, version: String) -> TablePicture {
         roundNumber: snapshot.roundNumber,
         board: snapshot.board.map { meld in
             meld.cards.map(boardCard)
-        }
+        },
+        hand: snapshot.hand.map(boardCard)
     )
 }
 

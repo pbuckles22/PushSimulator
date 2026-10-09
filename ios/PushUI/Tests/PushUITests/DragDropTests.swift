@@ -496,6 +496,9 @@ final class DragDropTests: XCTestCase {
             "Four of Clubs",
         ])
         XCTAssertEqual(CardView(card: set[0]).face, screen.board.layout.rows[0].faces[0])
+        XCTAssertEqual(screen.hand.emptyTitle, "No cards")
+        XCTAssertFalse(screen.hand.allowsDrag)
+        XCTAssertTrue(screen.hand.cards.isEmpty)
 
         let hearts = card(id: 40, suit: .hearts, rank: .eight, locked: 0)
         let diamonds = card(id: 41, suit: .diamonds, rank: .eight, locked: 0)
@@ -549,6 +552,9 @@ final class DragDropTests: XCTestCase {
         XCTAssertEqual(still, hit)
         XCTAssertEqual(screen.roundLine, "Round 2")
         XCTAssertEqual(screen.versionLine, "0.3.2")
+        XCTAssertEqual(screen.hand.emptyTitle, "No cards")
+        XCTAssertFalse(screen.hand.allowsDrag)
+        XCTAssertTrue(Set(start.hand.map(\.id)).isDisjoint(with: screen.hand.cards.map(\.id)))
         sub.cancel()
     }
 
@@ -572,6 +578,8 @@ final class DragDropTests: XCTestCase {
         XCTAssertEqual(screen.roundLine, "Round 1")
         XCTAssertEqual(screen.board.emptyTitle, "No melds")
         XCTAssertTrue(screen.board.layout.rows.isEmpty)
+        XCTAssertEqual(screen.hand.emptyTitle, "No cards")
+        XCTAssertFalse(screen.hand.allowsDrag)
 
         var signals = 0
         let sub = table.objectWillChange.sink { signals += 1 }
@@ -669,6 +677,9 @@ final class DragDropTests: XCTestCase {
         XCTAssertEqual(screen.versionLine, "0.3.2")
         XCTAssertEqual(screen.deckLine, "Deck size 108")
         XCTAssertEqual(screen.roundLine, "Round 2")
+        XCTAssertEqual(screen.hand.emptyTitle, "No cards")
+        XCTAssertFalse(screen.hand.allowsDrag)
+        XCTAssertTrue(handIds.isDisjoint(with: screen.hand.cards.map(\.id)))
         XCTAssertEqual(signals, 1)
 
         let snapped = settleDrop(
