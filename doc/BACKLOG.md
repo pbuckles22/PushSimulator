@@ -437,11 +437,13 @@ The page is `viewer/`. The bridge is `push_wasm`. Four seats come from `finish_p
 
 **User Story 3.3.4: Engine drop**
 
+**Status:** on `main`. Content is `c61ef41`. Public version **0.3.9**. UniFFI applies `PlayMeld` or `HitMeld`. The king, the eight, and the locked joker stay in the hand. The two of clubs joins the fours. The lifted card shows its face. The shoe stays 108. iPhone 16 simulator, PASS. `swift test --package-path ios/PushUI` is green (81 tests). `feature/3.3.4-engine-drop` is kept.
+
 *As a player, I want that drop to go through Rust so the rules decide.*
 
-* \[ \] UniFFI applies `PlayMeld` or `HitMeld`.  
-* \[ \] `GameError` and a refusal come from Rust.  
-* \[ \] The shoe on the exhibit stays 108.
+* \[x\] UniFFI applies `PlayMeld` or `HitMeld`.  
+* \[x\] `GameError` and a refusal come from Rust.  
+* \[x\] The shoe on the exhibit stays 108.
 
 Take, discard, steal, and scores stay out of 3.3.1–3.3.4.
 

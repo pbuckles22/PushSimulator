@@ -62,7 +62,7 @@ Phase 1b (WASM viewer) can start once Epic 1.2+ is playable headless; full bot-v
 
 ## Next concrete step
 
-Phase 1b is in [BACKLOG.md](BACKLOG.md) as stories 1b.1–1b.5. It is parallel to Phase 3 and does not block 3.3.4. The iOS thread is 3.3.4 when asked. The viewer thread starts at 1b.1 from current `main`. `feature/1b-wasm-tick` stays a two-seat sketch.
+Phase 1b is in [BACKLOG.md](BACKLOG.md) as stories 1b.1–1b.5. It is parallel to Phase 3. 3.3.4 is on `main`. The iOS thread waits until asked. The viewer thread starts at 1b.1 from current `main`. `feature/1b-wasm-tick` stays a two-seat sketch.
 
 ## Phase 3 and later: mini-wins (2026-10-09)
 
@@ -71,6 +71,6 @@ The old 3.3 story was three bullets and never named the Swift drop API. That hid
 - **3.3.1** Drop API (`Transferable`, `PlayMeld` / `HitMeld`, snap-back). Screen unchanged; version stays 0.3.2.
 - **3.3.2** Hand row on screen. No drag yet. On `main`. Public version **0.3.3**. The row scrolls. A card does not lift.
 - **3.3.3** On `main`. Content is `f895827`. Public version **0.3.5**. A hand card lifts through the 3.3.1 API. The stand-in takes an unlocked card onto a new meld and refuses a drop onto a row.
-- **3.3.4** UniFFI applies the drop. Rust returns `GameError` and refusals.
+- **3.3.4** On `main`. Content is `c61ef41`. Public version **0.3.9**. UniFFI applies the drop. Rust refuses the king, the eight, and the locked joker. The two of clubs joins the fours.
 
 Phase 4 is the same split: 4.1.1–4.1.3 (listen, headless handshake, iOS handshake), 4.2.1–4.2.2 (room code, room engine), 4.3.1–4.3.3 (JSON, server apply, opponent snapshot). Story 5.1’s Rust workflow box is done; **5.1.1** is `swift test --package-path ios/PushUI` in CI.

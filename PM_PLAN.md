@@ -62,13 +62,14 @@ Operating model: `.cursor/rules/` ship commands (UCPH, CMPH, SWAT), human check,
 - **3.3.1:** on `main`. Content is `9afe342`. Public version stays **0.3.2**. Drop maps to `PlayMeld` or `HitMeld`. A `GameError` or a refusal snaps back. The screen is still 3.2. `swift test --package-path ios/PushUI` is green (35 tests). `feature/3.3-drag-drop` is kept.
 - **3.3.2:** on `main`. Content is `4acd3cf`. Public version **0.3.3**. The local seat's hand is on the screen. Opponent hands stay off the picture. The row scrolls. A card does not lift. iPhone 16 simulator, PASS. `swift test --package-path ios/PushUI` is green (38 tests). `feature/3.3.2-hand-row` is kept.
 - **3.3.3:** on `main`. Content is `f895827`. Public version **0.3.5**. A hand card lifts. A drop calls `settleDrop`. A `GameError` or a refusal leaves the card in the hand. The picture changes only on accept. The stand-in takes an unlocked card onto a new meld and refuses a drop onto a row. The king becomes its own row. The locked joker and the eight stay in the hand. The fours stay three cards. The shoe stays 108. iPhone 16 simulator, PASS. `swift test --package-path ios/PushUI` is green (77 tests). `feature/3.3.3-on-screen-drag` is kept.
-- **Next (iOS):** 3.3.4 (engine drop) when asked.
+- **3.3.4:** on `main`. Content is `c61ef41`. Public version **0.3.9**. UniFFI applies `PlayMeld` or `HitMeld`. A refusal comes from Rust. The king, the eight, and the locked joker stay in the hand. The two of clubs joins the fours. The lifted card shows its face and its slot is empty. The shoe stays 108. iPhone 16 simulator, PASS. `feature/3.3.4-engine-drop` is kept.
+- **Next (iOS):** wait until asked. Take, discard, steal, and scores stay out. Phase 3 stays open.
 - **Next (viewer):** 1b.1 when asked.
 - **Full backlog:** [doc/BACKLOG.md](doc/BACKLOG.md)
 - **Commentary / deltas:** [doc/PLAN_COMMENTARY.md](doc/PLAN_COMMENTARY.md) (3.3 split; integration-chain Epic 1.9 suggested; Google export quirks)
 
 ## Version
 
-Plan coordinate starts at **0.1.0**. Phase 2 stayed there (headless sim). Story 3.1 is **0.3.1**. Story 3.2 is **0.3.2**. Story 3.3.1 keeps **0.3.2** (no screen change). Story 3.3.2 is **0.3.3**. Story 3.3.3 is **0.3.5**. See [doc/VERSIONING.md](doc/VERSIONING.md).
+Plan coordinate starts at **0.1.0**. Phase 2 stayed there (headless sim). Story 3.1 is **0.3.1**. Story 3.2 is **0.3.2**. Story 3.3.1 keeps **0.3.2** (no screen change). Story 3.3.2 is **0.3.3**. Story 3.3.3 is **0.3.5**. Story 3.3.4 is **0.3.9**. See [doc/VERSIONING.md](doc/VERSIONING.md).
 
 Keep in sync with AGENT_HANDOFF *Current state* and [doc/PROJECT_STATUS.md](doc/PROJECT_STATUS.md).
