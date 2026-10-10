@@ -43,6 +43,79 @@ final class OnScreenDragTests: XCTestCase {
         XCTAssertFalse(hand.cards.map(\.id).contains(boardFour.id))
     }
 
+    func testLiftingTheEightHidesOnlyThatSlotAndTheKingStaysUntilTheLiftEnds() {
+        let eight = exhibitHand()[0].id
+        let king = exhibitHand()[1].id
+        let two = exhibitHand()[3].id
+        XCTAssertFalse(handSlotIsHidden(cardId: eight, liftedId: nil))
+        XCTAssertTrue(handSlotIsHidden(cardId: eight, liftedId: eight))
+        XCTAssertFalse(handSlotIsHidden(cardId: king, liftedId: eight))
+        XCTAssertFalse(handSlotIsHidden(cardId: two, liftedId: eight))
+        XCTAssertTrue(handSlotIsHidden(cardId: king, liftedId: king))
+        XCTAssertFalse(handSlotIsHidden(cardId: eight, liftedId: king))
+        XCTAssertFalse(handSlotIsHidden(cardId: two, liftedId: king))
+        XCTAssertFalse(handSlotIsHidden(cardId: king, liftedId: nil))
+    }
+
+    func testADragSessionHidesThatHandSlotAndTheEndShowsIt() {
+        let eight = exhibitHand()[0].id
+        let king = exhibitHand()[1].id
+        XCTAssertEqual(HandSlotVisibility.duringDrag(of: eight).alpha, 0)
+        XCTAssertEqual(HandSlotVisibility.afterDrag(of: eight).alpha, 1)
+        XCTAssertEqual(HandSlotVisibility.duringDrag(of: king).alpha, 0)
+        XCTAssertEqual(HandSlotVisibility.afterDrag(of: king).alpha, 1)
+    }
+
+    /// Chain: the lifted two's drag bytes → the card the drop reads → the hit on the fours.
+    func testLiftedTwoOfClubsLoadsAsTheHitOntoTheFours() {
+        let two = exhibitHand()[3]
+        let expectation = expectation(description: "lifted two")
+        let provider = handCardItemProvider(for: CardDrag(cards: [two]))
+        var loaded: CardDrag?
+        let accepted = acceptLiftedCards([provider]) { drag in
+            loaded = drag
+            expectation.fulfill()
+            return true
+        }
+        XCTAssertTrue(accepted)
+        wait(for: [expectation], timeout: 2)
+        XCTAssertEqual(loaded, CardDrag(cards: [two]))
+        XCTAssertEqual(
+            moveIntent(drag: loaded ?? CardDrag(cards: []), onto: .meld(0), hand: exhibitHand()),
+            .hitMeld([MeldDrop(meldIndex: 0, cards: [two])])
+        )
+    }
+
+    func testAnInAppLiftDropsTheTwoImmediatelyAndASecondDropDoesNotRun() {
+        let two = exhibitHand()[3]
+        let eight = exhibitHand()[0]
+        XCTAssertEqual(handCardPreviewLines(eight), ["8", "♦"])
+        XCTAssertEqual(handCardPreviewLines(exhibitHand()[1]), ["K", "♠"])
+        XCTAssertEqual(handCardPreviewLines(exhibitHand()[2]), ["Joker", "locked"])
+        XCTAssertEqual(handCardPreviewLines(two), ["2", "♣"])
+        LiftedHandCard.begin(CardDrag(cards: [two]))
+        var calls = 0
+        let accepted = acceptLiftedCards([]) { drag in
+            calls += 1
+            XCTAssertEqual(drag, CardDrag(cards: [two]))
+            return true
+        }
+        XCTAssertTrue(accepted)
+        XCTAssertEqual(calls, 1)
+        let again = acceptLiftedCards([]) { _ in
+            calls += 1
+            return true
+        }
+        XCTAssertFalse(again)
+        XCTAssertEqual(calls, 1)
+        LiftedHandCard.begin(CardDrag(cards: [eight]))
+        let refused = acceptLiftedCards([]) { _ in
+            false
+        }
+        XCTAssertFalse(refused)
+        LiftedHandCard.end()
+    }
+
     func testTheSameFaceWithAnotherIdDoesNotLift() {
         let hand = HandView(cards: exhibitHand())
         let otherEight = card(id: 99, suit: .diamonds, rank: .eight, locked: 0)

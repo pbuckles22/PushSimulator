@@ -1,12 +1,24 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Version, shoe size, round, the board, and the local hand. The picture is the published table.
 public struct GameBoardScreen: View {
     @ObservedObject public var table: PublishedTable
-    @State private var newMeldTargeted = false
+    private let engine: ((MoveIntent) -> DropAnswer)?
 
-    public init(table: PublishedTable) {
+    public init(
+        table: PublishedTable,
+        engine: ((MoveIntent) -> DropAnswer)? = nil
+    ) {
         self.table = table
+        self.engine = engine
+    }
+
+    private func answer(_ intent: MoveIntent) -> DropAnswer {
+        if let engine {
+            return engine(intent)
+        }
+        return standInAnswer(picture: table.picture, intent: intent)
     }
 
     public var versionLine: String {
@@ -24,7 +36,7 @@ public struct GameBoardScreen: View {
     public var board: BoardView {
         BoardView(melds: table.picture.board) { drag, index in
             drop(drag, onto: .meld(index)) { intent in
-                standInAnswer(picture: table.picture, intent: intent)
+                answer(intent)
             }
         }
     }
@@ -38,7 +50,7 @@ public struct GameBoardScreen: View {
         [.newMeld] + table.picture.board.indices.map { .meld($0) }
     }
 
-    /// Asks the stand-in through `settleDrop`. The picture changes only on an accept
+    /// Asks the engine through `settleDrop`. The picture changes only on an accept
     /// that returns a different hand or board. Returns whether the picture changed.
     @discardableResult
     public func drop(
@@ -65,26 +77,11 @@ public struct GameBoardScreen: View {
                 .accessibilityIdentifier("deck-size")
             Text(roundLine)
                 .accessibilityIdentifier("round")
-            Text("New meld")
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                .padding(.horizontal, 8)
-                .background(newMeldTargeted ? Color(white: 0.9) : Color.white)
-                .contentShape(Rectangle())
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.black, lineWidth: newMeldTargeted ? 2 : 1)
-                )
-                .accessibilityIdentifier("new-meld")
-                .dropDestination(for: CardDrag.self) { items, _ in
-                    guard let drag = items.first else {
-                        return false
-                    }
-                    return drop(drag, onto: .newMeld) { intent in
-                        standInAnswer(picture: table.picture, intent: intent)
-                    }
-                } isTargeted: { targeted in
-                    newMeldTargeted = targeted
+            NewMeldZone { drag in
+                drop(drag, onto: .newMeld) { intent in
+                    answer(intent)
                 }
+            }
             board
             Spacer(minLength: 16)
             hand
@@ -92,5 +89,28 @@ public struct GameBoardScreen: View {
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color.white)
+    }
+}
+
+/// The new-meld target. Its highlight state stays here, so a drag across it
+/// does not rebuild the hand.
+private struct NewMeldZone: View {
+    let onDrop: (CardDrag) -> Bool
+    @State private var targeted = false
+
+    var body: some View {
+        Text("New meld")
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .padding(.horizontal, 8)
+            .background(targeted ? Color(white: 0.9) : Color.white)
+            .contentShape(Rectangle())
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.black, lineWidth: targeted ? 2 : 1)
+            )
+            .accessibilityIdentifier("new-meld")
+            .onDrop(of: [.json], isTargeted: $targeted) { providers in
+                acceptLiftedCards(providers, perform: onDrop)
+            }
     }
 }

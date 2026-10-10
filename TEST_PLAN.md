@@ -116,6 +116,10 @@ Story 3.3.3 lets a hand card lift. Public version **0.3.5**. A drop calls `settl
 
 Human check 2026-10-09 **PASS**. iPhone 16 simulator. The screen showed **0.3.5**. One card showed while dragging. The locked joker and the eight returned to the hand. The fours stayed three cards. The king left the hand and became its own row on New meld. A sideways grab on the hand still scrolled. Prior run was **0.3.4**: two copies showed while dragging, the eight joined the fours, and the king did not stay on New meld. No runtime log. The version on screen is the marker. This slice does not send a drop through Rust. A drop onto a row is refused until Rust decides.
 
+Story 3.3.4 sends that drop through Rust. Public version **0.3.9**. UniFFI applies one `PlayMeld` or one `HitMeld`. A `GameError` or a refusal comes from Rust and leaves the card in the hand. The picture changes only on accept. Seat 0 is on the board. A one-card king is refused. The eight does not join the fours. The locked joker is refused. The two of clubs joins the fours. The shoe stays 108. `cargo test -p push_ffi` runs that drop with the exhibit. `ios/board_ui_check.swift` drops the king, the eight, and the joker back into the hand, then the two onto the fours, and a reload keeps that hit.
+
+Human check 2026-10-09 **PASS**. iPhone 16 simulator. The screen showed **0.3.9**, Deck size 108, Round 2, three fours, 4♥ 5♥ 6♥ 7♥, and a hand of 8♦, K♠, a locked joker, and 2♣. The lifted card showed its face. Its slot was empty. The eight and the king came back at once. The two of clubs joined the fours. The king on New meld stayed in the hand. A sideways grab still scrolls. Prior run was **0.3.8**: the rules passed, the lifted face was sometimes blank white, and letting go made the card vanish and return about a second later. No runtime log. The version on screen is the marker.
+
 ---
 
 ## Tier 2: Integration / E2E
@@ -123,7 +127,7 @@ Human check 2026-10-09 **PASS**. iPhone 16 simulator. The screen showed **0.3.5*
 | Surface | When | Command / check |
 |---------|------|-----------------|
 | WASM viewer | Phase 1b, not started | Stories 1b.1–1b.5 in `doc/BACKLOG.md`. Build with `wasm-pack`, serve `viewer/`. 1b.1 shows four dealt hands. 1b.5 plays five rounds |
-| iOS | Phase 3 | `script/Build-Xcframework.sh`, then Device Hub on a booted iPhone. Story 3.1 PASS: Deck size 108. Story 3.2: version 0.3.2, Deck size 108, Round 2, fours then the heart run. Story 3.3.1 does not change that screen. Story 3.3.2: version 0.3.3, the same board, and a hand row 8♦ K♠ locked Joker 2♣. No drag. Story 3.3.3: version 0.3.5. One card shows while it lifts. The joker and the eight stay in the hand. The king becomes a new row |
+| iOS | Phase 3 | `script/Build-Xcframework.sh`, then Device Hub on a booted iPhone. Story 3.1 PASS: Deck size 108. Story 3.2: version 0.3.2, Deck size 108, Round 2, fours then the heart run. Story 3.3.1 does not change that screen. Story 3.3.2: version 0.3.3, the same board, and a hand row 8♦ K♠ locked Joker 2♣. No drag. Story 3.3.3: version 0.3.5. One card shows while it lifts. The joker and the eight stay in the hand. The king becomes a new row. Story 3.3.4: version 0.3.9. One card shows its face while it lifts. The king, the eight, and the locked joker stay in the hand. The two of clubs joins the fours. The shoe stays 108 |
 | Multiplayer | Phase 4 | WS handshake + room round-trip |
 
 ```bash

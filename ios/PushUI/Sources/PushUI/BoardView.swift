@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// One row per meld, cards left to right in the order they were given.
 public struct BoardLayout: Equatable {
@@ -49,11 +50,13 @@ public struct BoardView: View {
                     }
                     .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                     .contentShape(Rectangle())
-                    .dropDestination(for: CardDrag.self) { items, _ in
-                        guard let drag = items.first, let onDrop else {
+                    .onDrop(of: [.json], isTargeted: nil) { providers in
+                        guard let onDrop else {
                             return false
                         }
-                        return onDrop(drag, index)
+                        return acceptLiftedCards(providers) { drag in
+                            onDrop(drag, index)
+                        }
                     }
                 }
             }

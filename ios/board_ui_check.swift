@@ -7,7 +7,7 @@ enum BoardUICheck {
     static func main() {
         let game = Game()
         precondition(game.getDeckSize() == 108, "shoe \(game.getDeckSize())")
-        precondition(game.publicVersion() == "0.3.5", "version \(game.publicVersion())")
+        precondition(game.publicVersion() == "0.3.9", "version \(game.publicVersion())")
         let opened = game.tableSnapshot()
         precondition(opened.deckSize == game.getDeckSize(), "snapshot shoe \(opened.deckSize)")
         precondition(opened.roundNumber == 1, "round \(opened.roundNumber)")
@@ -15,7 +15,7 @@ enum BoardUICheck {
 
         let table = PublishedTable { livePicture(from: game) }
         let screen = GameBoardScreen(table: table)
-        precondition(screen.versionLine == "0.3.5", screen.versionLine)
+        precondition(screen.versionLine == "0.3.9", screen.versionLine)
         precondition(screen.deckLine == "Deck size 108", screen.deckLine)
         precondition(screen.roundLine == "Round 1", screen.roundLine)
         precondition(screen.board.emptyTitle == "No melds", "empty title")
@@ -41,7 +41,7 @@ enum BoardUICheck {
         let boardScreen = GameBoardScreen(table: shown)
         precondition(boardScreen.deckLine == "Deck size 108", boardScreen.deckLine)
         precondition(boardScreen.roundLine == "Round 2", boardScreen.roundLine)
-        precondition(boardScreen.versionLine == "0.3.5", boardScreen.versionLine)
+        precondition(boardScreen.versionLine == "0.3.9", boardScreen.versionLine)
         precondition(boardScreen.board.emptyTitle == nil, "exhibit looked empty")
         precondition(boardScreen.hand.emptyTitle == nil, "exhibit hand looked empty")
         precondition(boardScreen.hand.allowsDrag == true, "exhibit hand does not lift")
@@ -236,7 +236,7 @@ enum BoardUICheck {
         precondition(boardScreen.board.layout.rows[0].faces.map(\.pip) == ["4", "4", "4"], "accept published")
         precondition(boardScreen.board.layout.rows[1].faces.map(\.pip) == ["4", "5", "6", "7"], "accept moved the run")
         precondition(boardScreen.deckLine == "Deck size 108", boardScreen.deckLine)
-        precondition(boardScreen.versionLine == "0.3.5", boardScreen.versionLine)
+        precondition(boardScreen.versionLine == "0.3.9", boardScreen.versionLine)
         precondition(boardScreen.hand.cards.map(\.id) == [21, 22, 23, 24], "accept rewrote the hand")
         precondition(boardScreen.hand.allowsDrag == true, "exhibit hand does not lift")
         let publishedIds = shown.picture.board.flatMap { $0 }.map(\.id) + shown.picture.hand.map(\.id)
@@ -283,35 +283,68 @@ enum BoardUICheck {
         precondition(game.getDeckSize() == 108, "live shoe")
         dragWatch.cancel()
 
+        // Chain: exhibit shoe → published hand → Rust PlayMeld refusal →
+        // Rust HitMeld refusal → Rust HitMeld accept. The shoe stays 108.
         let kingCard = boardScreen.hand.cards[1]
         let played = boardScreen.drop(CardDrag(cards: [kingCard]), onto: .newMeld) { intent in
-            standInAnswer(picture: shown.picture, intent: intent)
+            engineAnswer(game: exhibit, intent: intent)
         }
-        precondition(played, "king drop did not update the picture")
-        precondition(boardScreen.hand.cards.map(\.id) == [21, 23, 24], "king stayed in the hand")
-        precondition(boardScreen.board.layout.rows.count == 3, "king did not open a row")
-        precondition(
-            boardScreen.board.layout.rows[2].faces.map(\.spoken) == ["King of Spades"],
-            "king face"
-        )
-        precondition(boardScreen.versionLine == "0.3.5", boardScreen.versionLine)
+        precondition(!played, "a one-card king left the hand")
+        precondition(boardScreen.hand.cards.map(\.id) == [21, 22, 23, 24], "king left the hand")
+        precondition(boardScreen.board.layout.rows.count == 2, "king opened a row")
+        precondition(boardScreen.versionLine == "0.3.9", boardScreen.versionLine)
         precondition(boardScreen.deckLine == "Deck size 108", boardScreen.deckLine)
         precondition(boardScreen.roundLine == "Round 2", boardScreen.roundLine)
-        precondition(exhibit.getDeckSize() == 108, "drop wrote the shoe")
+        precondition(exhibit.getDeckSize() == 108, "king drop wrote the shoe")
 
-        let jokerCard = boardScreen.hand.cards[1]
-        let refusedJoker = boardScreen.drop(CardDrag(cards: [jokerCard]), onto: .meld(0)) { intent in
-            standInAnswer(picture: shown.picture, intent: intent)
+        let eightCard = boardScreen.hand.cards[0]
+        let refusedEight = boardScreen.drop(CardDrag(cards: [eightCard]), onto: .meld(0)) { intent in
+            engineAnswer(game: exhibit, intent: intent)
+        }
+        precondition(!refusedEight, "the eight joined the fours")
+        precondition(boardScreen.board.layout.rows[0].faces.map(\.pip) == ["4", "4", "4"], "eight hit the set")
+
+        let jokerCard = boardScreen.hand.cards[2]
+        let refusedJoker = boardScreen.drop(CardDrag(cards: [jokerCard]), onto: .newMeld) { intent in
+            engineAnswer(game: exhibit, intent: intent)
         }
         precondition(!refusedJoker, "locked joker left the hand")
-        precondition(boardScreen.hand.cards.map(\.id) == [21, 23, 24], "joker drop changed the hand")
-        precondition(CardFace(boardScreen.hand.cards[1]).spoken == "Joker, locked", "lock")
-        precondition(boardScreen.board.layout.rows[0].faces.map(\.pip) == ["4", "4", "4"], "joker hit the set")
+        precondition(boardScreen.hand.cards.map(\.id) == [21, 22, 23, 24], "joker drop changed the hand")
+        precondition(CardFace(boardScreen.hand.cards[2]).spoken == "Joker, locked", "lock")
+
+        let twoCard = boardScreen.hand.cards[3]
+        let hitTwo = boardScreen.drop(CardDrag(cards: [twoCard]), onto: .meld(0)) { intent in
+            engineAnswer(game: exhibit, intent: intent)
+        }
+        precondition(hitTwo, "the two stayed in the hand")
+        precondition(boardScreen.hand.cards.map(\.id) == [21, 22, 23], "two stayed in the hand")
+        precondition(CardFace(boardScreen.hand.cards[2]).spoken == "Joker, locked", "lock after the hit")
+        precondition(
+            boardScreen.board.layout.rows[0].faces.map(\.spoken) == [
+                "Four of Hearts",
+                "Four of Spades",
+                "Four of Clubs",
+                "Two of Clubs",
+            ],
+            "two did not join the fours"
+        )
+        precondition(boardScreen.board.layout.rows[1].faces.map(\.pip) == ["4", "5", "6", "7"], "run moved")
+        precondition(boardScreen.deckLine == "Deck size 108", boardScreen.deckLine)
+        precondition(exhibit.getDeckSize() == 108, "hit wrote the shoe")
+        precondition(exhibit.tableSnapshot().deckSize == 108, "snapshot shoe")
+        precondition(game.tableSnapshot().board.isEmpty, "exhibit wrote the live game")
+
+        let again = boardScreen.drop(CardDrag(cards: [twoCard]), onto: .meld(0)) { intent in
+            engineAnswer(game: exhibit, intent: intent)
+        }
+        precondition(!again, "the two hit twice")
+        precondition(boardScreen.hand.cards.map(\.id) == [21, 22, 23], "second hit changed the hand")
 
         shown.reload()
-        precondition(boardScreen.hand.cards.map(\.id) == [21, 22, 23, 24], "reload kept the drop")
-        precondition(boardScreen.board.layout.rows.count == 2, "reload kept the king row")
-        precondition(boardScreen.hand.allowsDrag == true, "restored hand does not lift")
+        precondition(boardScreen.hand.cards.map(\.id) == [21, 22, 23], "reload restored the two")
+        precondition(boardScreen.board.layout.rows.count == 2, "reload added a row")
+        precondition(boardScreen.board.layout.rows[0].faces.map(\.spoken).last == "Two of Clubs", "reload dropped the two")
+        precondition(boardScreen.hand.allowsDrag == true, "hand does not lift")
         print("board-ui ok")
     }
 }

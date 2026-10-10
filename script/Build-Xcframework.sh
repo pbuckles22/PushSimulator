@@ -71,6 +71,7 @@ if [ -n "$UDID" ]; then
         "$UI/CardView.swift" \
         "$UI/BoardView.swift" \
         "$UI/HandView.swift" \
+        "$UI/HandCardDrag.swift" \
         "$UI/DragDrop.swift" \
         "$UI/PublishedTable.swift" \
         "$UI/GameBoardScreen.swift"
@@ -87,6 +88,7 @@ if [ -n "$UDID" ]; then
         "$SIM_OUT/PushUI.o" \
         "$ROOT/ios/PushCore.xcframework/ios-arm64-simulator/libpush_ffi.a" \
         -framework SwiftUI \
+        -framework UIKit \
         -framework Foundation
     mkdir -p "$SIM_OUT/PushApp.app"
     cp "$SIM_OUT/PushApp" "$SIM_OUT/PushApp.app/PushApp"
@@ -100,7 +102,7 @@ if [ -n "$UDID" ]; then
   <key>CFBundleIdentifier</key><string>com.pushsimulator.app</string>
   <key>CFBundleName</key><string>Push</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>0.3.5</string>
+  <key>CFBundleShortVersionString</key><string>0.3.9</string>
   <key>CFBundleVersion</key><string>1</string>
   <key>LSRequiresIPhoneOS</key><true/>
   <key>MinimumOSVersion</key><string>16.0</string>
