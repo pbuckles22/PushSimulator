@@ -74,6 +74,32 @@ struct CardFaceView: View {
     }
 }
 
+/// The word "wild" at the bottom of a two or a joker. The face underneath stays theirs.
+struct WildMarkBadge: View {
+    var spoken: String
+    var identifier: String
+
+    var body: some View {
+        VStack {
+            Spacer()
+            Text(verbatim: spoken)
+                .font(.system(size: 12, weight: .heavy))
+                .foregroundStyle(.black)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1)
+                .background(Color.white, in: Capsule())
+                .overlay {
+                    Capsule().strokeBorder(Color.black, lineWidth: 1)
+                }
+                .padding(.bottom, 6)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityIdentifier(identifier)
+        .accessibilityLabel(spoken)
+        .allowsHitTesting(false)
+    }
+}
+
 struct CardBackView: View {
     var body: some View {
         RoundedRectangle(cornerRadius: 8)

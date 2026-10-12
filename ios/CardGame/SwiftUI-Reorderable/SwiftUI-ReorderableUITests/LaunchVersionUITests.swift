@@ -4,7 +4,8 @@ See the LICENSE.txt file for this sample's licensing information.
 Abstract:
 Chain: their solitaire launches → the screen version → the deck pile shows
  the undealt shoe → one natural rank and suit draws with their face →
- a joker draws with their face. The retired "Deck size 108" line stays absent.
+ a joker draws with their face → a two and that joker show a wild mark.
+ The retired "Deck size 108" line stays absent.
 */
 
 import XCTest
@@ -19,8 +20,8 @@ final class LaunchVersionUITests: XCTestCase {
         let window = app.windows.firstMatch
         XCTAssertEqual(window.title, "Solitaire")
 
-        XCTAssertTrue(app.staticTexts["0.3.13"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.staticTexts["0.3.12"].exists)
+        XCTAssertTrue(app.staticTexts["0.3.14"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["0.3.13"].exists)
         XCTAssertFalse(app.staticTexts["Deck size 108"].exists)
 
         let newGame = app.buttons["New"]
@@ -41,5 +42,18 @@ final class LaunchVersionUITests: XCTestCase {
         XCTAssertEqual(joker.label, "Joker")
         XCTAssertFalse(app.staticTexts["Joker wild"].exists)
         XCTAssertFalse(app.staticTexts["Joker, locked"].exists)
+
+        let jokerMark = app.descendants(matching: .any)["joker-wild-mark"]
+        XCTAssertTrue(jokerMark.waitForExistence(timeout: 5))
+        XCTAssertEqual(jokerMark.label, "wild")
+
+        let two = app.descendants(matching: .any)["two-face"]
+        XCTAssertTrue(two.waitForExistence(timeout: 5))
+        XCTAssertEqual(two.label, "2♣️")
+
+        let twoMark = app.descendants(matching: .any)["two-wild-mark"]
+        XCTAssertTrue(twoMark.waitForExistence(timeout: 5))
+        XCTAssertEqual(twoMark.label, "wild")
+        XCTAssertFalse(app.descendants(matching: .any)["natural-wild-mark"].exists)
     }
 }

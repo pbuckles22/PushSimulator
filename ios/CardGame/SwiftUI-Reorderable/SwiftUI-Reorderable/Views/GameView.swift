@@ -91,17 +91,36 @@ struct GameView: View {
 }
 
 /// The empty column between the turned card and the suit piles. Their spacer stays.
-/// The exhibit joker draws there with their face view.
+/// The exhibit joker draws there with their face view, and the exhibit two under it.
 private struct JokerGap: View {
     var body: some View {
-        ZStack {
-            CardBackView()
-                .hidden()
-            if let face = JokerFace.shown() {
-                CardFaceView(joker: face)
+        VStack(spacing: 10) {
+            ZStack {
+                CardBackView()
+                    .hidden()
+                if let face = JokerFace.shown() {
+                    CardFaceView(joker: face)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityIdentifier("joker-face")
+                        .accessibilityLabel(face.spoken)
+                        .overlay {
+                            if let mark = WildMark.shownJoker() {
+                                WildMarkBadge(spoken: mark.spoken, identifier: "joker-wild-mark")
+                            }
+                        }
+                }
+            }
+            if let face = NaturalFace.shownTwo(),
+               let value = CardValue(natural: face) {
+                CardFaceView(card: value)
                     .accessibilityElement(children: .ignore)
-                    .accessibilityIdentifier("joker-face")
+                    .accessibilityIdentifier("two-face")
                     .accessibilityLabel(face.spoken)
+                    .overlay {
+                        if let mark = WildMark.shownTwo() {
+                            WildMarkBadge(spoken: mark.spoken, identifier: "two-wild-mark")
+                        }
+                    }
             }
         }
     }

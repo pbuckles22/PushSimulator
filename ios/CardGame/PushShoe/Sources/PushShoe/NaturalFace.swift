@@ -26,6 +26,20 @@ public struct NaturalFace: Equatable {
         one(in: Game.exhibitSetAndRun())
     }
 
+    /// The exhibit hand's two. A fresh game has none.
+    public static func shownTwo() -> NaturalFace? {
+        shownTwo(in: Game.exhibitSetAndRun())
+    }
+
+    public static func shownTwo(in game: Game) -> NaturalFace? {
+        let table = game.tableSnapshot()
+        let cards = table.hand + table.board.flatMap(\.cards)
+        guard let card = cards.first(where: { $0.rank == .two }) else {
+            return nil
+        }
+        return draw(card)
+    }
+
     /// Their face for a natural rank and suit. A joker or a missing suit draws nothing.
     public static func draw(_ card: CardSnapshot) -> NaturalFace? {
         guard card.rank != .joker, card.suit != .none,

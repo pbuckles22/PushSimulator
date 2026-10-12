@@ -1,7 +1,7 @@
 import PushFfi
 
 /// A joker, using the same corner-and-center slots their face view already draws.
-/// A suit on the card is ignored. A lock and a wild mark are later stories.
+/// A suit on the card is ignored. A lock is a later story.
 public struct JokerFace: Equatable {
     public let rankSymbol: String
     public let suitSymbol: String
