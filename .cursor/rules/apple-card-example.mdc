@@ -1,0 +1,26 @@
+---
+description: Apple's card sample is a read-only reference outside this workspace
+alwaysApply: true
+---
+
+# Apple card example is read-only
+
+The Apple sample is an example. It is not our app.
+
+**Reference, do not edit:** `/Users/chaos/dev/AppleCardGameExample`
+
+**Our shell:** `ios/CardGame/`. Version, tests, and later Push wiring go there.
+
+## Required
+
+- Edit `ios/CardGame/` only.
+- Leave `ios/PushUI` and `ios/PushApp` as the retired shell.
+- Read the example when you need their original drag, drop, reorder, faces, or backs.
+
+## Forbidden
+
+- Writing, staging, or committing anything under `/Users/chaos/dev/AppleCardGameExample`.
+- Copying the example back into this workspace to edit it.
+- Treating a file under the example path as in-scope because a task says "their project."
+
+If the example path is missing, stop. Do not download a new copy into the repo.

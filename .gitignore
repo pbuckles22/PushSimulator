@@ -58,6 +58,9 @@ doc/gemini/dropzone/*
 # Local compile counter. Never commit.
 build_number.txt
 
+# Local screen checks.
+docs/screenshots/
+
 # Handoff session notes. Ignore the files. Keep the directory by tracking README and the template.
 .cursor/handoff/*
 !.cursor/handoff/README.md

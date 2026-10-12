@@ -35,3 +35,4 @@ Document toolchain in AGENT_HANDOFF.md and TEST_PLAN.md. **Do not recopy hard ru
 | Handoff / epic close | `wrap-on-command.mdc`, `handoff-checklist.mdc`, `epic-close.mdc` |
 | Gemini drop | `gemini-handoff.mdc` |
 | Branch / commit / push | `github-feature-workflow` skill + AGENT_HANDOFF Git workflow |
+| Editing Apple's card sample | `apple-card-example.mdc` |
