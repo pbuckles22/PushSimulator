@@ -128,6 +128,10 @@ Story **3.3** draws one natural rank and suit with their face view. Public versi
 
 Human check 2026-10-12 **PASS**. Mac, Solitaire window. The screen showed **0.3.12**, Game #7, 0 moves, **108** on the deck pile, and their four of hearts in the turned-card slot: a white card, a red heart, and 4 with a heart in the corner. Prior run was version **0.3.11**, Game #4, 0 moves, pile 108, and that slot empty. No runtime log. The version on screen is the marker. This slice does not change their drag, drop, or card backs, and it does not draw a joker.
 
+Story **3.4** draws a joker with their face view. Public version **0.3.13**. The exhibit hand's joker is a white card with a black star and the word Joker in the corner. It sits in the empty column between the turned card and the suit piles. A suit on a joker does not become a heart. A lock and a wild mark are not drawn. The turned-card slot still shows their four of hearts. The deck pile stays **108**. `script/Test-CardGameShoe.sh` runs the digit test, the 3.2 shoe chain, the 3.3 face chain, and `testDeckNewGetDeckSizeExhibitShoeDeckPileShows108AndOneNaturalRankAndSuitDrawsTheirFaceAndAJokerDrawsTheirFace`. `LaunchVersionUITests.testLaunchShowsSolitaireVersionWithNoPush` launches Solitaire, checks **0.3.13**, checks that the retired line is absent, clicks New, checks the deck pile is 108, checks the face label is 4♥️, and checks the joker label is Joker.
+
+Human check 2026-10-12 **PASS**. Mac, Solitaire window. The settled screen showed **0.3.13**, Game #9, 0 moves, **108** on the deck pile, their four of hearts in the turned-card slot, and a joker in the gap: a white card, a black star, and the word Joker in the corner. The seven piles and four suit slots were empty. Prior run was **0.3.12**, Game #7, 0 moves, pile 108, four of hearts, and that gap empty. No runtime log. The version on screen is the marker. New still deals their solitaire, then those dealt cards leave the board after about 20 seconds. The settled picture is the 3.4 check. A wild mark and a lock mark stay later stories.
+
 ---
 
 ## Tier 2: Integration / E2E

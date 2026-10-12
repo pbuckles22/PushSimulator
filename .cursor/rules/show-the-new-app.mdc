@@ -1,0 +1,32 @@
+---
+description: Quit the running app before the human looks, so the window is the build just produced
+alwaysApply: true
+---
+
+# Show the new app
+
+The human checks a window, not a build log. A second copy with the same bundle id does not replace the one already running. `open` on the new `.app` activates the old process. They then look at the previous version.
+
+## Before they look
+
+Do this after the UI test and before the human-check ask ([human-check.mdc](human-check.mdc)):
+
+1. Quit **every** running instance of that app. Process name and path both count. A UI test copy counts. An older DerivedData or `target/` copy counts.
+2. Launch **only** the build just produced.
+3. Confirm one instance is running, its executable path is that build, and that bundle’s version is the marker you will ask them to read.
+4. If an older path is still running, quit again and relaunch. Do not ask until the check passes.
+
+`killall` uses the product name (`SwiftUI-Reorderable`), not the window title (`Solitaire`).
+
+```bash
+killall SwiftUI-Reorderable || true
+open /path/to/the/build/just/produced/SwiftUI-Reorderable.app
+ps aux | grep '[S]wiftUI-Reorderable'
+# one line, and that path is the new build
+```
+
+## Do not
+
+- Leave the previous story’s app running and open the new one beside it.
+- Treat “the app is already open” as the new build.
+- Ask them to find the right window among two copies.

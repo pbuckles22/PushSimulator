@@ -10,15 +10,16 @@ Build and test output is not what the human will check. Applies once AGENT_HANDO
 ## Before asking for Tier 2, smoke, install, or “try it”
 
 1. **Run** the documented install or run step. Do not only paste the command.
-2. **Confirm** the thing they will open is the build you just produced (version string, timestamp, or the marker TEST_PLAN names).
-3. **Then** ask, in chat and in any handoff **Next**, with all of these:
+2. **Quit every running copy** of that app, then launch the build you just produced. `open` does not replace a process that is already running. Confirm the running executable path is that build ([show-the-new-app.mdc](show-the-new-app.mdc)).
+3. **Confirm** the version string, timestamp, or the marker TEST_PLAN names on that running build.
+4. **Then** ask, in chat and in any handoff **Next**, with all of these:
    1. **Where they are** — which screen, device, or mode.
    2. **What they should see** — in plain words.
    3. **What they should do** — a few numbered steps.
    4. **PASS if** / **FAIL if** — one line each, something they can show you.
    5. **Evidence** — the few named log lines that must match that result (secondary).
    6. **Version** — the marker they use to confirm this build, when the product has one.
-4. If this slice is **not** the full behavior, say that in the ask so they do not fail a thing you did not ship.
+5. If this slice is **not** the full behavior, say that in the ask so they do not fail a thing you did not ship.
 
 Copy the same shape into TEST_PLAN for that story. **Next** must not say only “ask for smoke.”
 
@@ -38,7 +39,7 @@ Archive the detail in the project’s log or TEST_PLAN. The chat line comes firs
 
 ## Do not
 
-- Ask while the installed or running copy is still the older build.
+- Ask while the installed or running copy is still the older build, or while two copies are open.
 - Treat an artifact directory alone as “installed” unless AGENT_HANDOFF says that directory is what they run.
 - Commit the ship “so they can test from main.” Deliver the build locally. Commit after PASS.
 - Stack story N+1 onto dirty WIP because N is blocked on the human.
