@@ -51,25 +51,53 @@ Operating model: `.cursor/rules/` ship commands (UCPH, CMPH, SWAT), human check,
 - **2.3:** on `main` at `69534dd`. One thousand games run through `rayon::par_iter`. The lowest total wins. A tie is not a win. The CSV records seat win rates, average turns, and population score variance. Debug `test_rayon_parallelization` finished 1000 of 1000 in 12.77s. Seed 1 scores 5 and 85. `feature/2.3-parallel-csv` is kept.
 - **2.4:** on `main`. Content is `f5868db`. A point-averse seat pushes and discards high cards and never holds a wild. A hoarder holds every wild through round 3. Keep(n) holds wilds while the hand has at most n, and sheds the surplus. A profile match deals 2 to 10 seats. `--players` copies seat 1 into every later seat. Two random seats still use `finish_random_game`. Seed 1 scores 5 and 85. `feature/2.4-strategic-bots` is kept.
 - **Phase 2:** complete — 2026-10-09. Legal moves, a random bot, bounded search, Rayon batches, CSV metrics, and strategic profiles. The lowest total wins. A tie is not a win. On this Mac, 5 threads, release keep-N versus point-averse: at 3 seats keep-4 won 94,133 of 100,000 (mean 82.83); at 4 seats keep-5 won 79,222 (mean 144.32); at 5 seats keep-5 won 64,653 (mean 191.59). Pooled, keep-5 won 237,927 of 300,000 (mean 139.37). Keep-6 did not add wins.
-- **3.1:** on `main`. Content is `398e20a`. Public version **0.3.1**. `Game::get_deck_size` is the undealt shoe, 108. UniFFI exports that call. The SwiftUI screen shows Deck size 108. Device Hub, iPhone 16, PASS. `feature/3.1-uniffi-deck-size` is kept.
-- **3.2:** on `main`. Content is `adac445`. Public version **0.3.2**. `@Published` state wraps the Rust table. The screen shows 0.3.2, Deck size 108, Round 2, three fours, and 4♥ 5♥ 6♥ 7♥. iPhone 16 simulator, PASS. `feature/3.2-board-ui` is kept.
-- **Phase 1b:** open. Not started. Parallel to Phase 3. It does not block 3.3.4. Stories are in [doc/BACKLOG.md](doc/BACKLOG.md). One seed, four seats, profiles `push_sim` already has. `feature/1b-wasm-tick` is a two-seat sketch from `6d52fbd`. Do not branch from it.
+- **Phase 3 forward:** stories **3.1–3.32** in [doc/BACKLOG.md](doc/BACKLOG.md). None are started. The shell is `AppleCardGameExample/` at the repo root. Rules stay in `push_core`. Their drag, drop, reorder, faces, and backs stay theirs. Two seats. Seat 0 is the human. Seat 1 is one profile `push_sim` already has. One seed stays fixed. Opponent cards are their backs. Phase 3 closes at **3.32**: five rounds scored, the lowest total marked, round 6 dealt and unplayed, matching `push_core`.
+- **3.1:** next. Compile `AppleCardGameExample` unchanged. Their app launches. No Push behavior. First screen ship is public version **0.3.10**.
+- **3.2:** Their deck pile shows the undealt shoe from Rust. The exhibit shoe is 108.
+- **3.3:** One natural rank and suit draws with their face view.
+- **3.4:** A joker draws with their face view.
+- **3.5:** A two and a joker show a wild mark on that face.
+- **3.6:** A fixed Rust table shows the discard top with their face.
+- **3.7:** Seat 0's hand sits in their hand layout. Nothing lifts into the engine.
+- **3.8:** Seat 1's cards are their backs. The count is visible.
+- **3.9:** One set from the fixture uses their pile layout.
+- **3.10:** One run from the fixture uses their pile layout.
+- **3.11:** The screen shows the round number and which seat is to move.
+- **3.12:** A locked card is marked.
+- **3.13:** Dropping the locked joker calls Rust and returns the card. The picture stays.
+- **3.14:** A legal one-card hit calls `HitMeld`. The picture updates from Rust.
+- **3.15:** A play that misses round 1's minimum is refused. The hand stays.
+- **3.16:** Two sets of three call one `PlayMeld`. That seat is on the board.
+- **3.17:** A later set, after that seat is on the board, calls `PlayMeld` with no round minimum.
+- **3.18:** The wrong natural card is refused. The wild stays on the meld.
+- **3.19:** The natural card replaces the wild. The wild enters the hand locked.
+- **3.20:** Using that wild on the same turn is refused.
+- **3.21:** Their discard control calls `TakeDiscard`. That card joins the hand.
+- **3.22:** Their push control calls `PushDiscard`. The next seat receives the discard and one draw. The actor draws one.
+- **3.23:** Off the board, discarding a card that fits is refused. The turn shows penalty drawing.
+- **3.24:** One control calls `DrawFromDeck` until the safe card is the discard.
+- **3.25:** A safe discard calls `DiscardCard` and the turn passes.
+- **3.26:** An empty hand ends the round. Each seat's hand score is on the screen.
+- **3.27:** Round 2 is dealt. The board is empty. Totals from round 1 remain.
+- **3.28:** A penalty draw with nothing left ends the round. Those drawn cards are in the scores.
+- **3.29:** One control plays seat 1's profile turn. The felt updates. A line names that action.
+- **3.30:** The current round's minimum is on the screen.
+- **3.31:** That seed plays all five rounds. The lowest total is marked.
+- **3.32:** Round 6 is dealt and unplayed. The scores match a `push_core` test for that seed.
+- **Retired iOS UI:** still on `main` at `d80ff16`. Content of the drop ship is `c61ef41`. Public version **0.3.9**. Deck size, the board, the hand row, and the Rust drop are in that tree. They are not the forward plan. Do not continue `ios/PushUI`. `feature/3.1-uniffi-deck-size`, `feature/3.2-board-ui`, `feature/3.3-drag-drop`, `feature/3.3.2-hand-row`, `feature/3.3.3-on-screen-drag`, and `feature/3.3.4-engine-drop` stay. A rewind of `main` to `6d52fbd` is not done.
+- **Phase 1b:** open. Not started. Parallel to Phase 3. It does not block 3.1. Stories are in [doc/BACKLOG.md](doc/BACKLOG.md). One seed, four seats, profiles `push_sim` already has. `feature/1b-wasm-tick` is a two-seat sketch from `6d52fbd`. Do not branch from it.
 - **1b.1:** Four dealt hands on `viewer/`. Draw, discard, Round 1. The board is empty.
 - **1b.2:** One step. The log names the seat, the action, and the cards.
 - **1b.3:** The first meld is cards on the felt.
 - **1b.4:** Round 1 ends. Four scores show. Round 2 is dealt and the board is empty.
 - **1b.5:** Five rounds play. Round 6 is dealt and unplayed. A rule-book mismatch becomes a `push_core` test.
-- **3.3.1:** on `main`. Content is `9afe342`. Public version stays **0.3.2**. Drop maps to `PlayMeld` or `HitMeld`. A `GameError` or a refusal snaps back. The screen is still 3.2. `swift test --package-path ios/PushUI` is green (35 tests). `feature/3.3-drag-drop` is kept.
-- **3.3.2:** on `main`. Content is `4acd3cf`. Public version **0.3.3**. The local seat's hand is on the screen. Opponent hands stay off the picture. The row scrolls. A card does not lift. iPhone 16 simulator, PASS. `swift test --package-path ios/PushUI` is green (38 tests). `feature/3.3.2-hand-row` is kept.
-- **3.3.3:** on `main`. Content is `f895827`. Public version **0.3.5**. A hand card lifts. A drop calls `settleDrop`. A `GameError` or a refusal leaves the card in the hand. The picture changes only on accept. The stand-in takes an unlocked card onto a new meld and refuses a drop onto a row. The king becomes its own row. The locked joker and the eight stay in the hand. The fours stay three cards. The shoe stays 108. iPhone 16 simulator, PASS. `swift test --package-path ios/PushUI` is green (77 tests). `feature/3.3.3-on-screen-drag` is kept.
-- **3.3.4:** on `main`. Content is `c61ef41`. Public version **0.3.9**. UniFFI applies `PlayMeld` or `HitMeld`. A refusal comes from Rust. The king, the eight, and the locked joker stay in the hand. The two of clubs joins the fours. The lifted card shows its face and its slot is empty. The shoe stays 108. iPhone 16 simulator, PASS. `feature/3.3.4-engine-drop` is kept.
-- **Next (iOS):** wait until asked. Take, discard, steal, and scores stay out. Phase 3 stays open.
+- **Next (iOS):** **3.1**. Compile `AppleCardGameExample` unchanged.
 - **Next (viewer):** 1b.1 when asked.
 - **Full backlog:** [doc/BACKLOG.md](doc/BACKLOG.md)
-- **Commentary / deltas:** [doc/PLAN_COMMENTARY.md](doc/PLAN_COMMENTARY.md) (3.3 split; integration-chain Epic 1.9 suggested; Google export quirks)
+- **Commentary / deltas:** [doc/PLAN_COMMENTARY.md](doc/PLAN_COMMENTARY.md) (retired 3.3 split; integration-chain Epic 1.9 suggested; Google export quirks)
 
 ## Version
 
-Plan coordinate starts at **0.1.0**. Phase 2 stayed there (headless sim). Story 3.1 is **0.3.1**. Story 3.2 is **0.3.2**. Story 3.3.1 keeps **0.3.2** (no screen change). Story 3.3.2 is **0.3.3**. Story 3.3.3 is **0.3.5**. Story 3.3.4 is **0.3.9**. See [doc/VERSIONING.md](doc/VERSIONING.md).
+Plan coordinate starts at **0.1.0**. Phase 2 stayed there (headless sim). The retired drop UI on `main` is **0.3.9**. This replan does not bump. Story **3.1** is the next screen ship, **0.3.10**. A later story with no screen change does not bump. Each later screen change adds one. See [doc/VERSIONING.md](doc/VERSIONING.md).
 
 Keep in sync with AGENT_HANDOFF *Current state* and [doc/PROJECT_STATUS.md](doc/PROJECT_STATUS.md).

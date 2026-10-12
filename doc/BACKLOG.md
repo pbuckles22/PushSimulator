@@ -338,7 +338,7 @@ This closes Epic 1.2. Epic 1.4 is complete — 2026-10-06.
 
 ## **Phase 1b: Watch a four-person game**
 
-**Status:** open. Not started. This track is parallel to Phase 3. It does not sit in front of 3.3.1. An iOS thread starts at 3.3.1. A viewer thread starts at 1b.1 and stays in this order. Rules stay in `push_core`. The page only shows them. A mismatch with the rule book becomes a `push_core` test. `feature/1b-wasm-tick` is a two-seat sketch from `6d52fbd`. Do not branch from it. Branch each story from current `main`.
+**Status:** open. Not started. This track is parallel to Phase 3. It does not sit in front of 3.1. An iOS thread starts at 3.1. A viewer thread starts at 1b.1 and stays in this order. Rules stay in `push_core`. The page only shows them. A mismatch with the rule book becomes a `push_core` test. `feature/1b-wasm-tick` is a two-seat sketch from `6d52fbd`. Do not branch from it. Branch each story from current `main`.
 
 The page is `viewer/`. The bridge is `push_wasm`. Four seats come from `finish_profile_game` / `play_profile_turn` and the profiles `push_sim` already has. One seed and one lineup stay fixed so the same game can be replayed. Each story is done when that page is what you see.
 
@@ -382,70 +382,228 @@ The page is `viewer/`. The bridge is `push_wasm`. Four seats come from `finish_p
 * \[ \] The log is still on the page.  
 * \[ \] A rule-book mismatch is recorded as a `push_core` test, not a rule inside the page.
 
-## **Phase 3: iOS SwiftUI App (Local Play)**
+## **Phase 3: iOS local play on their card sample**
 
-**User Story 3.1: Rust/Swift Bridge**
+**Status:** open. Not started. Next is **3.1**. The shell is `AppleCardGameExample/` at the repo root. Rules stay in `push_core`. Their drag, drop, reorder, faces, and backs stay theirs. The only Swift edits are the bodies of the methods their views already call, plus a stable card id so duplicate ranks and jokers can be told apart. A refusal leaves the picture as it was. An accept refreshes the picture from Rust. Two seats. Seat 0 is the human. Seat 1 is one profile `push_sim` already has. One seed stays fixed. Opponent cards are their backs. Phase 3 closes at **3.32**.
 
-**Status:** on `main`. Content is `398e20a`. Public version **0.3.1**. `Game::get_deck_size` is 108. The SwiftUI screen shows Deck size 108. `feature/3.1-uniffi-deck-size` is kept.
+The retired drop UI is still on `main` at `d80ff16` (content `c61ef41`, public version **0.3.9**). It is not this list. Do not continue `ios/PushUI`. A rewind of `main` to `6d52fbd` is not done.
 
-*As an iOS developer, I need to call my Rust engine from Swift so I don't have to rewrite the rules.*
+**User Story 3.1: Compile**
 
-* \[x\] Generate .xcframework using UniFFI (or Swift-Bridge).  
-* \[x\] Write basic SwiftUI view calling Game.get\_deck\_size() and rendering text.
+*As a player, I want their card app to launch before any Push rule is wired in.*
 
-**User Story 3.2: Reactive UI & Board Rendering**
+* \[ \] `AppleCardGameExample` builds and launches with no Push behavior.
+* \[ \] The screen version is **0.3.10**.
 
-**Status:** on `main`. Content is `adac445`. Public version **0.3.2**. The screen shows 0.3.2, Deck size 108, Round 2, three fours, and 4♥ 5♥ 6♥ 7♥. `feature/3.2-board-ui` is kept.
+**User Story 3.2: Shoe**
 
-*As a player, I want to see the state of the game natively on my screen.*
+*As a player, I want their deck pile to show how many cards Rust has not dealt.*
 
-* \[x\] Implement @Published state wrapping the Rust GameState.  
-* \[x\] Build SwiftUI CardView changing dynamically based on Suit/Rank.  
-* \[x\] Build SwiftUI BoardView laying out Sets and Runs.
+* \[ \] Their deck pile shows the undealt count from Rust.
+* \[ \] The exhibit shoe is 108.
 
-**User Story 3.3.1: Drop API**
+**User Story 3.3: One face**
 
-**Status:** on `main`. Content is `9afe342`. Public version stays **0.3.2**. The screen is still 3.2. `swift test --package-path ios/PushUI` is green (35 tests). `feature/3.3-drag-drop` is kept.
+*As a player, I want one natural card to use their face.*
 
-*As a player, I want a drop to become a play or a hit before the screen animates.*
+* \[ \] One natural rank and suit draws with their face view.
 
-* \[x\] `CardDrag` is `Transferable`.  
-* \[x\] A new-meld drop is one `PlayMeld` group. A meld drop is one `HitMeld`.  
-* \[x\] `settleDrop` returns the same hand and board on `GameError` and on a refusal. An accept returns the engine table.  
-* \[x\] The published picture still has no hand.
+**User Story 3.4: Joker face**
 
-**User Story 3.3.2: Hand row**
+*As a player, I want a joker to use their face.*
 
-**Status:** on `main`. Content is `4acd3cf`. Public version **0.3.3**. The screen shows 0.3.3, Deck size 108, Round 2, the set, the run, and a hand of 8♦, K♠, a locked joker, and 2♣. iPhone 16 simulator, PASS. `swift test --package-path ios/PushUI` is green (38 tests). `feature/3.3.2-hand-row` is kept.
+* \[ \] A joker draws with their face view.
 
-*As a player, I want to see my hand on the screen so I know what I can drag.*
+**User Story 3.5: Wild mark**
 
-* \[x\] The local seat’s hand is on the screen.  
-* \[x\] Opponent hands stay off the picture.  
-* \[x\] No drag yet. The row scrolls left and right. A card does not lift.
+*As a player, I want a wild to be marked on their face.*
 
-**User Story 3.3.3: On-screen drag**
+* \[ \] A two and a joker show a wild mark on that face.
 
-**Status:** on `main`. Content is `f895827`. Public version **0.3.5**. A hand card lifts. A drop calls `settleDrop`. A refusal leaves the card in the hand. The stand-in takes an unlocked card onto a new meld and refuses a drop onto a row. iPhone 16 simulator, PASS. `swift test --package-path ios/PushUI` is green (77 tests). `feature/3.3.3-on-screen-drag` is kept.
+**User Story 3.6: Discard top**
 
-*As a player, I want to drag a hand card onto a meld or a new-meld zone.*
+*As a player, I want the discard top to come from Rust.*
 
-* \[x\] A drop calls the 3.3.1 API.  
-* \[x\] A `GameError` or a refusal leaves the card in the hand.  
-* \[x\] The picture updates only on accept.  
-* \[x\] The engine is still a stand-in.
+* \[ \] A fixed Rust table shows the discard top with their face.
 
-**User Story 3.3.4: Engine drop**
+**User Story 3.7: Local hand**
 
-**Status:** on `main`. Content is `c61ef41`. Public version **0.3.9**. UniFFI applies `PlayMeld` or `HitMeld`. The king, the eight, and the locked joker stay in the hand. The two of clubs joins the fours. The lifted card shows its face. The shoe stays 108. iPhone 16 simulator, PASS. `swift test --package-path ios/PushUI` is green (81 tests). `feature/3.3.4-engine-drop` is kept.
+*As a player, I want my hand in their layout before anything plays.*
 
-*As a player, I want that drop to go through Rust so the rules decide.*
+* \[ \] Seat 0's hand sits in their hand layout.
+* \[ \] Nothing lifts into the engine.
 
-* \[x\] UniFFI applies `PlayMeld` or `HitMeld`.  
-* \[x\] `GameError` and a refusal come from Rust.  
-* \[x\] The shoe on the exhibit stays 108.
+**User Story 3.8: Opponent backs**
 
-Take, discard, steal, and scores stay out of 3.3.1–3.3.4.
+*As a player, I want the other seat hidden.*
+
+* \[ \] Seat 1's cards are their backs.
+* \[ \] The count is visible.
+
+**User Story 3.9: One set**
+
+*As a player, I want one set in their pile layout.*
+
+* \[ \] One set from the fixture uses their pile layout.
+
+**User Story 3.10: One run**
+
+*As a player, I want one run in their pile layout.*
+
+* \[ \] One run from the fixture uses their pile layout.
+
+**User Story 3.11: Round and turn**
+
+*As a player, I want to see the round and whose turn it is.*
+
+* \[ \] The screen shows the round number and which seat is to move.
+
+**User Story 3.12: Lock mark**
+
+*As a player, I want a locked card marked.*
+
+* \[ \] A locked card is marked.
+
+**User Story 3.13: Refused hit**
+
+*As a player, I want an illegal hit to come back.*
+
+* \[ \] Dropping the locked joker calls Rust and returns the card.
+* \[ \] The picture stays.
+
+**User Story 3.14: Accepted hit**
+
+*As a player, I want a legal hit to go through Rust.*
+
+* \[ \] A legal one-card hit calls `HitMeld`.
+* \[ \] The picture updates from Rust.
+
+**User Story 3.15: Refused opening**
+
+*As a player, I want a short opening to stay in my hand.*
+
+* \[ \] A play that misses round 1's minimum is refused.
+* \[ \] The hand stays.
+
+**User Story 3.16: Accepted opening**
+
+*As a player, I want round 1's two sets to land together.*
+
+* \[ \] Two sets of three call one `PlayMeld`.
+* \[ \] That seat is on the board.
+
+**User Story 3.17: Free meld**
+
+*As a player, I want a later set once I am on the board.*
+
+* \[ \] A later set calls `PlayMeld` with no round minimum.
+
+**User Story 3.18: Refused steal**
+
+*As a player, I want the wrong card to leave the wild where it is.*
+
+* \[ \] The wrong natural card is refused.
+* \[ \] The wild stays on the meld.
+
+**User Story 3.19: Accepted steal**
+
+*As a player, I want a real card to take the wild.*
+
+* \[ \] The natural card replaces the wild.
+* \[ \] The wild enters the hand locked.
+
+**User Story 3.20: Locked wild**
+
+*As a player, I want that wild to wait until the next turn.*
+
+* \[ \] Using that wild on the same turn is refused.
+
+**User Story 3.21: Take**
+
+*As a player, I want their discard control to take the top card.*
+
+* \[ \] Their discard control calls `TakeDiscard`.
+* \[ \] That card joins the hand.
+
+**User Story 3.22: Push**
+
+*As a player, I want their push control to push the discard.*
+
+* \[ \] Their push control calls `PushDiscard`.
+* \[ \] The next seat receives the discard and one draw.
+* \[ \] The actor draws one.
+
+**User Story 3.23: Unsafe discard**
+
+*As a player, I want an off-board discard of a fitting card to start the penalty.*
+
+* \[ \] Off the board, discarding a card that fits is refused.
+* \[ \] The turn shows penalty drawing.
+
+**User Story 3.24: Penalty draw**
+
+*As a player, I want the penalty draw to end on a safe card.*
+
+* \[ \] One control calls `DrawFromDeck` until the safe card is the discard.
+* \[ \] The extra cards show.
+
+**User Story 3.25: Legal discard**
+
+*As a player, I want a safe discard to end my turn.*
+
+* \[ \] A safe discard calls `DiscardCard`.
+* \[ \] The turn passes.
+
+**User Story 3.26: Round over**
+
+*As a player, I want an empty hand to end the round and show scores.*
+
+* \[ \] An empty hand ends the round.
+* \[ \] Each seat's hand score is on the screen.
+
+**User Story 3.27: Next deal**
+
+*As a player, I want the next round dealt with the board clear.*
+
+* \[ \] Round 2 is dealt.
+* \[ \] The board is empty.
+* \[ \] Totals from round 1 remain.
+
+**User Story 3.28: Deck-out**
+
+*As a player, I want an empty shoe during a penalty to end the round.*
+
+* \[ \] A penalty draw with nothing left ends the round.
+* \[ \] Those drawn cards are in the scores.
+
+**User Story 3.29: Bot step**
+
+*As a player, I want one control to play the other seat.*
+
+* \[ \] One control plays seat 1's profile turn.
+* \[ \] The felt updates.
+* \[ \] A line names that action.
+
+**User Story 3.30: Round goal**
+
+*As a player, I want this round's minimum on the screen.*
+
+* \[ \] The current round's minimum is on the screen.
+
+**User Story 3.31: Five rounds**
+
+*As a player, I want that seed to finish the match.*
+
+* \[ \] That seed plays all five rounds.
+* \[ \] The lowest total is marked.
+
+**User Story 3.32: Match end**
+
+*As a player, I want round 6 dealt and unplayed, with scores that match the engine.*
+
+* \[ \] Round 6 is dealt and unplayed.
+* \[ \] The scores match a `push_core` test for that seed.
+* \[ \] Phase 3 can close.
 
 ## **Phase 4: Multiplayer Server**
 
@@ -511,4 +669,4 @@ Take, discard, steal, and scores stay out of 3.3.1–3.3.4.
 
 * \[ \] Run `swift test --package-path ios/PushUI` in CI.
 
-Branch protection that requires a green suite stays a later checkbox. It does not jump ahead of 3.3.2.
+Branch protection that requires a green suite stays a later checkbox. It does not jump ahead of 3.1.
