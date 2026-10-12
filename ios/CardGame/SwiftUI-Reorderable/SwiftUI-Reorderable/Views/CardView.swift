@@ -7,6 +7,7 @@ A view that shows the current state of a card instance, as well as the
  representations of a card.
 */
 
+import PushShoe
 import SwiftUI
 
 struct CardView: View {
@@ -22,24 +23,41 @@ struct CardView: View {
 }
 
 struct CardFaceView: View {
-    var card: CardValue
+    private let rankSymbol: String
+    private let suitSymbol: String
+    private let systemImageName: String
+    private let tint: Color
+
+    init(card: CardValue) {
+        rankSymbol = card.rank.symbol
+        suitSymbol = card.suit.symbol
+        systemImageName = card.suit.systemImageName
+        tint = card.suit.color
+    }
+
+    init(joker face: JokerFace) {
+        rankSymbol = face.rankSymbol
+        suitSymbol = face.suitSymbol
+        systemImageName = face.systemImageName
+        tint = face.isRed ? .red : .black
+    }
 
     var body: some View {
         ZStack {
             // Background color
             Color.white
             // Suit image, on its own layer so that it's centered.
-            Image(systemName: card.suit.systemImageName)
+            Image(systemName: systemImageName)
                 .resizable()
                 .scaledToFit()
-                .foregroundStyle(card.suit.color.gradient)
+                .foregroundStyle(tint.gradient)
                 .padding()
             // The header with the rank and suit emoji.
             VStack {
                 HStack {
-                    Text(verbatim: card.rank.symbol)
+                    Text(verbatim: rankSymbol)
                     Spacer()
-                    Text(verbatim: card.suit.symbol)
+                    Text(verbatim: suitSymbol)
                 }
                 .alignmentGuide(.stackingGuide) { $0[.top] + $0.height }
                 Spacer()
@@ -52,7 +70,7 @@ struct CardFaceView: View {
         }
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .aspectRatio(0.7, contentMode: .fit)
-        .foregroundStyle(card.suit.color)
+        .foregroundStyle(tint)
     }
 }
 

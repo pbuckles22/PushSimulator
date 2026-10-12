@@ -26,13 +26,43 @@ final class DeckPileTests: XCTestCase {
         XCTAssertNotEqual(face?.spoken, "4♥")
     }
 
-    /// A joker has no natural face. That face is story 3.4.
-    func testJokerDoesNotDrawTheirFace() {
+    /// A joker has no natural face. Their joker face is a separate drawing.
+    func testJokerDoesNotDrawTheirNaturalFace() {
         let joker = CardSnapshot(id: 23, suit: .none, rank: .joker, lockedUntilTurn: 2)
         let suitedJoker = CardSnapshot(id: 23, suit: .hearts, rank: .joker, lockedUntilTurn: 0)
 
         XCTAssertNil(NaturalFace.draw(joker))
         XCTAssertNil(NaturalFace.draw(suitedJoker))
+    }
+
+    /// A joker draws the symbols their face view uses. A suit on that card does not become a heart.
+    func testAJokerDrawsTheirFace() {
+        let joker = CardSnapshot(id: 23, suit: .none, rank: .joker, lockedUntilTurn: 2)
+        let suited = CardSnapshot(id: 23, suit: .hearts, rank: .joker, lockedUntilTurn: 0)
+        let unlocked = CardSnapshot(id: 99, suit: .none, rank: .joker, lockedUntilTurn: 0)
+        let face = JokerFace.draw(joker)
+
+        XCTAssertEqual(face?.rankSymbol, "Joker")
+        XCTAssertEqual(face?.suitSymbol, "")
+        XCTAssertEqual(face?.systemImageName, "star.fill")
+        XCTAssertEqual(face?.isRed, false)
+        XCTAssertEqual(face?.spoken, "Joker")
+        XCTAssertNotEqual(face?.spoken, "Joker wild")
+        XCTAssertNotEqual(face?.spoken, "Joker, locked")
+        XCTAssertFalse(face?.systemImageName.hasPrefix("suit.") ?? true)
+        XCTAssertEqual(JokerFace.draw(suited), face)
+        XCTAssertEqual(JokerFace.draw(unlocked), face)
+        XCTAssertNotEqual(face?.spoken, "4♥️")
+    }
+
+    /// A natural rank and suit is not a joker face.
+    func testANaturalCardDoesNotDrawTheJokerFace() {
+        let four = CardSnapshot(id: 1, suit: .hearts, rank: .four, lockedUntilTurn: 0)
+        let two = CardSnapshot(id: 24, suit: .clubs, rank: .two, lockedUntilTurn: 0)
+
+        XCTAssertNil(JokerFace.draw(four))
+        XCTAssertNil(JokerFace.draw(two))
+        XCTAssertNil(JokerFace.one(in: Game()))
     }
 
     /// A missing suit is not a natural rank and suit.
@@ -130,5 +160,46 @@ final class DeckPileTests: XCTestCase {
         XCTAssertNotEqual(face, NaturalFace.draw(table.hand[0]))
         XCTAssertEqual(table.hand[2].rank, .joker)
         XCTAssertNil(NaturalFace.draw(table.hand[2]))
+    }
+
+    /// Chain: the 3.2 shoe, the 3.3 four of hearts, then the exhibit joker drawn with their face.
+    func testDeckNewGetDeckSizeExhibitShoeDeckPileShows108AndOneNaturalRankAndSuitDrawsTheirFaceAndAJokerDrawsTheirFace() {
+        let fresh = Game()
+        let exhibit = Game.exhibitSetAndRun()
+        let table = exhibit.tableSnapshot()
+        let four = table.board[0].cards[0]
+        let jokerCard = table.hand[2]
+        let face = NaturalFace.draw(four)
+        let joker = JokerFace.draw(jokerCard)
+
+        XCTAssertEqual(fresh.getDeckSize(), 108)
+        XCTAssertEqual(exhibit.getDeckSize(), 108)
+        XCTAssertEqual(UndealtShoe.count(), 108)
+        XCTAssertEqual(DeckPileCount.shown(), "108")
+        XCTAssertNil(NaturalFace.one(in: fresh))
+        XCTAssertNil(JokerFace.one(in: fresh))
+        XCTAssertEqual(four.id, 1)
+        XCTAssertEqual(four.rank, .four)
+        XCTAssertEqual(four.suit, .hearts)
+        XCTAssertEqual(NaturalFace.one(in: exhibit), face)
+        XCTAssertEqual(NaturalFace.shown(), face)
+        XCTAssertEqual(face?.spoken, "4♥️")
+        XCTAssertEqual(face?.systemImageName, "suit.heart.fill")
+        XCTAssertEqual(jokerCard.id, 23)
+        XCTAssertEqual(jokerCard.suit, .none)
+        XCTAssertEqual(jokerCard.rank, .joker)
+        XCTAssertEqual(jokerCard.lockedUntilTurn, 2)
+        XCTAssertNil(NaturalFace.draw(jokerCard))
+        XCTAssertNil(JokerFace.draw(four))
+        XCTAssertEqual(JokerFace.one(in: exhibit), joker)
+        XCTAssertEqual(JokerFace.shown(), joker)
+        XCTAssertEqual(joker?.rankSymbol, "Joker")
+        XCTAssertEqual(joker?.suitSymbol, "")
+        XCTAssertEqual(joker?.systemImageName, "star.fill")
+        XCTAssertEqual(joker?.isRed, false)
+        XCTAssertEqual(joker?.spoken, "Joker")
+        XCTAssertNotEqual(joker?.spoken, face?.spoken)
+        XCTAssertNotEqual(joker?.spoken, "Joker wild")
+        XCTAssertNotEqual(joker?.spoken, "Joker, locked")
     }
 }

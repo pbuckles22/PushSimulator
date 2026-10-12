@@ -3,8 +3,8 @@ See the LICENSE.txt file for this sample's licensing information.
 
 Abstract:
 Chain: their solitaire launches → the screen version → the deck pile shows
- the undealt shoe → one natural rank and suit draws with their face.
- The retired "Deck size 108" line stays absent.
+ the undealt shoe → one natural rank and suit draws with their face →
+ a joker draws with their face. The retired "Deck size 108" line stays absent.
 */
 
 import XCTest
@@ -19,8 +19,8 @@ final class LaunchVersionUITests: XCTestCase {
         let window = app.windows.firstMatch
         XCTAssertEqual(window.title, "Solitaire")
 
-        XCTAssertTrue(app.staticTexts["0.3.12"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.staticTexts["0.3.11"].exists)
+        XCTAssertTrue(app.staticTexts["0.3.13"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["0.3.12"].exists)
         XCTAssertFalse(app.staticTexts["Deck size 108"].exists)
 
         let newGame = app.buttons["New"]
@@ -35,5 +35,11 @@ final class LaunchVersionUITests: XCTestCase {
         let face = app.descendants(matching: .any)["natural-face"]
         XCTAssertTrue(face.waitForExistence(timeout: 5))
         XCTAssertEqual(face.label, "4♥️")
+
+        let joker = app.descendants(matching: .any)["joker-face"]
+        XCTAssertTrue(joker.waitForExistence(timeout: 5))
+        XCTAssertEqual(joker.label, "Joker")
+        XCTAssertFalse(app.staticTexts["Joker wild"].exists)
+        XCTAssertFalse(app.staticTexts["Joker, locked"].exists)
     }
 }

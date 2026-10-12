@@ -6,6 +6,7 @@ The playing area layout with a single reorder container managing drag and
  drop across all piles.
 */
 
+import PushShoe
 import SwiftUI
 
 struct GameView: View {
@@ -19,8 +20,7 @@ struct GameView: View {
                 HStack(alignment: .top, spacing: spacing) {
                     Group {
                         RemainderView(game: game)
-                        CardBackView()
-                            .hidden()
+                        JokerGap()
                         ForEach(CardValue.Suit.allCases) { suit in
                             DestinationView(game: game, suit: suit)
                         }
@@ -87,6 +87,23 @@ struct GameView: View {
     .background(.green.gradient)
     .reorderContainer(for: CardValue.self) { difference in
         cards.apply(difference: difference)
+    }
+}
+
+/// The empty column between the turned card and the suit piles. Their spacer stays.
+/// The exhibit joker draws there with their face view.
+private struct JokerGap: View {
+    var body: some View {
+        ZStack {
+            CardBackView()
+                .hidden()
+            if let face = JokerFace.shown() {
+                CardFaceView(joker: face)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityIdentifier("joker-face")
+                    .accessibilityLabel(face.spoken)
+            }
+        }
     }
 }
 
