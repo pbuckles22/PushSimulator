@@ -45,6 +45,12 @@ struct RemainderView: View {
                 CardFaceView(card: currentCard.value)
                     .draggable(containerItemID: currentCard.value)
                     .opacity(currentCard.value == hiddenCard ? 0 : 1)
+            } else if let face = NaturalFace.shown(),
+                      let value = CardValue(natural: face) {
+                CardFaceView(card: value)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityIdentifier("natural-face")
+                    .accessibilityLabel(face.spoken)
             }
         }
         .dragContainer(for: CardValue.self) { cardID in

@@ -124,6 +124,10 @@ Story **3.2** on `ios/CardGame` shows the undealt shoe on their deck pile. Publi
 
 Human check 2026-10-12 **PASS**. Mac, Solitaire window. The screen showed **0.3.11**, Game #4, 0 moves, and **108** on the deck pile. Prior run was version 0.3.10 with no shoe on that pile. No runtime log. The version on screen is the marker. This slice does not change their drag, drop, faces, or backs.
 
+Story **3.3** draws one natural rank and suit with their face view. Public version **0.3.12**. The exhibit's first board card is the four of hearts. `NaturalFace.draw` maps that rank and suit onto the symbols, image, and raw values `CardFaceView` already uses. A joker or a missing suit draws nothing. The screen shows that one face in the turned-card slot while the slot is empty. The deck pile stays **108**. `script/Test-CardGameShoe.sh` runs the digit test, the 3.2 shoe chain, and `testDeckNewGetDeckSizeExhibitShoeDeckPileShows108AndOneNaturalRankAndSuitDrawsTheirFace`. `LaunchVersionUITests.testLaunchShowsSolitaireVersionWithNoPush` launches Solitaire, checks **0.3.12**, checks that the retired line is absent, clicks New, checks the deck pile is 108, and checks the face label is 4♥️.
+
+Human check 2026-10-12 **PASS**. Mac, Solitaire window. The screen showed **0.3.12**, Game #7, 0 moves, **108** on the deck pile, and their four of hearts in the turned-card slot: a white card, a red heart, and 4 with a heart in the corner. Prior run was version **0.3.11**, Game #4, 0 moves, pile 108, and that slot empty. No runtime log. The version on screen is the marker. This slice does not change their drag, drop, or card backs, and it does not draw a joker.
+
 ---
 
 ## Tier 2: Integration / E2E
