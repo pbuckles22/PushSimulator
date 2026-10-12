@@ -28,6 +28,8 @@ struct GameView: View {
                     .frame(width: cardWidth)
                 }
                 .padding(.bottom, 20)
+                LocalHandRow(cardWidth: cardWidth, spacing: spacing)
+                    .padding(.bottom, 20)
                 HStack(alignment: .top, spacing: spacing) {
                     ForEach(0..<7) { index in
                         PileView(game: game, index: index)
@@ -87,6 +89,45 @@ struct GameView: View {
     .background(.green.gradient)
     .reorderContainer(for: CardValue.self) { difference in
         cards.apply(difference: difference)
+    }
+}
+
+/// Seat 0's hand, left to right, under the top row. Their face view stays theirs.
+/// These cards do not join the pile drag. Nothing lifts into the engine.
+private struct LocalHandRow: View {
+    var cardWidth: CGFloat
+    var spacing: CGFloat
+
+    private var hand: LocalHand { LocalHand.shown() }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: spacing) {
+            ForEach(Array(hand.slots.enumerated()), id: \.element.id) { index, slot in
+                drawn(slot)
+                    .frame(width: cardWidth)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityIdentifier("hand-face-\(index)")
+                    .accessibilityLabel(slot.spoken)
+                    .overlay {
+                        if let mark = slot.wild {
+                            WildMarkBadge(spoken: mark.spoken, identifier: "hand-wild-\(index)")
+                        }
+                    }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func drawn(_ slot: LocalHand.Slot) -> some View {
+        switch slot.face {
+        case .natural(let natural):
+            if let value = CardValue(natural: natural) {
+                CardFaceView(card: value)
+            }
+        case .joker(let joker):
+            CardFaceView(joker: joker)
+        }
     }
 }
 
