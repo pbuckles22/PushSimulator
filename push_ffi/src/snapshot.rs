@@ -1,4 +1,5 @@
-//! Records the screen draws. The shoe size, the melds, and the local hand come from `push_core`.
+//! Records the screen draws. The shoe size, the melds, the local hand, and seat 1's
+//! card count come from `push_core`. Seat 1's cards stay off the record.
 
 use push_core::card::{Card, Rank, Suit};
 use push_core::game_state::GameState;
@@ -48,7 +49,8 @@ pub struct MeldSnapshot {
 }
 
 /// The shoe size, the round, the melds, the local seat's hand, and the discard top.
-/// Opponent hands stay off this record. Cards under the top stay off it.
+/// Seat 1's cards stay off this record. `opponent_count` is how many that seat holds.
+/// Cards under the top stay off it.
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct TableSnapshot {
     pub deck_size: u32,
@@ -56,6 +58,7 @@ pub struct TableSnapshot {
     pub board: Vec<MeldSnapshot>,
     pub hand: Vec<CardSnapshot>,
     pub discard_top: Option<CardSnapshot>,
+    pub opponent_count: u32,
 }
 
 /// The set of fours and the heart run the screen lays out.
@@ -80,6 +83,7 @@ pub fn exhibit_snapshot(deck_size: u32) -> TableSnapshot {
         ],
         hand: exhibit_hand(),
         discard_top: exhibit_discard_cards().last().copied().map(card_snapshot),
+        opponent_count: 0,
     }
 }
 
@@ -95,7 +99,18 @@ pub fn snapshot_from_state(state: &GameState) -> TableSnapshot {
             .collect(),
         hand: local_hand(state),
         discard_top: state.deck.discard.last().copied().map(card_snapshot),
+        opponent_count: seat_hand_len(state, 1),
     }
+}
+
+/// How many cards seat `seat` holds. A missing seat is zero.
+fn seat_hand_len(state: &GameState, seat: u32) -> u32 {
+    state
+        .players
+        .iter()
+        .find(|player| player.seat_index == seat)
+        .map(|player| player.hand.len() as u32)
+        .unwrap_or(0)
 }
 
 /// Nine of clubs under a queen of diamonds. The queen is the top.

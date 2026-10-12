@@ -6,7 +6,8 @@ Chain: their solitaire launches → the screen version → the deck pile shows
  the undealt shoe → one natural rank and suit draws with their face →
  a joker draws with their face → a two and that joker show a wild mark →
  the discard top draws with their face →
- seat 0's hand sits in their layout and nothing lifts.
+ seat 0's hand sits in their layout and nothing lifts →
+ seat 1's cards are their backs and the count is visible.
  The retired "Deck size 108" line stays absent.
 */
 
@@ -22,8 +23,8 @@ final class LaunchVersionUITests: XCTestCase {
         let window = app.windows.firstMatch
         XCTAssertEqual(window.title, "Solitaire")
 
-        XCTAssertTrue(app.staticTexts["0.3.16"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.staticTexts["0.3.15"].exists)
+        XCTAssertTrue(app.staticTexts["0.3.17"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["0.3.16"].exists)
         XCTAssertFalse(app.staticTexts["Deck size 108"].exists)
 
         let newGame = app.buttons["New"]
@@ -88,5 +89,19 @@ final class LaunchVersionUITests: XCTestCase {
         XCTAssertEqual(handTwoMark.label, "wild")
         XCTAssertFalse(app.descendants(matching: .any)["hand-face-4"].exists)
         XCTAssertFalse(app.staticTexts["Joker, locked"].exists)
+
+        let count = app.descendants(matching: .any)["opponent-count"]
+        XCTAssertTrue(count.waitForExistence(timeout: 5))
+        XCTAssertEqual(count.label, "1")
+        XCTAssertNotEqual(count.label, "108")
+        XCTAssertNotEqual(count.label, "A♥️")
+
+        let back = app.descendants(matching: .any)["opponent-back-0"]
+        XCTAssertTrue(back.waitForExistence(timeout: 5))
+        XCTAssertEqual(back.label, "back")
+        XCTAssertNotEqual(back.label, "A♥️")
+        XCTAssertNotEqual(back.label, "Joker")
+        XCTAssertFalse(app.descendants(matching: .any)["opponent-back-1"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["opponent-wild-0"].exists)
     }
 }

@@ -17,6 +17,8 @@ struct GameView: View {
             let spacing: CGFloat = 10
             let cardWidth = (proxy.size.width - 6 * spacing) / 7
             VStack {
+                OpponentBackRow(cardWidth: cardWidth, spacing: spacing)
+                    .padding(.bottom, 20)
                 HStack(alignment: .top, spacing: spacing) {
                     Group {
                         RemainderView(game: game)
@@ -89,6 +91,37 @@ struct GameView: View {
     .background(.green.gradient)
     .reorderContainer(for: CardValue.self) { difference in
         cards.apply(difference: difference)
+    }
+}
+
+/// Seat 1's cards, as their backs, across the top of the felt. The count sits beside them.
+/// These cards do not join the pile drag. Their faces stay off the picture.
+private struct OpponentBackRow: View {
+    var cardWidth: CGFloat
+    var spacing: CGFloat
+
+    private var backs: OpponentBacks { OpponentBacks.shown() }
+
+    var body: some View {
+        if !backs.backs.isEmpty {
+            HStack(alignment: .center, spacing: spacing) {
+                Text(verbatim: backs.countText)
+                    .font(.title2.bold())
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.55), radius: 2, y: 1)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityIdentifier("opponent-count")
+                    .accessibilityLabel(backs.countText)
+                ForEach(backs.backs, id: \.index) { back in
+                    CardBackView()
+                        .frame(width: cardWidth)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityIdentifier("opponent-back-\(back.index)")
+                        .accessibilityLabel("back")
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 }
 

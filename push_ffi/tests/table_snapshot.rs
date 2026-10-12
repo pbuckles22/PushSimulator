@@ -407,6 +407,104 @@ fn test_snapshot_copies_the_local_hand_and_leaves_the_opponent_hand_off() {
     assert_eq!(none.deck_size, 108);
 }
 
+/// Seat 1's hand length is the count. Those cards are not copied onto the record.
+/// Seat 0 and seat 2 do not add to that count.
+#[test]
+fn test_seat_1_count_is_the_hidden_hand_and_the_cards_stay_off() {
+    let mut deck = Deck::new();
+    let local = vec![
+        take(&mut deck, Suit::Diamonds, Rank::Eight),
+        take(&mut deck, Suit::Spades, Rank::King),
+    ];
+    let hidden_ace = take(&mut deck, Suit::Hearts, Rank::Ace);
+    let hidden_joker = take_joker(&mut deck);
+    let other_seat = vec![
+        take(&mut deck, Suit::Clubs, Rank::Ace),
+        take(&mut deck, Suit::Clubs, Rank::Three),
+        take(&mut deck, Suit::Clubs, Rank::Four),
+    ];
+    let mut players = vec![Player::new(0, 0), Player::new(1, 1), Player::new(2, 2)];
+    players[0].hand = local.clone();
+    players[1].hand = vec![hidden_ace, hidden_joker];
+    players[2].hand = other_seat.clone();
+    let state = GameState::new(players, deck);
+    let snap = snapshot_from_state(&state);
+
+    assert_eq!(snap.opponent_count, 2);
+    assert_eq!(snap.hand.len(), 2);
+    assert_eq!(snap.hand[0].id, local[0].id);
+    assert_eq!(snap.hand[1].id, local[1].id);
+    assert!(snap.hand.iter().all(|card| card.id != hidden_ace.id));
+    assert!(snap.hand.iter().all(|card| card.id != hidden_joker.id));
+    assert!(other_seat.iter().all(|card| !ids(&snap).contains(&card.id)));
+    assert!(snap.hand.iter().all(|card| card.id != other_seat[0].id));
+    assert!(snap.discard_top.as_ref().map(|card| card.id) != Some(hidden_ace.id));
+    assert_ne!(snap.opponent_count, 0);
+    assert_ne!(snap.opponent_count, other_seat.len() as u32);
+    assert_ne!(snap.opponent_count, (snap.hand.len() + other_seat.len()) as u32);
+
+    let mut only_local = vec![Player::new(0, 0), Player::new(1, 1)];
+    only_local[0].hand = local;
+    let local_only = snapshot_from_state(&GameState::new(only_local, Deck::new()));
+    assert_eq!(local_only.opponent_count, 0);
+    assert_eq!(local_only.hand.len(), 2);
+
+    let mut only_seat_1 = Player::new(1, 1);
+    only_seat_1.hand = vec![hidden_joker];
+    let hidden = snapshot_from_state(&GameState::new(vec![only_seat_1], Deck::new()));
+    assert_eq!(hidden.opponent_count, 1);
+    assert!(hidden.hand.is_empty());
+    assert!(hidden.discard_top.is_none());
+}
+
+/// Chain: undealt shoe → exhibit faces → local hand → discard top →
+/// seat 1's count. The ace stays off the record. A second read leaves the table.
+#[test]
+fn test_exhibit_shoe_faces_local_hand_discard_top_and_seat_1_count_hides_the_ace() {
+    let fresh = Game::new();
+    let exhibit = Game::exhibit_set_and_run();
+    let snap = exhibit.table_snapshot();
+    let again = exhibit.table_snapshot();
+
+    assert_eq!(fresh.get_deck_size(), 108);
+    assert_eq!(exhibit.get_deck_size(), 108);
+    assert_eq!(fresh.table_snapshot().opponent_count, 0);
+    assert!(fresh.table_snapshot().hand.is_empty());
+    assert!(fresh.table_snapshot().discard_top.is_none());
+    assert_eq!(snap.deck_size, 108);
+    assert_eq!(snap.round_number, 2);
+    assert_eq!(snap.board.len(), 2);
+    assert_face(
+        &snap.board[0].cards[0],
+        1,
+        CardSuit::Hearts,
+        CardRank::Four,
+        0,
+    );
+    assert_face(&snap.hand[0], 21, CardSuit::Diamonds, CardRank::Eight, 0);
+    assert_face(&snap.hand[1], 22, CardSuit::Spades, CardRank::King, 0);
+    assert_face(&snap.hand[2], 23, CardSuit::None, CardRank::Joker, 2);
+    assert_face(&snap.hand[3], 24, CardSuit::Clubs, CardRank::Two, 0);
+    assert_face(
+        snap.discard_top.as_ref().expect("discard top"),
+        201,
+        CardSuit::Diamonds,
+        CardRank::Queen,
+        0,
+    );
+    assert_eq!(snap.opponent_count, 1);
+    assert!(snap.hand.iter().all(|card| card.id != 90));
+    assert!(snap
+        .board
+        .iter()
+        .flat_map(|meld| &meld.cards)
+        .all(|card| card.id != 90));
+    assert_ne!(snap.discard_top.as_ref().map(|card| card.id), Some(90));
+    assert_ne!(snap.discard_top.as_ref().map(|card| card.rank), Some(CardRank::Nine));
+    assert_eq!(again, snap);
+    assert_eq!(exhibit.get_deck_size(), 108);
+}
+
 fn table(deck: Deck, hand: Vec<Card>) -> GameState {
     let mut players = vec![Player::new(0, 0), Player::new(1, 1)];
     players[0].hand = hand;
