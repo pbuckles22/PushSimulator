@@ -16,6 +16,7 @@ fn test_exhibit_shoe_play_meld_refuses_the_king_and_hit_meld_takes_the_two() {
     let before = exhibit.table_snapshot();
     assert_eq!(exhibit.get_deck_size(), 108);
     assert_eq!(before.deck_size, 108);
+    assert_eq!(before.discard_top.as_ref().map(|card| card.id), Some(201));
     assert_eq!(before.round_number, 2);
     assert_eq!(before.hand.len(), 4);
     assert!(before.hand.iter().all(|card| card.id != 90));
@@ -92,6 +93,7 @@ fn test_exhibit_shoe_play_meld_refuses_the_king_and_hit_meld_takes_the_two() {
     assert_eq!(after.board[0].cards.len(), 4);
     assert_eq!(after.board[0].cards[3].id, two.id);
     assert_eq!(after.board[0].cards[3].rank, push_ffi::CardRank::Two);
+    assert_eq!(after.discard_top, before.discard_top);
     assert_eq!(after.board[1], before.board[1]);
     assert!(after.hand.iter().all(|card| card.id != 90));
     assert!(after

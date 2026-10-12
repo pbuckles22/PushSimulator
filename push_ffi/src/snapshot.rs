@@ -47,14 +47,15 @@ pub struct MeldSnapshot {
     pub cards: Vec<CardSnapshot>,
 }
 
-/// The shoe size, the round, the melds, and the local seat's hand.
-/// Opponent hands stay off this record.
+/// The shoe size, the round, the melds, the local seat's hand, and the discard top.
+/// Opponent hands stay off this record. Cards under the top stay off it.
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct TableSnapshot {
     pub deck_size: u32,
     pub round_number: u32,
     pub board: Vec<MeldSnapshot>,
     pub hand: Vec<CardSnapshot>,
+    pub discard_top: Option<CardSnapshot>,
 }
 
 /// The set of fours and the heart run the screen lays out.
@@ -78,6 +79,7 @@ pub fn exhibit_snapshot(deck_size: u32) -> TableSnapshot {
             ]),
         ],
         hand: exhibit_hand(),
+        discard_top: exhibit_discard_cards().last().copied().map(card_snapshot),
     }
 }
 
@@ -92,7 +94,16 @@ pub fn snapshot_from_state(state: &GameState) -> TableSnapshot {
             .map(|cards| meld(cards.clone()))
             .collect(),
         hand: local_hand(state),
+        discard_top: state.deck.discard.last().copied().map(card_snapshot),
     }
+}
+
+/// Nine of clubs under a queen of diamonds. The queen is the top.
+pub(crate) fn exhibit_discard_cards() -> Vec<Card> {
+    vec![
+        card(200, Suit::Clubs, Rank::Nine),
+        card(201, Suit::Diamonds, Rank::Queen),
+    ]
 }
 
 /// Seat 0 is the local seat. Another seat's cards are not copied.

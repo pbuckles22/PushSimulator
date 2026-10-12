@@ -27,18 +27,23 @@ struct RemainderView: View {
     }
 
     var body: some View {
-        Button {
-            incrementCardIndex()
-        } label: {
-            ZStack {
-                CardPlaceholderView()
-                CardBackView()
-                    .opacity(cards.isEmpty ? 0 : 1)
-                DeckPileCount()
+        VStack(spacing: 10) {
+            Button {
+                incrementCardIndex()
+            } label: {
+                ZStack {
+                    CardPlaceholderView()
+                    CardBackView()
+                        .opacity(cards.isEmpty ? 0 : 1)
+                    DeckPileCount()
+                }
+            }
+            .buttonStyle(.plain)
+            .disabled(cards.isEmpty)
+            if let top = DiscardFace.shown() {
+                DiscardTopFace(face: top)
             }
         }
-        .buttonStyle(.plain)
-        .disabled(cards.isEmpty)
         ZStack {
             CardPlaceholderView()
             if let currentCard {
@@ -90,5 +95,34 @@ struct RemainderView: View {
 
     func incrementCardIndex() {
         game.remainderIndex = (game.remainderIndex + 1) % (cards.count + 1)
+    }
+}
+
+/// The exhibit discard top, under the deck pile. Their face view stays theirs.
+private struct DiscardTopFace: View {
+    var face: DiscardFace
+
+    var body: some View {
+        drawn
+            .accessibilityElement(children: .ignore)
+            .accessibilityIdentifier("discard-face")
+            .accessibilityLabel(face.spoken)
+            .overlay {
+                if let mark = DiscardFace.shownMark() {
+                    WildMarkBadge(spoken: mark.spoken, identifier: "discard-wild-mark")
+                }
+            }
+    }
+
+    @ViewBuilder
+    private var drawn: some View {
+        switch face {
+        case .natural(let natural):
+            if let value = CardValue(natural: natural) {
+                CardFaceView(card: value)
+            }
+        case .joker(let joker):
+            CardFaceView(joker: joker)
+        }
     }
 }

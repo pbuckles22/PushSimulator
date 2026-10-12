@@ -4,7 +4,8 @@ See the LICENSE.txt file for this sample's licensing information.
 Abstract:
 Chain: their solitaire launches → the screen version → the deck pile shows
  the undealt shoe → one natural rank and suit draws with their face →
- a joker draws with their face → a two and that joker show a wild mark.
+ a joker draws with their face → a two and that joker show a wild mark →
+ the discard top draws with their face.
  The retired "Deck size 108" line stays absent.
 */
 
@@ -20,8 +21,8 @@ final class LaunchVersionUITests: XCTestCase {
         let window = app.windows.firstMatch
         XCTAssertEqual(window.title, "Solitaire")
 
-        XCTAssertTrue(app.staticTexts["0.3.14"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.staticTexts["0.3.13"].exists)
+        XCTAssertTrue(app.staticTexts["0.3.15"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["0.3.14"].exists)
         XCTAssertFalse(app.staticTexts["Deck size 108"].exists)
 
         let newGame = app.buttons["New"]
@@ -55,5 +56,10 @@ final class LaunchVersionUITests: XCTestCase {
         XCTAssertTrue(twoMark.waitForExistence(timeout: 5))
         XCTAssertEqual(twoMark.label, "wild")
         XCTAssertFalse(app.descendants(matching: .any)["natural-wild-mark"].exists)
+
+        let discard = app.descendants(matching: .any)["discard-face"]
+        XCTAssertTrue(discard.waitForExistence(timeout: 5))
+        XCTAssertEqual(discard.label, "Q♦️")
+        XCTAssertFalse(app.descendants(matching: .any)["discard-wild-mark"].exists)
     }
 }

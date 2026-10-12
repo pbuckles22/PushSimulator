@@ -27,6 +27,62 @@ fn test_deck_new_uniffi_game_get_deck_size_table_snapshot_empty_board() {
 }
 
 #[test]
+/// Chain: empty discard → a pile whose last card is the top → the exhibit's
+/// fixed discard top. The shoe stays 108. The four, the joker, and the two stay.
+fn test_snapshot_discard_top_is_the_last_card_on_the_exhibit_and_the_shoe_stays_108() {
+    let fresh = Game::new().table_snapshot();
+    assert!(fresh.discard_top.is_none());
+    assert_eq!(fresh.deck_size, 108);
+
+    let mut deck = Deck::new();
+    let nine = take(&mut deck, Suit::Clubs, Rank::Nine);
+    let queen = take(&mut deck, Suit::Diamonds, Rank::Queen);
+    let mut state = table(deck, vec![]);
+    state.deck.discard.clear();
+    let empty = snapshot_from_state(&state);
+    assert!(empty.discard_top.is_none());
+
+    state.deck.discard = vec![nine, queen];
+    let piled = snapshot_from_state(&state);
+    let top = piled.discard_top.expect("the last discard card is the top");
+    assert_face(&top, queen.id, CardSuit::Diamonds, CardRank::Queen, 0);
+    assert_ne!(top.id, nine.id);
+    assert_ne!(top.rank, CardRank::Nine);
+
+    state.deck.discard = vec![queen];
+    let only = snapshot_from_state(&state);
+    assert_eq!(only.discard_top.as_ref().map(|card| card.id), Some(queen.id));
+
+    let exhibit = Game::exhibit_set_and_run();
+    let snap = exhibit.table_snapshot();
+    assert_eq!(exhibit.get_deck_size(), 108);
+    assert_eq!(snap.deck_size, 108);
+    let shown = snap
+        .discard_top
+        .clone()
+        .expect("the exhibit has a discard top");
+    assert_face(&shown, 201, CardSuit::Diamonds, CardRank::Queen, 0);
+    assert_ne!(shown.id, 200);
+    assert_ne!(shown.rank, CardRank::Nine);
+    assert!(snap.hand.iter().all(|card| card.id != shown.id));
+    assert!(snap
+        .board
+        .iter()
+        .flat_map(|meld| &meld.cards)
+        .all(|card| card.id != shown.id));
+    assert_face(
+        &snap.board[0].cards[0],
+        1,
+        CardSuit::Hearts,
+        CardRank::Four,
+        0,
+    );
+    assert_face(&snap.hand[2], 23, CardSuit::None, CardRank::Joker, 2);
+    assert_face(&snap.hand[3], 24, CardSuit::Clubs, CardRank::Two, 0);
+    assert_eq!(exhibit.table_snapshot(), snap);
+}
+
+#[test]
 fn test_exhibit_set_and_run_keeps_the_shoe_and_lays_two_melds() {
     let fresh = Game::new();
     let exhibit = Game::exhibit_set_and_run();

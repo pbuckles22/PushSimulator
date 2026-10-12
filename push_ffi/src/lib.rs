@@ -162,6 +162,7 @@ fn exhibit_rules() -> GameState {
         .map(snapshot::card_from_snapshot)
         .collect();
     state.players[0].is_on_board = true;
+    state.deck.discard = snapshot::exhibit_discard_cards();
     state.players[1].hand = vec![Card {
         id: 90,
         suit: Suit::Hearts,
