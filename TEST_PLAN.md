@@ -120,6 +120,10 @@ Story 3.3.4 sends that drop through Rust. Public version **0.3.9**. UniFFI appli
 
 Human check 2026-10-09 **PASS**. iPhone 16 simulator. The screen showed **0.3.9**, Deck size 108, Round 2, three fours, 4♥ 5♥ 6♥ 7♥, and a hand of 8♦, K♠, a locked joker, and 2♣. The lifted card showed its face. Its slot was empty. The eight and the king came back at once. The two of clubs joined the fours. The king on New meld stayed in the hand. A sideways grab still scrolls. Prior run was **0.3.8**: the rules passed, the lifted face was sometimes blank white, and letting go made the card vanish and return about a second later. No runtime log. The version on screen is the marker.
 
+Story **3.2** on `ios/CardGame` shows the undealt shoe on their deck pile. Public version **0.3.11**. `DeckPile.text` is the digits of the count. `UndealtShoe.count` is UniFFI `Game.getDeckSize`. A fresh game and `Game.exhibitSetAndRun` are both 108. `DeckPileCount.shown` is the text on that pile. The retired line "Deck size 108" stays off the Solitaire window. `script/Test-CardGameShoe.sh` runs the digit test and that chain. `LaunchVersionUITests.testLaunchShowsSolitaireVersionWithNoPush` launches Solitaire, checks **0.3.11**, checks that line is absent, clicks New, and checks the deck pile is 108.
+
+Human check 2026-10-12 **PASS**. Mac, Solitaire window. The screen showed **0.3.11**, Game #4, 0 moves, and **108** on the deck pile. Prior run was version 0.3.10 with no shoe on that pile. No runtime log. The version on screen is the marker. This slice does not change their drag, drop, faces, or backs.
+
 ---
 
 ## Tier 2: Integration / E2E

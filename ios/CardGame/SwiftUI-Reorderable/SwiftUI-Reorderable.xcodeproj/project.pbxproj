@@ -6,6 +6,10 @@
 	objectVersion = 110;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		B32000032F7B03180009F25C /* PushShoe in Frameworks */ = {isa = PBXBuildFile; productRef = B32000022F7B03180009F25C /* PushShoe */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		040CCA512F7B03170009F25C /* SwiftUI-Reorderable.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "SwiftUI-Reorderable.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A03100012F7B03170009F25C /* SwiftUI-ReorderableUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "SwiftUI-ReorderableUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -44,6 +48,7 @@
 		040CCA4E2F7B03170009F25C /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				B32000032F7B03180009F25C /* PushShoe in Frameworks */,
 			);
 		};
 		A03100032F7B03170009F25C /* Frameworks */ = {
@@ -117,6 +122,9 @@
 				040CCA532F7B03170009F25C /* SwiftUI-Reorderable */,
 			);
 			name = "SwiftUI-Reorderable";
+			packageProductDependencies = (
+				B32000022F7B03180009F25C /* PushShoe */,
+			);
 			productName = "SwiftUI-Reorderable";
 			productReference = 040CCA512F7B03170009F25C /* SwiftUI-Reorderable.app */;
 			productType = "com.apple.product-type.application";
@@ -191,6 +199,9 @@
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 040CCA522F7B03170009F25C /* Products */;
+			packageReferences = (
+				B32000012F7B03180009F25C /* XCLocalSwiftPackageReference "PushShoe" */,
+			);
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -369,7 +380,12 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 0.3.10;
+				MARKETING_VERSION = 0.3.11;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-force_load",
+					"$(PROJECT_DIR)/../../../target/release/libpush_ffi.a",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.example.apple-samplecode.SwiftUI-Reorderable${SAMPLE_CODE_DISAMBIGUATOR}";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -406,7 +422,12 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 0.3.10;
+				MARKETING_VERSION = 0.3.11;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-force_load",
+					"$(PROJECT_DIR)/../../../target/release/libpush_ffi.a",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.example.apple-samplecode.SwiftUI-Reorderable${SAMPLE_CODE_DISAMBIGUATOR}";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -430,7 +451,7 @@
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 0.3.10;
+				MARKETING_VERSION = 0.3.11;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.example.apple-samplecode.SwiftUI-ReorderableUITests${SAMPLE_CODE_DISAMBIGUATOR}";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -448,7 +469,7 @@
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 0.3.10;
+				MARKETING_VERSION = 0.3.11;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.example.apple-samplecode.SwiftUI-ReorderableUITests${SAMPLE_CODE_DISAMBIGUATOR}";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -485,6 +506,21 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		B32000012F7B03180009F25C /* XCLocalSwiftPackageReference "PushShoe" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../PushShoe;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B32000022F7B03180009F25C /* PushShoe */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B32000012F7B03180009F25C /* XCLocalSwiftPackageReference "PushShoe" */;
+			productName = PushShoe;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 040CCA492F7B03170009F25C /* Project object */;
 	validiationLevel = 1;

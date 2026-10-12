@@ -6,6 +6,7 @@ A view that shows the remaining cards that the player can play into the
  piles.
 */
 
+import PushShoe
 import SwiftUI
 import SwiftData
 
@@ -33,6 +34,7 @@ struct RemainderView: View {
                 CardPlaceholderView()
                 CardBackView()
                     .opacity(cards.isEmpty ? 0 : 1)
+                DeckPileCount()
             }
         }
         .buttonStyle(.plain)

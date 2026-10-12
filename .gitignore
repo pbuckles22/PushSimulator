@@ -43,6 +43,9 @@ ios/PushCore.xcframework/
 ios/.swiftpm/
 ios/.build/
 ios/PushUI/.build/
+ios/CardGame/PushShoe/.build/
+ios/CardGame/PushShoe/Generated/
+ios/CardGame/PushShoe/Sources/PushFfi/push_ffi.swift
 
 # Full-repo Gemini XML dump (script/Export-GeminiSnapshot.ps1)
 Gemini_Snapshot.txt

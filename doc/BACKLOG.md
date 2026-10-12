@@ -384,7 +384,7 @@ The page is `viewer/`. The bridge is `push_wasm`. Four seats come from `finish_p
 
 ## **Phase 3: iOS local play on their card sample**
 
-**Status:** open. **3.1** is done. Next is **3.2**. The shell is `ios/CardGame/`. Apple's sample is read-only at `/Users/chaos/dev/AppleCardGameExample`, outside this workspace. Rules stay in `push_core`. Their drag, drop, reorder, faces, and backs stay theirs. The only Swift edits are the bodies of the methods their views already call, plus a stable card id so duplicate ranks and jokers can be told apart. A refusal leaves the picture as it was. An accept refreshes the picture from Rust. Two seats. Seat 0 is the human. Seat 1 is one profile `push_sim` already has. One seed stays fixed. Opponent cards are their backs. Phase 3 closes at **3.32**.
+**Status:** open. **3.2** is done. Next is **3.3**. The shell is `ios/CardGame/`. Apple's sample is read-only at `/Users/chaos/dev/AppleCardGameExample`, outside this workspace. Rules stay in `push_core`. Their drag, drop, reorder, faces, and backs stay theirs. The only Swift edits are the bodies of the methods their views already call, plus a stable card id so duplicate ranks and jokers can be told apart. A refusal leaves the picture as it was. An accept refreshes the picture from Rust. Two seats. Seat 0 is the human. Seat 1 is one profile `push_sim` already has. One seed stays fixed. Opponent cards are their backs. Phase 3 closes at **3.32**.
 
 The retired drop UI is still on `main` at `d80ff16` (content `c61ef41`, public version **0.3.9**). It is not this list. Do not continue `ios/PushUI`. A rewind of `main` to `6d52fbd` is not done.
 
@@ -399,8 +399,8 @@ The retired drop UI is still on `main` at `d80ff16` (content `c61ef41`, public v
 
 *As a player, I want their deck pile to show how many cards Rust has not dealt.*
 
-* \[ \] Their deck pile shows the undealt count from Rust.
-* \[ \] The exhibit shoe is 108.
+* \[x\] Their deck pile shows the undealt count from Rust.
+* \[x\] The exhibit shoe is 108.
 
 **User Story 3.3: One face**
 
